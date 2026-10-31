@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=9">
+<link rel="stylesheet" href="styles.css?v=10">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=9"></script>
-<script src="app.js?v=9"></script>
+<script src="config.js?v=10"></script>
+<script src="app.js?v=10"></script>
 <style>
   .wave { width: 100%; height: 64px; display: block; background: #050505; border: 1px solid var(--line); margin-top: 12px; }
   .rng { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: .82rem; color: var(--text-2); }
@@ -75,10 +75,10 @@
         <div class="empty-state"><div class="icon">[ MP3 / WAV ]</div><div>Drop your song here or <span class="browse">browse</span></div><div class="hint">MP3 UP TO <span class="js-mp3mb"></span> MB · WAV UP TO <span class="js-wavmb"></span> MB</div></div>
       </div>
       <div id="preview-box" hidden>
-        <div class="label" style="margin-top:16px">Free preview · <span class="js-prev"></span> seconds</div>
+        <div class="label" style="margin-top:16px">Teaser while it's blurred · <span class="js-prev"></span> seconds</div>
         <canvas class="wave" id="wave" width="1200" height="128"></canvas>
         <div class="rng"><span>START</span><input type="range" id="prev-start" min="0" step="1" value="0"><span id="prev-start-t">0:00</span></div>
-        <div class="row" style="margin-top:10px"><button class="btn btn-sm" type="button" id="prev-listen">Listen to preview</button><span class="small muted">Everyone hears this part. The full song is what fans unlock or buy.</span></div>
+        <div class="row" style="margin-top:10px"><button class="btn btn-sm" type="button" id="prev-listen">Listen to preview</button><span class="small muted">Everyone hears your whole song. While it's blurred, people only hear this part until they find it.</span></div>
       </div>
       <p class="small muted" id="no-preview" hidden style="margin-top:12px">This device couldn't read the song to make a preview. It will still upload; there just won't be a preview to play.</p>
     </div>
@@ -234,6 +234,9 @@
   const done = (id) => { $(id).classList.add("done"); };
   const undone = (id) => { $(id).classList.remove("done"); };
   let vidIn = false, songIn = false; // step 2 is done once both are in
+  // the 30-second part only matters for blurred songs (everyone else hears the whole song)
+  let previewReady = false;
+  function paintPreview() { $("preview-box").hidden = !(previewReady && $("photo-hidden").checked); }
 
   // ── 01 MP3 + preview clip ──────────────────────────────────────
   let mp3 = null;      // { file, duration, format: "mp3" | "wav" }
@@ -252,7 +255,7 @@
     songIn = true; if (vidIn) done("n2");
     lockState();
     if (!$("title").value) $("title").value = file.name.replace(/\.(mp3|wav)$/i, "").replace(/[_]+/g, " ").slice(0, 100);
-    $("preview-box").hidden = true; $("no-preview").hidden = true;
+    previewReady = false; $("preview-box").hidden = true; $("no-preview").hidden = true;
     try {
       const AC = window.AudioContext || window.webkitAudioContext;
       const ac = new AC();
@@ -264,7 +267,7 @@
       const maxStart = Math.max(0, Math.floor(pcm.duration - PREV));
       $("prev-start").max = maxStart;
       $("prev-start").value = Math.min(maxStart, pcm.duration > 90 ? 45 : 0); // skip the intro on longer songs
-      $("preview-box").hidden = false;
+      previewReady = true; paintPreview();
       drawWave(); updStart();
     } catch (e) {
       console.warn("decode failed", e);
@@ -549,6 +552,7 @@
   function lockState() {
     const locked = isLocked();
     $("lock-box").hidden = !locked;
+    paintPreview();
     // "listen only" needs a song
     $("reward-listen").hidden = !mp3;
     if (!mp3 && document.querySelector('input[name="reward"][value="listen"]').checked) document.querySelector('input[name="reward"][value="free"]').checked = true;

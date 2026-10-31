@@ -179,14 +179,14 @@
   let current = null, bar = null;
 
   function playButton(t) {
-    return '<button class="pbtn" type="button" data-play="' + esc(t.id) + '" aria-label="Play preview">' + PLAY + "</button>";
+    return '<button class="pbtn" type="button" data-play="' + esc(t.id) + '" aria-label="Play">' + PLAY + "</button>";
   }
   function syncButtons() {
     document.querySelectorAll("[data-play]").forEach((b) => {
       const on = current && b.dataset.play === current.id && !audio.paused;
       b.classList.toggle("playing", !!on);
       b.innerHTML = on ? PAUSE : PLAY;
-      b.setAttribute("aria-label", on ? "Pause" : "Play preview");
+      b.setAttribute("aria-label", on ? "Pause" : "Play");
     });
     if (bar) {
       bar.querySelector("[data-pp]").innerHTML = audio.paused ? PLAY : PAUSE;
@@ -218,21 +218,43 @@
       audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
     };
   }
+  // everyone hears the whole song, unless it's blurred until found (then the preview plays)
+  const fullCache = {};
+  const canHearFull = (t) => hasSong(t) && !isLocked(t);
   function play(t, fullUrl) {
     if (current && current.id === t.id && !fullUrl) { audio.paused ? audio.play().catch(() => {}) : audio.pause(); return; }
-    if (!fullUrl && !t.preview_path) return toast("No preview for this track yet.", true);
+    if (!fullUrl && canHearFull(t) && fullCache[t.id] && fullCache[t.id].exp > Date.now()) fullUrl = fullCache[t.id].url;
+    const wantFull = !fullUrl && canHearFull(t);
+    if (!fullUrl && !t.preview_path && !wantFull) return toast("Nothing to play for this one yet.", true);
     current = t;
-    audio.src = fullUrl || publicUrl(t.preview_path);
-    audio.play().catch(() => toast("Tap play again to start the preview."));
+    // start right away inside the tap (phones need that), then switch to the whole song when its link arrives
+    if (fullUrl || t.preview_path) {
+      audio.muted = wantFull; // quiet until the whole song is ready, so it doesn't jump
+      audio.src = fullUrl || publicUrl(t.preview_path);
+      audio.play().catch(() => toast("Tap play again to start it."));
+    }
     mountBar();
     const p = t.profiles || {};
     bar.querySelector("img").src = publicUrl(t.cover_path);
     bar.querySelector(".pi b").textContent = t.title;
-    bar.querySelector(".pi span").textContent = (artistName(p) ? artistName(p) + " · " : "") + (fullUrl ? "FULL SONG" : "PREVIEW · " + (isLocked(t) ? lockTag(t) : priceLabel(t)));
+    const label = (full) => (artistName(p) ? artistName(p) + " · " : "") + (full ? "FULL SONG" : "PREVIEW · " + (isLocked(t) ? lockTag(t) : priceLabel(t)));
+    bar.querySelector(".pi span").textContent = label(!!fullUrl || wantFull);
     const buy = bar.querySelector("[data-buy]");
     buy.textContent = isLocked(t) ? "Details" : +t.price > 0 ? "Buy " + money(t.price, t.currency) : "Download";
     buy.href = trackLink(t.slug);
     buy.onclick = (e) => { if (isLocked(t)) return; e.preventDefault(); App.buy(t); };
+    if (wantFull) {
+      callFunction("stream", { track_id: t.id }).then((o) => {
+        fullCache[t.id] = { url: o.url, exp: Date.now() + 50 * 60 * 1000 };
+        if (!current || current.id !== t.id) return;
+        audio.src = o.url; audio.currentTime = 0; audio.muted = false;
+        audio.play().catch(() => toast("Tap play again to start it."));
+      }).catch(() => {
+        audio.muted = false;
+        if (!t.preview_path) toast("Couldn't load the song. Try again.", true);
+        else if (bar) bar.querySelector(".pi span").textContent = label(false);
+      });
+    }
   }
   audio.addEventListener("play", syncButtons);
   audio.addEventListener("pause", syncButtons);
@@ -260,7 +282,7 @@
         (t.photo_hidden ? '<span class="hide-badge">FIND IT IN PERSON</span>' : "") +
         '<span class="tag pill solid">' + esc(isLocked(t) ? lockTag(t) : priceLabel(t)) + "</span>" +
         (!hasSong(t) || hasVid(t) || t.audio_format === "wav" ? '<span class="pill solid" style="position:absolute;right:10px;top:10px">' + esc(!hasSong(t) ? "VIDEO" : hasVid(t) ? songType(t) + "+VID" : "WAV") + "</span>" : "") +
-        (t.preview_path ? playButton(t) : "") + "</div>" +
+        (t.preview_path || (hasSong(t) && !isLocked(t)) ? playButton(t) : "") + "</div>" +
       '<div class="body">' +
         '<a class="t" href="' + esc(trackLink(t.slug)) + '">' + esc(t.title) + "</a>" +
         (!opts.hideArtist && p.handle ? '<a class="a" href="' + esc(profileLink(p.handle)) + '">' + esc(artistName(p)) + "</a>" : "") +
