@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=7">
+<link rel="stylesheet" href="styles.css?v=8">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=7"></script>
-<script src="app.js?v=7"></script>
+<script src="config.js?v=8"></script>
+<script src="app.js?v=8"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -82,7 +82,7 @@
 
   <!-- PURCHASES -->
   <section data-panel="purchases" hidden>
-    <p class="small muted" style="margin-bottom:12px">Every song you buy stays here. Download it again on any phone or computer.</p>
+    <p class="small muted" style="margin-bottom:12px">Every song and video you buy stays here. Download it again on any phone or computer.</p>
     <div id="purchases"><p class="muted mono small">Loading<span class="cursor"></span></p></div>
   </section>
 
@@ -266,12 +266,13 @@
       App.toast(t.is_published ? "Hidden from your page and Explore" : "Published"); loadTracks();
     } else if (act === "del") {
       if (!confirm('Delete "' + t.title + '"? Its page and preview go away. People who bought it keep their copy in their purchases list, but can\'t download it again. This can\'t be undone.')) return;
-      const full = await sb.from("tracks").select("audio_path, cover_path, preview_path, mind_path, video_path").eq("id", t.id).single();
+      const full = await sb.from("tracks").select("audio_path, video_dl_path, cover_path, preview_path, mind_path, video_path").eq("id", t.id).single();
       const { error } = await sb.from("tracks").delete().eq("id", t.id);
       if (error) return App.toast(error.message, true);
       const f = full.data || {};
       sb.storage.from("media").remove([f.cover_path, f.preview_path, f.mind_path, f.video_path].filter(Boolean)); // the exact spot is deleted with the song
-      if (f.audio_path) sb.storage.from("songs").remove([f.audio_path]);
+      const priv = [f.audio_path, f.video_dl_path].filter(Boolean);
+      if (priv.length) sb.storage.from("songs").remove(priv);
       App.toast("Deleted"); loadTracks();
     } else if (act === "price") openPrice(t);
     else if (act === "edit") openEdit(t);
@@ -406,13 +407,15 @@
         '<label class="field"><span>Genre</span><input class="input" id="e-genre" maxlength="40"></label>' +
         '<label class="field"><span>Description</span><textarea class="input" id="e-desc" maxlength="1000"></textarea></label>' +
         '<div class="row"><button class="btn btn-primary" id="e-save">Save</button><button class="btn btn-ghost" id="e-cancel">Cancel</button><span class="spacer"></span>' +
-        '<button class="btn btn-sm" id="e-dl">↓ My ' + App.fileType(t) + "</button></div>" +
+        '<button class="btn btn-sm" id="e-dl">↓ My ' + (App.hasSong(t) ? App.songType(t) : "video") + "</button>" +
+        (App.hasSong(t) && App.hasVid(t) ? '<button class="btn btn-sm" id="e-dlv">↓ My video</button>' : "") + "</div>" +
       "</div>");
     bg.querySelector("#e-title").value = t.title || "";
     bg.querySelector("#e-genre").value = t.genre || "";
     bg.querySelector("#e-desc").value = t.description || "";
     bg.querySelector("#e-cancel").onclick = () => bg.remove();
     bg.querySelector("#e-dl").onclick = (e) => App.download(t, e.currentTarget);
+    if (bg.querySelector("#e-dlv")) bg.querySelector("#e-dlv").onclick = (e) => App.download(t, e.currentTarget, "video");
     bg.querySelector("#e-save").onclick = async () => {
       const title = bg.querySelector("#e-title").value.trim();
       if (!title) return App.toast("Give it a title.", true);
@@ -464,7 +467,7 @@
 
   // ── purchases ──────────────────────────────────────────────
   async function loadPurchases() {
-    const { data } = await sb.from("purchases").select("id, track_id, track_title, amount, currency, created_at, tracks(id, slug, owner, title, cover_path, price, audio_format, profiles!owner(handle, display_name))").eq("buyer", uid).order("created_at", { ascending: false });
+    const { data } = await sb.from("purchases").select("id, track_id, track_title, amount, currency, created_at, tracks(id, slug, owner, title, cover_path, price, audio_format, has_song, has_video, profiles!owner(handle, display_name))").eq("buyer", uid).order("created_at", { ascending: false });
     const rows = data || [];
     $("n-purchases").textContent = rows.length || "";
     $("purchases").innerHTML = rows.length
@@ -473,10 +476,12 @@
           return '<div class="li">' + (t ? '<img alt="" src="' + esc(App.publicUrl(t.cover_path)) + '">' : '<img alt="">') +
             '<div class="grow"><b>' + (t ? '<a href="' + esc(App.trackLink(t.slug)) + '" style="text-decoration:none">' + esc(r.track_title) + "</a>" : esc(r.track_title)) + "</b>" +
             "<span>" + esc((t && App.artistName(t.profiles) ? App.artistName(t.profiles) + " · " : "") + App.money(r.amount, r.currency) + " · " + App.timeAgo(r.created_at)) + "</span></div>" +
-            (t ? '<button class="btn btn-sm btn-primary" data-dl="' + i + '">↓ ' + App.fileType(t) + "</button>" : '<span class="small muted mono">REMOVED</span>') + "</div>";
+            (t ? '<button class="btn btn-sm btn-primary" data-dl="' + i + '">↓ ' + (App.hasSong(t) ? App.songType(t) : "Video") + "</button>" +
+              (App.hasSong(t) && App.hasVid(t) ? ' <button class="btn btn-sm" data-dlv="' + i + '">↓ Video</button>' : "") : '<span class="small muted mono">REMOVED</span>') + "</div>";
         }).join("") + "</div>"
       : '<div class="empty">Nothing bought yet. <a href="explore.html">Find music →</a></div>';
     $("purchases").querySelectorAll("[data-dl]").forEach((b) => (b.onclick = () => App.download(rows[+b.dataset.dl].tracks, b)));
+    $("purchases").querySelectorAll("[data-dlv]").forEach((b) => (b.onclick = () => App.download(rows[+b.dataset.dlv].tracks, b, "video")));
   }
 
   // ── following ──────────────────────────────────────────────
