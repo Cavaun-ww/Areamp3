@@ -225,7 +225,19 @@
     if (current && current.id === t.id && !fullUrl) { audio.paused ? audio.play().catch(() => {}) : audio.pause(); return; }
     if (!fullUrl && canHearFull(t) && fullCache[t.id] && fullCache[t.id].exp > Date.now()) fullUrl = fullCache[t.id].url;
     const wantFull = !fullUrl && canHearFull(t);
-    if (!fullUrl && isLocked(t)) return toast("This one stays silent until you find it in person.");
+    if (!fullUrl && isLocked(t)) {
+      // blurred: silent until found. Fans who found it (and the artist) hear the whole song.
+      if (!t._found) return toast("This one stays silent until you find it in person.");
+      const c = fullCache[t.id];
+      if (c && c.exp > Date.now()) fullUrl = c.url;
+      else {
+        callFunction("stream", { track_id: t.id }).then((o) => {
+          fullCache[t.id] = { url: o.url, exp: Date.now() + 50 * 60 * 1000 };
+          play(t, o.url);
+        }).catch((e) => toast(e.message, true));
+        return;
+      }
+    }
     if (!fullUrl && !t.preview_path && !wantFull) return toast("Nothing to play for this one yet.", true);
     current = t;
     // start right away inside the tap (phones need that), then switch to the whole song when its link arrives
