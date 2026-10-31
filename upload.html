@@ -52,17 +52,17 @@
       <div class="part-label">Video, GIF or photo <span>appears on top of the image</span></div>
       <div class="drop" id="drop-vid">
         <input type="file" id="file-vid" accept="video/mp4,video/webm,video/quicktime,image/gif,image/jpeg,image/png,image/webp">
-        <div class="empty-state"><div class="icon">[ MP4 / GIF ]</div><div>Drop a video, GIF or photo here or <span class="browse">browse</span></div><div class="hint">Videos up to 3 minutes. Too big? We'll shrink it for you.</div></div>
+        <div class="empty-state"><div class="icon">[ MP4 / GIF ]</div><div>Drop a video, GIF or photo here or <span class="browse">browse</span></div><div class="hint">Videos up to 4 minutes. Too big? We'll get it ready for you.</div></div>
       </div>
       <div class="trim" id="trim" hidden>
-        <h3>Let's make your video fit</h3>
+        <h3>Let's get your video ready</h3>
         <p class="muted small" id="trim-why" style="margin-top:4px"></p>
         <video id="trim-vid" muted playsinline loop></video>
         <div class="rng"><span>START</span><input type="range" id="trim-start" min="0" step="0.1" value="0"><span id="trim-start-t">0:00</span></div>
         <div class="rng"><span>END</span><input type="range" id="trim-end" min="0" step="0.1" value="0"><span id="trim-end-t">0:00</span></div>
         <div class="small muted mono" id="trim-est" style="margin:10px 0 14px"></div>
-        <div class="note small" id="trim-keep" hidden style="margin-bottom:12px">Keep this screen open while it shrinks. It takes about as long as the clip.</div>
-        <div class="row"><button class="btn btn-primary" id="trim-go" type="button">Make it fit</button><button class="btn btn-ghost" id="trim-cancel" type="button">Cancel</button></div>
+        <div class="note small" id="trim-keep" hidden style="margin-bottom:12px">Keep this screen open while it gets ready. It takes about as long as the clip.</div>
+        <div class="row"><button class="btn btn-primary" id="trim-go" type="button">Get it ready</button><button class="btn btn-ghost" id="trim-cancel" type="button">Cancel</button></div>
       </div>
       <details class="box" id="fx-box">
         <summary>Pop-out effects <span class="small muted" id="fx-sum">(optional)</span></summary>
@@ -405,7 +405,7 @@
   }
 
   // trimmer: cut a too-big video down and re-save it smaller, right on the phone
-  const MAX_LEN = 180;
+  const MAX_LEN = 240; // 4 minutes
   const TARGET_BYTES = (C.MAX_VIDEO_MB - 1.5) * 1048576;
   let trimFile = null, trimDur = 0;
   const canShrink = () => !!(window.MediaRecorder && HTMLCanvasElement.prototype.captureStream);
@@ -417,7 +417,7 @@
     tv.onloadedmetadata = () => {
       trimDur = isFinite(tv.duration) ? tv.duration : 0;
       if (!trimDur) { $("trim").hidden = true; return App.toast("That video couldn't be read. Try an MP4.", true); }
-      $("trim-why").textContent = "This video is a little too big to upload. Pick the part you want (up to " + Math.round(MAX_LEN / 60) + " minutes) and we'll make it fit.";
+      $("trim-why").textContent = "Pick the part you want to use and we'll get it ready for AR.";
       ["trim-start", "trim-end"].forEach((id) => ($(id).max = trimDur.toFixed(1)));
       $("trim-start").value = 0;
       $("trim-end").value = Math.min(trimDur, MAX_LEN).toFixed(1);
@@ -425,7 +425,7 @@
       tv.play().catch(() => {});
     };
     $("trim").hidden = false;
-    $("trim-go").disabled = false; $("trim-go").textContent = "Make it fit"; $("trim-keep").hidden = true;
+    $("trim-go").disabled = false; $("trim-go").textContent = "Get it ready"; $("trim-keep").hidden = true;
     setTimeout(() => $("trim").scrollIntoView({ behavior: "smooth", block: "center" }), 150);
   }
   function trimUpdate(moved) {
@@ -468,7 +468,7 @@
       let bps = Math.min(4000000, Math.floor((TARGET_BYTES * 8) / len));
       let out = null;
       for (let tries = 0; tries < 3 && !out; tries++) {
-        try { out = await shrinkVideo(v, a, b, bps, pct(tries ? "Shrinking more…" : "Shrinking…"), LIMIT); }
+        try { out = await shrinkVideo(v, a, b, bps, pct(tries ? "Almost ready…" : "Getting it ready…"), LIMIT); }
         catch (e) { if (!e.projected) throw e; bps = Math.max(150000, Math.floor(bps * 0.85 * LIMIT / e.projected)); }
       }
       if (!out || out.size > LIMIT) throw new Error("Still a little too big. Pick a shorter part and try again.");
@@ -478,7 +478,7 @@
     } catch (e) {
       App.toast(e.message || "Couldn't shrink that video. Try trimming it in your Photos app.", true);
     } finally {
-      go.textContent = "Make it fit"; go.disabled = false; $("trim-cancel").disabled = false; $("trim-keep").hidden = true;
+      go.textContent = "Get it ready"; go.disabled = false; $("trim-cancel").disabled = false; $("trim-keep").hidden = true;
       if (lock) lock.release().catch(() => {});
       try { v.pause(); } catch (_) {}
       v.remove(); URL.revokeObjectURL(url);
