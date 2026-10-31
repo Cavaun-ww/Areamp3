@@ -225,6 +225,7 @@
     if (current && current.id === t.id && !fullUrl) { audio.paused ? audio.play().catch(() => {}) : audio.pause(); return; }
     if (!fullUrl && canHearFull(t) && fullCache[t.id] && fullCache[t.id].exp > Date.now()) fullUrl = fullCache[t.id].url;
     const wantFull = !fullUrl && canHearFull(t);
+    if (!fullUrl && isLocked(t)) return toast("This one stays silent until you find it in person.");
     if (!fullUrl && !t.preview_path && !wantFull) return toast("Nothing to play for this one yet.", true);
     current = t;
     // start right away inside the tap (phones need that), then switch to the whole song when its link arrives
@@ -282,7 +283,7 @@
         (t.photo_hidden ? '<span class="hide-badge">FIND IT IN PERSON</span>' : "") +
         '<span class="tag pill solid">' + esc(isLocked(t) ? lockTag(t) : priceLabel(t)) + "</span>" +
         (!hasSong(t) || hasVid(t) || t.audio_format === "wav" ? '<span class="pill solid" style="position:absolute;right:10px;top:10px">' + esc(!hasSong(t) ? "VIDEO" : hasVid(t) ? songType(t) + "+VID" : "WAV") + "</span>" : "") +
-        (t.preview_path || (hasSong(t) && !isLocked(t)) ? playButton(t) : "") + "</div>" +
+        (hasSong(t) && !isLocked(t) ? playButton(t) : "") + "</div>" +
       '<div class="body">' +
         '<a class="t" href="' + esc(trackLink(t.slug)) + '">' + esc(t.title) + "</a>" +
         (!opts.hideArtist && p.handle ? '<a class="a" href="' + esc(profileLink(p.handle)) + '">' + esc(artistName(p)) + "</a>" : "") +

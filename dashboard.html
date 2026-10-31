@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=10">
+<link rel="stylesheet" href="styles.css?v=11">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=10"></script>
-<script src="app.js?v=10"></script>
+<script src="config.js?v=11"></script>
+<script src="app.js?v=11"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -354,7 +354,8 @@
     q("#l-cancel").onclick = () => bg.remove();
     q("#l-save").onclick = async () => {
       const m = (q('input[name="l-mode"]:checked') || {}).value || "free";
-      const upd = { photo_hidden: true, song_lock: m, unlock_radius_m: +q("#l-radius").value || 100, hint: q("#l-hint").value.trim() || null };
+      // blurred songs stay silent until found: drop the old public sample
+      const upd = { photo_hidden: true, song_lock: m, ...(on ? {} : { preview_path: null }), unlock_radius_m: +q("#l-radius").value || 100, hint: q("#l-hint").value.trim() || null };
       if (m === "free" || m === "listen") upd.price = 0;
       if (m === "buy") {
         const p = +(+q("#l-price").value).toFixed(2);
@@ -364,6 +365,7 @@
       }
       const { error } = await sb.from("tracks").update(upd).eq("id", t.id);
       if (error) return App.toast(error.message, true);
+      if (!on && t.preview_path) sb.storage.from("media").remove([t.preview_path]);
       bg.remove(); App.toast(on ? "Blur settings saved" : "Blurred. Fans have to find the real one"); loadTracks();
     };
     if (q("#l-off")) q("#l-off").onclick = async () => {
