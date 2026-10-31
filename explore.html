@@ -16,7 +16,9 @@
 <style>
   .head-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
   .head-row .vf { display: inline-block; width: 13px; height: 13px; margin-right: 10px; vertical-align: -1px; border: 2px solid currentColor; border-radius: 2px; box-shadow: inset 0 0 0 2px var(--text), inset 0 0 0 5px currentColor; }
-  @media (max-width: 520px) { .head-row #ar-btn { width: 100%; justify-content: center; } }
+  .ar-wrap { max-width: 330px; }
+  .ar-note { font-size: .82rem; color: var(--text-2); margin-top: 8px; line-height: 1.45; }
+  @media (max-width: 520px) { .ar-wrap { max-width: none; width: 100%; } .head-row #ar-btn { width: 100%; justify-content: center; } .ar-note { text-align: center; } }
   .search { position: relative; margin: 18px 0 0; }
   .search .input { padding-left: 38px; font-size: 16px; }
   .search::before { content: ">"; position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-family: var(--mono); color: var(--muted); }
@@ -111,7 +113,7 @@
 </head>
 <body>
 <main class="wrap wrap-wide">
-  <div class="head-row"><div><div class="label">Browse</div><h1 style="font-size:1.8rem;margin-top:4px">Explore</h1></div><a class="btn btn-primary" href="ar.html?explore=1" id="ar-btn"><span class="vf" aria-hidden="true"></span>Open AR camera</a></div>
+  <div class="head-row"><div><div class="label">Browse</div><h1 style="font-size:1.8rem;margin-top:4px">Explore</h1></div><div class="ar-wrap"><a class="btn btn-primary" href="ar.html?explore=1" id="ar-btn"><span class="vf" aria-hidden="true"></span>Open AR camera</a><p class="ar-note">Point your phone at any Area MP3 image out in the world to watch and hear it, and unlock hidden drops.</p></div></div>
   <div class="tabs" id="tabs"><button type="button" data-t="all" class="on">All music</button><button type="button" data-t="following">Following</button></div>
   <div class="search"><input class="input" type="search" id="q" placeholder="Search songs, artists or genres" autocomplete="off" enterkeyhint="search"></div>
 
