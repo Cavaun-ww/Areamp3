@@ -46,29 +46,13 @@
       <p class="small muted" style="margin-top:12px">Tip: detailed, high-contrast images track best. Plain logos or mostly-empty images are hard for the camera to lock onto. This image is also your cover art.</p>
     </div>
 
-    <!-- 2 MUSIC OR VIDEO: a song (with an optional GIF/photo on top), or a video with its own sound -->
+    <!-- 2 WHAT PLAYS WHEN SCANNED: overlay (same as Pixi Wizard) + song. A video OR a song, not both. -->
     <div class="card">
-      <div class="step-head"><span class="step-num" id="n2">2</span><div><div class="step-title">Music or video</div><div class="step-sub">Pick one: a song, or a video with its own sound. Fans hear it and can download it.</div></div></div>
-      <div class="seg" id="kind-seg" style="margin-bottom:18px"><button type="button" data-k="music" class="on">Music</button><button type="button" data-k="video">Video</button></div>
-      <div id="song-part">
-      <div class="part-label">Song <span>MP3 or WAV. Fans hear the whole song.</span></div>
-      <div class="drop" id="drop-mp3">
-        <input type="file" id="file-mp3" accept="audio/mpeg,.mp3,audio/wav,audio/x-wav,audio/wave,.wav">
-        <div class="empty-state"><div class="icon">[ MP3 / WAV ]</div><div>Drop your song here or <span class="browse">browse</span></div><div class="hint">MP3 UP TO <span class="js-mp3mb"></span> MB · WAV UP TO <span class="js-wavmb"></span> MB</div></div>
-      </div>
-      <div id="preview-box" hidden>
-        <div class="label" style="margin-top:16px">Teaser while it's blurred · <span class="js-prev"></span> seconds</div>
-        <canvas class="wave" id="wave" width="1200" height="128"></canvas>
-        <div class="rng"><span>START</span><input type="range" id="prev-start" min="0" step="1" value="0"><span id="prev-start-t">0:00</span></div>
-        <div class="row" style="margin-top:10px"><button class="btn btn-sm" type="button" id="prev-listen">Listen to preview</button><span class="small muted">Everyone hears your whole song. While it's blurred, people only hear this part until they find it.</span></div>
-      </div>
-      <p class="small muted" id="no-preview" hidden style="margin-top:12px">This device couldn't read the song to make a preview. It will still upload; there just won't be a preview to play.</p>
-      </div>
-      <div id="ov-part">
-      <div class="part-label" id="ov-label"></div>
+      <div class="step-head"><span class="step-num" id="n2">2</span><div><div class="step-title">Video &amp; song</div><div class="step-sub">What people see, hear and download. A song or a video, not both.</div></div></div>
+      <div class="part-label">Video, GIF or photo <span>appears on top of the image. Fans can download videos too.</span></div>
       <div class="drop" id="drop-vid">
         <input type="file" id="file-vid" accept="video/mp4,video/webm,video/quicktime,image/gif,image/jpeg,image/png,image/webp">
-        <div class="empty-state"><div class="icon" id="ov-icon">[ MP4 ]</div><div id="ov-drop">Drop a video here or <span class="browse">browse</span></div><div class="hint" id="ov-hint">Videos up to 4 minutes. Too big? We'll get it ready for you.</div></div>
+        <div class="empty-state"><div class="icon">[ MP4 / GIF ]</div><div>Drop a video, GIF or photo here or <span class="browse">browse</span></div><div class="hint">Videos up to 4 minutes. Too big? We'll get it ready for you.</div></div>
       </div>
       <div class="trim" id="trim" hidden>
         <h3>Let's get your video ready</h3>
@@ -85,7 +69,18 @@
         <div id="fx"></div>
       </details>
 
+      <div class="part-label" style="margin-top:22px">Song <span id="song-sub">MP3 or WAV. Skip this if you added a video.</span></div>
+      <div class="drop" id="drop-mp3">
+        <input type="file" id="file-mp3" accept="audio/mpeg,.mp3,audio/wav,audio/x-wav,audio/wave,.wav">
+        <div class="empty-state"><div class="icon">[ MP3 / WAV ]</div><div>Drop your song here or <span class="browse">browse</span></div><div class="hint">MP3 UP TO <span class="js-mp3mb"></span> MB · WAV UP TO <span class="js-wavmb"></span> MB</div></div>
       </div>
+      <div id="preview-box" hidden>
+        <div class="label" style="margin-top:16px">Teaser while it's blurred · <span class="js-prev"></span> seconds</div>
+        <canvas class="wave" id="wave" width="1200" height="128"></canvas>
+        <div class="rng"><span>START</span><input type="range" id="prev-start" min="0" step="1" value="0"><span id="prev-start-t">0:00</span></div>
+        <div class="row" style="margin-top:10px"><button class="btn btn-sm" type="button" id="prev-listen">Listen to preview</button><span class="small muted">Everyone hears your whole song. While it's blurred, people only hear this part until they find it.</span></div>
+      </div>
+      <p class="small muted" id="no-preview" hidden style="margin-top:12px">This device couldn't read the song to make a preview. It will still upload; there just won't be a preview to play.</p>
     </div>
 
     <!-- 3 NAME IT & PUBLISH (same as Pixi Wizard, plus price) -->
@@ -251,13 +246,14 @@
     const isWav = /^audio\/(wav|x-wav|wave|vnd\.wave)$/.test(file.type) || /\.wav$/i.test(file.name);
     const isMp3 = !isWav && (/^audio\/(mpeg|mp3)$/.test(file.type) || /\.mp3$/i.test(file.name));
     if (!isWav && !isMp3) return App.toast("Please choose an MP3 or WAV file.", true);
+    if (vid && vid.kind === "video") return App.toast("You added a video, which plays with its own sound. A drop can have a song or a video, not both.", true);
     const maxMb = isWav ? (C.MAX_WAV_MB || 50) : C.MAX_MP3_MB;
     if (file.size > maxMb * 1048576) return App.toast(isWav
       ? "That WAV is over " + maxMb + " MB (about " + Math.floor(maxMb / 10.1) + " minutes at CD quality). Export it as 16-bit / 44.1 kHz, or upload an MP3."
       : "That MP3 is over " + maxMb + " MB. Export at 320 kbps or lower.", true);
     mp3 = { file, duration: 0, format: isWav ? "wav" : "mp3" }; pcm = null;
     showPreview("drop-mp3", null, file.name + " · " + (file.size / 1048576).toFixed(1) + " MB · reading…");
-    songIn = true; if (kind === "music") done("n2");
+    songIn = true; if (vidIn) done("n2");
     lockState();
     if (!$("title").value) $("title").value = file.name.replace(/\.(mp3|wav)$/i, "").replace(/[_]+/g, " ").slice(0, 100);
     previewReady = false; $("preview-box").hidden = true; $("no-preview").hidden = true;
@@ -379,37 +375,19 @@
   // ── 03 overlay: video, GIF or photo (same as Pixi Wizard) ─────────
   let vid = null; // { file, w, h, kind: "video" | "image", gif }
   const fmt = (t) => Math.floor(t / 60) + ":" + String(Math.floor(t % 60)).padStart(2, "0");
-  function overlayDone() { vidIn = true; if (kind === "video" ? vid && vid.kind === "video" : songIn) done("n2"); }
-
-  // ── Music or Video: one or the other, never both ──
-  let kind = "music";
-  function setKind(k) {
-    kind = k;
-    $("kind-seg").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.k === k));
-    $("song-part").hidden = k !== "music";
-    const music = k === "music";
-    $("ov-label").style.marginTop = music ? "22px" : "0";
-    $("ov-label").innerHTML = music
-      ? 'Picture on top <span>optional GIF or photo that shows while your song plays. Leave it empty for moving sound bars.</span>'
-      : 'Video <span>plays on top of the image with its own sound. Fans can download it.</span>';
-    $("ov-icon").textContent = music ? "[ GIF / JPG ]" : "[ MP4 ]";
-    $("ov-drop").innerHTML = (music ? "Drop a GIF or photo here or " : "Drop a video here or ") + '<span class="browse">browse</span>';
-    $("ov-hint").textContent = music ? "GIF · JPG · PNG · WEBP" : "Videos up to 4 minutes. Too big? We'll get it ready for you.";
-    $("file-vid").accept = music ? "image/gif,image/jpeg,image/png,image/webp" : "video/mp4,video/webm,video/quicktime";
-    // drop whatever doesn't fit the new choice
-    if (!music && mp3) { mp3 = null; pcm = null; songIn = false; resetDrop("drop-mp3"); previewReady = false; $("preview-box").hidden = true; $("no-preview").hidden = true; }
-    if (vid && (music ? vid.kind === "video" : vid.kind !== "video")) { vid = null; vidIn = false; resetDrop("drop-vid"); }
-    if (!music) { /* keep trimmer state */ } else { $("trim").hidden = true; $("trim-vid").pause(); }
-    undone("n2"); if (music ? songIn : vid && vid.kind === "video") done("n2");
-    lockState();
+  function overlayDone() { vidIn = true; if (songIn || (vid && vid.kind === "video")) done("n2"); paintSongBox(); }
+  // a drop has a song OR a video, not both (a GIF or photo can go with a song)
+  function paintSongBox() {
+    const blocked = !!(vid && vid.kind === "video");
+    $("drop-mp3").style.opacity = blocked ? ".4" : "";
+    $("drop-mp3").style.pointerEvents = blocked ? "none" : "";
+    $("song-sub").textContent = blocked ? "Not needed: you added a video, and it plays with its own sound." : "MP3 or WAV. Skip this if you added a video.";
   }
-  $("kind-seg").onclick = (e) => { const b = e.target.closest("button"); if (b && b.dataset.k !== kind) setKind(b.dataset.k); };
   wireDrop("drop-vid", "file-vid", (file) => {
     $("trim").hidden = true; $("trim-vid").pause();
     const isGif = file.type === "image/gif" || /\.gif$/i.test(file.name);
     const isPic = isGif || /^image\//.test(file.type);
-    if (kind === "music" && !isPic) return App.toast("With music, add a GIF or photo on top. For a video, switch to Video.", true);
-    if (kind === "video" && isPic) return App.toast("Choose a video file. For a GIF or photo with a song, switch to Music.", true);
+    if (!isPic && mp3) return App.toast("You added a song, so use a GIF or photo here. A drop can have a song or a video, not both.", true);
     if (isGif || /^image\/(jpeg|png|webp)$/.test(file.type)) {
       if (isGif && file.size > C.MAX_VIDEO_MB * 1048576) return App.toast("That GIF is too big. Try a shorter one.", true);
       if (!isGif && file.size > C.MAX_IMAGE_MB * 1048576) return App.toast("That photo is too big. Try a smaller one.", true);
@@ -620,7 +598,6 @@
   $("price").addEventListener("input", summaries);
   $("reward").addEventListener("change", lockState);
   lockState();
-  setKind("music");
 
   // ── publish ──────────────────────────────────────────────────────
   function progress(pct, msg) {
@@ -669,8 +646,9 @@
 
   function problem() {
     if (!img) return ["Add your image first (step 1).", "drop-img"];
-    if (kind === "video" && !(vid && vid.kind === "video")) return ["Add your video (step 2).", "drop-vid"];
-    if (kind === "music" && !mp3) return ["Add your song (step 2).", "drop-mp3"];
+    if (!vid) return ["Add your video, GIF or photo (step 2).", "drop-vid"];
+    if (!mp3 && vid.kind !== "video") return ["Add your song (step 2), or use a video instead.", "drop-mp3"];
+    if (mp3 && vid.kind === "video") return ["A drop can have a song or a video, not both.", "drop-mp3"];
     if (!$("title").value.trim()) return ["Give it a title.", "title"];
     const lock = lockValue();
     const selling = lock === "buy" || (lock === "none" && mode === "sell");
