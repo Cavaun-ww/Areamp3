@@ -549,7 +549,7 @@
           '<p class="small muted" style="margin-top:6px">Drag the pin or tap the map to fine-tune it.</p>' +
           '<label class="field" style="margin-top:12px"><span>Place name (what fans see)</span><input class="input" id="loc-name" maxlength="120" placeholder="e.g. Fordham Plaza mural"></label>' +
           '<label class="check" style="margin-top:12px"><input type="checkbox" id="loc-approx"> <span>Show approximate area only (about a 1/4 mile circle). The exact spot stays secret.</span></label>' +
-          '<div class="row" style="gap:8px;margin-top:16px">' +
+          '<div class="row loc-actions" style="gap:8px;margin-top:16px">' +
             '<button class="btn btn-primary" id="loc-save" type="button" disabled>Save location</button>' +
             (cur ? '<button class="btn btn-ghost" id="loc-remove" type="button">Remove</button>' : "") +
             '<button class="btn btn-ghost" id="loc-cancel" type="button">Cancel</button>' +

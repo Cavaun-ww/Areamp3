@@ -281,6 +281,17 @@ img.blurred { filter: blur(22px) grayscale(.4) brightness(.8); transform: scale(
 .loc-results button { text-align: left; background: #050505; border: 1px solid var(--line); color: var(--text-2); padding: 8px 10px; font: inherit; font-size: .82rem; cursor: pointer; }
 .loc-results button:hover { border-color: var(--text); color: var(--text); }
 .loc-map { height: 240px; border: 1px solid var(--line); background: #0b0b0b; }
+/* location box fits on a phone screen: shorter map, and Save / Cancel always in view */
+.loc-modal .loc-actions { position: sticky; bottom: -24px; margin-bottom: -24px; padding: 12px 0 24px; background: var(--card); border-top: 1px solid var(--line); z-index: 5; }
+@media (max-width: 560px) {
+  .loc-modal { padding: 10px; }
+  .loc-modal .modal { padding: 18px; max-height: calc(100dvh - 20px); }
+  .loc-modal .loc-actions { bottom: -18px; margin-bottom: -18px; padding-bottom: 18px; }
+  .loc-modal .loc-map { height: 170px; }
+  .loc-modal .loc-map > .muted { padding: 52px 8px !important; }
+  .loc-modal .modal > p.muted { margin-bottom: 8px !important; }
+  .loc-modal #loc-here { margin: 4px 0 !important; }
+}
 .loc-chip { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 9px 14px; border: 1px dashed var(--line-2); background: none; color: var(--text); font: inherit; font-size: .9rem; cursor: pointer; border-radius: var(--radius); }
 .loc-chip:hover { border-color: var(--text); }
 .loc-chip span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
