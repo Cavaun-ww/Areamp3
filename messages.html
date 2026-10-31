@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=18">
+<link rel="stylesheet" href="styles.css?v=19">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=18"></script>
-<script src="app.js?v=18"></script>
+<script src="config.js?v=19"></script>
+<script src="app.js?v=19"></script>
 <style>
   .wrap.chat-wrap { max-width: 640px; padding-bottom: 0; }
   .convo { display: flex; gap: 12px; align-items: center; padding: 12px 10px; text-decoration: none; color: var(--text); border-bottom: 1px solid var(--line); }
@@ -107,7 +107,7 @@
     };
     let shown = 30;
     const actHTML = () => !groups.length
-      ? '<div class="empty"><p style="margin-bottom:6px">No activity yet.</p><p class="muted small">Likes, comments, new followers, sales and fans finding your secret songs show up here.</p></div>'
+      ? '<div class="empty"><p style="margin-bottom:6px">No activity yet.</p><p class="muted small">Likes, comments, new followers, sales and listeners finding your secret songs show up here.</p></div>'
       : groups.slice(0, shown).map(rowHTML).join("") + (groups.length > shown ? '<button class="btn btn-ghost btn-block" id="act-more" style="margin-top:10px">Show more</button>' : "");
 
     main.innerHTML = '<div class="label">Inbox</div><h1 style="font-size:1.8rem;margin:4px 0 14px">Messages</h1>' +

@@ -23,7 +23,7 @@
     catch { return "$" + (+n || 0).toFixed(2); }
   }
   function priceLabel(t) { return +t.price > 0 ? money(t.price, t.currency) : "FREE"; }
-  // ── secret songs (locked until a fan finds the spot and scans it) ──
+  // ── secret songs (locked until a listener finds the spot and scans it) ──
   function isLocked(t) { return !!t && !!t.song_lock && t.song_lock !== "none"; }
   function lockTag(t) {
     return { free: "FIND IT · FREE", listen: "FIND IT · LISTEN", buy: "FIND IT · " + money(t.price, t.currency) }[t.song_lock] || priceLabel(t);
@@ -39,7 +39,7 @@
     return !!(data && data.length);
   }
   function artistName(p) { return p ? (p.display_name || (p.handle ? "@" + p.handle : "")) : ""; }
-  // what fans get: a song (MP3/WAV), a video, or both
+  // what listeners get: a song (MP3/WAV), a video, or both
   const hasSong = (t) => !t || t.has_song !== false;
   const hasVid = (t) => !!(t && t.has_video);
   function songType(t) { return (t && t.audio_format === "wav") ? "WAV" : "MP3"; }
@@ -226,7 +226,7 @@
     if (!fullUrl && canHearFull(t) && fullCache[t.id] && fullCache[t.id].exp > Date.now()) fullUrl = fullCache[t.id].url;
     const wantFull = !fullUrl && canHearFull(t);
     if (!fullUrl && isLocked(t)) {
-      // blurred: silent until found. Fans who found it (and the artist) hear the whole song.
+      // blurred: silent until found. Listeners who found it (and the artist) hear the whole song.
       if (!t._found) return toast("This one stays silent until you find it in person.");
       const c = fullCache[t.id];
       if (c && c.exp > Date.now()) fullUrl = c.url;
@@ -355,7 +355,7 @@
     a.href = url; a.rel = "noopener"; a.setAttribute("download", "");
     document.body.appendChild(a); a.click(); a.remove();
   }
-  // play the full song in the bottom player (fans who found it, buyers, the artist)
+  // play the full song in the bottom player (listeners who found it, buyers, the artist)
   async function playFull(t, btn) {
     try {
       if (btn) btn.disabled = true;
@@ -546,14 +546,14 @@
       bg.innerHTML =
         '<div class="modal">' +
           '<div class="label">Location</div><h3 style="margin:4px 0 6px">Where is the real image?</h3>' +
-          '<p class="muted small" style="margin-bottom:12px">Pin the spot where your image lives (a mural, poster, sticker, shop window, show) so fans can go find it and scan it.</p>' +
+          '<p class="muted small" style="margin-bottom:12px">Pin the spot where your image lives (a mural, poster, sticker, shop window, show) so listeners can go find it and scan it.</p>' +
           '<div class="loc-search"><input class="input" id="loc-q" placeholder="Search a place or address" enterkeyhint="search"><button class="btn btn-sm" id="loc-go" type="button">Search</button></div>' +
           '<div id="loc-results" class="loc-results"></div>' +
           '<button class="btn btn-sm btn-ghost btn-block" id="loc-here" type="button" style="margin:8px 0">Use my current location</button>' +
           '<div class="note small" id="loc-warn" hidden>Don\'t pin your home. Use public places like a shop, mural or venue.</div>' +
           '<div class="loc-map" id="loc-map"><div class="muted small mono" style="padding:70px 0;text-align:center">SEARCH OR USE YOUR LOCATION TO DROP A PIN</div></div>' +
           '<p class="small muted" style="margin-top:6px">Drag the pin or tap the map to fine-tune it.</p>' +
-          '<label class="field" style="margin-top:12px"><span>Place name (what fans see)</span><input class="input" id="loc-name" maxlength="120" placeholder="e.g. Fordham Plaza mural"></label>' +
+          '<label class="field" style="margin-top:12px"><span>Place name (what listeners see)</span><input class="input" id="loc-name" maxlength="120" placeholder="e.g. Fordham Plaza mural"></label>' +
           '<label class="check" style="margin-top:12px"><input type="checkbox" id="loc-approx"> <span>Show approximate area only (about a 1/4 mile circle). The exact spot stays secret.</span></label>' +
           '<div class="row loc-actions" style="gap:8px;margin-top:16px">' +
             '<button class="btn btn-primary" id="loc-save" type="button" disabled>Save location</button>' +

@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=18">
+<link rel="stylesheet" href="styles.css?v=19">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=18"></script>
-<script src="app.js?v=18"></script>
+<script src="config.js?v=19"></script>
+<script src="app.js?v=19"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -329,24 +329,24 @@
     if (r === null) await sb.from("track_spots").delete().eq("track_id", t.id);
     App.toast(r ? "Location saved" : "Location removed"); loadTracks();
   }
-  // blur = the image is blurred on the site AND the song unlocks only when a fan scans the real image at the spot
+  // blur = the image is blurred on the site AND the song unlocks only when a listener scans the real image at the spot
   function openLock(t) {
     const on = t.photo_hidden || App.isLocked(t);
     const cur = App.isLocked(t) ? t.song_lock : "free";
     const bg = modal(
       '<div class="label">Blur · find it in person</div><h3 style="margin:6px 0 14px;text-transform:none;letter-spacing:.02em">' + esc(t.title) + "</h3>" +
       '<div class="radio-list" id="l-mode">' +
-      '<p class="small muted" style="margin-bottom:12px">Your image shows blurred on the site, so nobody can scan it off a screen. Fans have to find the real one and scan it' + (t.has_location ? ' at your location' : '') + '. What do they get when they do?</p>' +
-        [["free", "Free download when found", "Fans who find it keep the full song for free."],
-         ["listen", "Listen only when found", "Fans who find it can play the full song any time, not download it."],
-         ["buy", "Right to buy when found", "Only fans who found it can buy it."]].map((o) =>
+      '<p class="small muted" style="margin-bottom:12px">Your image shows blurred on the site, so nobody can scan it off a screen. Listeners have to find the real one and scan it' + (t.has_location ? ' at your location' : '') + '. What do they get when they do?</p>' +
+        [["free", "Free download when found", "Listeners who find it keep the full song for free."],
+         ["listen", "Listen only when found", "Listeners who find it can play the full song any time, not download it."],
+         ["buy", "Right to buy when found", "Only listeners who found it can buy it."]].map((o) =>
           '<label><input type="radio" name="l-mode" value="' + o[0] + '"' + (o[0] === cur ? " checked" : "") + "> <span><b>" + o[1] + '</b><br><span class="small muted">' + o[2] + "</span></span></label>").join("") +
       "</div>" +
       '<div id="l-buy" style="margin-top:12px"><label class="field"><span>Price</span><div class="input-prefix" style="max-width:220px"><span class="pre">' + esc(C.CURRENCY) + '</span><input class="input mono" id="l-price" type="number" step="0.01" inputmode="decimal"></div></label></div>' +
       '<label class="field" style="margin-top:12px"' + (t.has_location ? "" : " hidden") + '><span>How close they need to be</span><select class="input" id="l-radius">' +
         [[50, "Right at it · about 150 ft"], [100, "Close · about 330 ft"], [250, "Nearby · about 800 ft"], [600, "Same area · about 1/3 mile"]].map((o) => '<option value="' + o[0] + '"' + (+t.unlock_radius_m === o[0] ? " selected" : "") + ">" + o[1] + "</option>").join("") +
       "</select></label>" +
-      '<label class="field" style="margin-top:12px"><span>Hint for fans</span><textarea class="input" id="l-hint" maxlength="300"></textarea></label>' +
+      '<label class="field" style="margin-top:12px"><span>Hint for listeners</span><textarea class="input" id="l-hint" maxlength="300"></textarea></label>' +
       '<div class="row" style="margin-top:18px"><button class="btn btn-primary" id="l-save">' + (on ? "Save" : "Turn on blur") + '</button><button class="btn btn-ghost" id="l-cancel">Cancel</button>' +
         (on ? '<button class="btn btn-ghost" id="l-off" style="margin-left:auto">Turn off blur</button>' : "") + "</div>");
     const q = (sel) => bg.querySelector(sel);
@@ -369,7 +369,7 @@
       const { error } = await sb.from("tracks").update(upd).eq("id", t.id);
       if (error) return App.toast(error.message, true);
       if (!on && t.preview_path) sb.storage.from("media").remove([t.preview_path]);
-      bg.remove(); App.toast(on ? "Blur settings saved" : "Blurred. Fans have to find the real one"); loadTracks();
+      bg.remove(); App.toast(on ? "Blur settings saved" : "Blurred. Listeners have to find the real one"); loadTracks();
     };
     if (q("#l-off")) q("#l-off").onclick = async () => {
       if (!confirm("Turn off the blur? The image shows clearly and the whole song plays for everyone (free or for sale, as you set it).")) return;
@@ -379,7 +379,7 @@
     };
   }
   function openPrice(t) {
-    if (App.isLocked(t)) { App.toast("This song is blurred until found. Change what fans get in Settings › Blur settings.", true); return openLock(t); }
+    if (App.isLocked(t)) { App.toast("This song is blurred until found. Change what listeners get in Settings › Blur settings.", true); return openLock(t); }
     if (!seller) { App.toast("Fill out the seller form first.", true); show("selling"); return; }
     const free = !(+t.price > 0);
     const bg = modal(

@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=18">
+<link rel="stylesheet" href="styles.css?v=19">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=18"></script>
-<script src="app.js?v=18"></script>
+<script src="config.js?v=19"></script>
+<script src="app.js?v=19"></script>
 <style>
   .wave { width: 100%; height: 64px; display: block; background: #050505; border: 1px solid var(--line); margin-top: 12px; }
   .rng { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: .82rem; color: var(--text-2); }
@@ -49,7 +49,7 @@
     <!-- 2 WHAT PLAYS WHEN SCANNED: overlay (same as Pixi Wizard) + song. A video OR a song, not both. -->
     <div class="card">
       <div class="step-head"><span class="step-num" id="n2">2</span><div><div class="step-title">Video &amp; song</div><div class="step-sub">What people see, hear and download. A song or a video, not both.</div></div></div>
-      <div class="part-label">Video, GIF or photo <span>appears on top of the image. Fans can download videos too.</span></div>
+      <div class="part-label">Video, GIF or photo <span>appears on top of the image. Listeners can download videos too.</span></div>
       <div class="drop" id="drop-vid">
         <input type="file" id="file-vid" accept="video/mp4,video/webm,video/quicktime,image/gif,image/jpeg,image/png,image/webp">
         <div class="empty-state"><div class="icon">[ MP4 / GIF ]</div><div>Drop a video, GIF or photo here or <span class="browse">browse</span></div><div class="hint">Videos up to 4 minutes. Too big? We'll get it ready for you.</div></div>
@@ -100,9 +100,9 @@
               <div class="small muted" style="margin-top:6px">Let people find the real image and scan it in person.</div>
             </div>
             <label class="toggle"><input type="checkbox" id="photo-hidden"><span class="switch" aria-hidden="true"></span>
-              <span><b>Blur the image</b><br><span class="small muted">Your image shows blurred on the site, so nobody can scan it off a screen to hear the song or see the video. Fans have to find the real one and scan it. Add a location too and they have to be right there.</span></span></label>
+              <span><b>Blur the image</b><br><span class="small muted">Your image shows blurred on the site, so nobody can scan it off a screen to hear the song or see the video. Listeners have to find the real one and scan it. Add a location too and they have to be right there.</span></span></label>
             <div class="lock-box" id="lock-box" hidden>
-              <div class="field"><span>What fans unlock when they find it</span>
+              <div class="field"><span>What listeners unlock when they find it</span>
                 <div class="radio-list" id="reward">
                   <label><input type="radio" name="reward" value="free" checked> <span><b>Free download</b><br><span class="small muted">They keep the full song for free.</span></span></label>
                   <label id="reward-listen"><input type="radio" name="reward" value="listen"> <span><b>Listen only</b><br><span class="small muted">They can play the full song any time on the site, but not download it.</span></span></label>
@@ -117,7 +117,7 @@
                   <option value="600">Same area · about 1/3 mile</option>
                 </select>
               </label>
-              <label class="field"><span>Hint for fans (optional)</span><textarea class="input" id="hint" maxlength="300" placeholder="e.g. Look up when you cross the bridge. Behind the record shop."></textarea></label>
+              <label class="field"><span>Hint for listeners (optional)</span><textarea class="input" id="hint" maxlength="300" placeholder="e.g. Look up when you cross the bridge. Behind the record shop."></textarea></label>
             </div>
           </div>
         </details>
@@ -347,7 +347,7 @@
       im.src = url;
     });
   }
-  // downscale big photos: faster tracking compile + smaller download for fans
+  // downscale big photos: faster tracking compile + smaller download for listeners
   async function prepareImage(file) {
     if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error("Please choose a JPG, PNG or WebP image.");
     if (file.size > C.MAX_IMAGE_MB * 1048576) throw new Error("That image is too big. Try a smaller one, or a screenshot of it.");
@@ -572,8 +572,8 @@
     $("price-area").hidden = noPrice;
     $("price-locked-note").hidden = !locked;
     $("price-locked-note").textContent = !locked ? "" : noPrice
-      ? (reward === "free" ? "Fans who find it get the song free, so there's no price." : "Fans who find it can listen to the full song, but it's not for sale, so there's no price.")
-      : "Only fans who find it can buy it, at the price below.";
+      ? (reward === "free" ? "Listeners who find it get the song free, so there's no price." : "Listeners who find it can listen to the full song, but it's not for sale, so there's no price.")
+      : "Only listeners who find it can buy it, at the price below.";
     if (locked && reward === "buy" && mode !== "sell") { $("mode-seg").querySelector('[data-m="sell"]').click(); $("price-box").open = true; }
     summaries();
   }
@@ -717,7 +717,7 @@
         files.push({ bucket: "media", path: folder + (isPic ? "/overlay." : "/video.") + ext, body: vid.file,
           type: vid.gif ? "image/gif" : (vid.file.type || "video/mp4"), msg: vid.gif ? "Uploading GIF…" : isPic ? "Uploading overlay photo…" : "Uploading video…", from: 54, to: 70 });
       }
-      // a private copy of the video, for fans to download (like the song)
+      // a private copy of the video, for listeners to download (like the song)
       if (vid && vid.kind === "video") {
         const vx = (vid.file.name.split(".").pop() || "mp4").toLowerCase().replace(/[^a-z0-9]/g, "") || "mp4";
         files.push({ bucket: "songs", path: folder + "/download." + vx, body: vid.file, type: vid.file.type || "video/mp4", msg: "Saving the video for downloads…", from: 70, to: mp3 ? 80 : 96 });
