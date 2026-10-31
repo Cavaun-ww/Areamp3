@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=8">
+<link rel="stylesheet" href="styles.css?v=9">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=8"></script>
-<script src="app.js?v=8"></script>
+<script src="config.js?v=9"></script>
+<script src="app.js?v=9"></script>
 <style>
   .head-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
   .head-row .vf { display: inline-block; width: 13px; height: 13px; margin-right: 10px; vertical-align: -1px; border: 2px solid currentColor; border-radius: 2px; box-shadow: inset 0 0 0 2px var(--text), inset 0 0 0 5px currentColor; }
@@ -95,6 +95,7 @@
   .tiles.list .tile .info { padding: 8px 6px; }
   .tiles.list .stats { border: 0; grid-template-columns: 50px repeat(3, 60px); padding: 0 12px; }
   .tiles.list .extra { display: block; }
+  .tile .loc { font-family: var(--mono); font-size: .7rem; color: var(--text-2); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: .04em; }
   .extra { display: none; font-family: var(--mono); font-size: .74rem; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   @media (max-width: 860px) {
@@ -104,7 +105,8 @@
     #filters-btn { display: inline-flex; }
     #sort-sel { display: block; }
     .sortbar .s, .sortbar .lbl { display: none; }
-    .sortbar { gap: 10px; flex-wrap: nowrap; }
+    .sortbar { gap: 10px; flex-wrap: wrap; }
+    #sort-sel { order: 5; flex: 1 1 100%; width: 100%; }
     .sortbar .count { display: none; }
     .tiles.list .stats { grid-template-columns: 44px 44px; }
     .tiles.list .stats .n.c, .tiles.list .stats .n.p { display: none; }
@@ -115,13 +117,14 @@
 <main class="wrap wrap-wide">
   <div class="head-row"><div><div class="label">Browse</div><h1 style="font-size:1.8rem;margin-top:4px">Explore</h1></div><div class="ar-wrap"><a class="btn btn-primary" href="ar.html?explore=1" id="ar-btn"><span class="vf" aria-hidden="true"></span>Open AR camera</a><p class="ar-note">Point your phone at any Area MP3 image out in the world to watch and hear it, and unlock hidden drops.</p></div></div>
   <div class="tabs" id="tabs"><button type="button" data-t="all" class="on">All music</button><button type="button" data-t="following">Following</button></div>
-  <div class="search"><input class="input" type="search" id="q" placeholder="Search songs, artists or genres" autocomplete="off" enterkeyhint="search"></div>
+  <div class="search"><input class="input" type="search" id="q" placeholder="Search songs, artists, genres or places" autocomplete="off" enterkeyhint="search"></div>
 
   <div class="lib">
     <aside class="side" id="side" aria-label="Filters"></aside>
     <section>
       <div class="sortbar">
         <button class="btn btn-sm" type="button" id="filters-btn">Filters</button>
+        <button class="btn btn-sm" type="button" id="near">Near me</button>
         <select class="input" id="sort-sel" aria-label="Sort by">
           <option value="date:-1">Newest</option><option value="date:1">Oldest</option><option value="likes:-1">Most liked</option><option value="comments:-1">Most comments</option>
           <option value="title:1">Title A–Z</option><option value="artist:1">Artist A–Z</option>
@@ -165,6 +168,7 @@
   try { view = localStorage.getItem("am-view") === "list" ? "list" : "grid"; } catch (e) {}
   const sel = { type: new Set(), format: new Set(), genre: new Set(), artist: new Set() };
   let yFrom = null, yTo = null, artistsOpen = false, genresOpen = false;
+  let here = null; // Near me: closest drops with a location first (same as Pixi Wizard)
 
   document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("on", b.dataset.t === tab));
   if (!App.configured) { $("list").innerHTML = '<div class="empty" style="grid-column:1/-1">Music shows up here once the site is connected.</div>'; return; }
@@ -197,7 +201,7 @@
   function passes(t, skip, q, fol) {
     if (fol && !fol.has(t.owner)) return false;
     if (q) {
-      const hay = (t.title + " " + (t.genre || "") + " " + artistLabel(t) + " " + artistKey(t) + " " + (t.description || "")).toLowerCase();
+      const hay = (t.title + " " + (t.genre || "") + " " + artistLabel(t) + " " + artistKey(t) + " " + (t.description || "") + " " + (t.place_name || "") + " " + (t.place_area || "")).toLowerCase();
       if (!q.split(/\s+/).every((w) => hay.includes(w))) return false;
     }
     if (skip !== "type" && sel.type.size && !sel.type.has(typeOf(t))) return false;
@@ -267,6 +271,7 @@
         (t.photo_hidden ? '<span class="hide-badge">FIND IT IN PERSON</span>' : "") + (t.preview_path ? App.playButton(t) : "") + "</div>" +
       '<div class="info"><a class="t" href="' + link + '">' + esc(t.title) + "</a>" +
         (p.handle ? '<a class="a" href="' + esc(App.profileLink(p.handle)) + '">' + esc(artistLabel(t)) + "</a>" : "") +
+        (t.has_location && (t.place_name || t.place_area || here) ? '<div class="loc">[ ' + esc([t.place_name || t.place_area, here && t.area_lat != null ? App.distLabel(App.milesBetween(here, { lat: t.area_lat, lng: t.area_lng })) : ""].filter(Boolean).join(" · ").toUpperCase()) + " ]</div>" : "") +
         '<div class="extra">' + esc([t.genre, t.duration ? App.fmtTime(t.duration) : "", new Date(t.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })].filter(Boolean).join(" · ")) + "</div></div>" +
       '<div class="stats"><span class="ty">' + esc(!App.hasSong(t) ? "VIDEO" : App.hasVid(t) ? App.songType(t) + "+VID" : App.songType(t)) + "</span>" +
         '<span class="n" title="Likes">' + ICON.heart + "<b>" + App.nLikes(t) + "</b></span>" +
@@ -293,7 +298,9 @@
       if (!fol.size) { $("side").innerHTML = ""; $("on").innerHTML = ""; $("count").textContent = ""; $("more").hidden = true; $("list").innerHTML = '<div class="empty" style="grid-column:1/-1">You\'re not following anyone yet. Tap + Follow on an artist\'s page.</div>'; return; }
     }
     drawSide(q, fol);
-    rows = all.filter((t) => passes(t, null, q, fol)).sort((a, b) => cmp[sort](a, b) * dir);
+    rows = all.filter((t) => passes(t, null, q, fol));
+    if (here) rows = rows.filter((t) => t.area_lat != null).sort((a, b) => App.milesBetween(here, { lat: a.area_lat, lng: a.area_lng }) - App.milesBetween(here, { lat: b.area_lat, lng: b.area_lng }));
+    else rows.sort((a, b) => cmp[sort](a, b) * dir);
     document.querySelectorAll(".sortbar .s").forEach((b) => {
       b.classList.toggle("on", b.dataset.s === sort);
       b.innerHTML = b.textContent.replace(/[↑↓]/g, "").trim() + (b.dataset.s === sort ? '<span class="dir">' + (dir < 0 ? "↓" : "↑") + "</span>" : "");
@@ -301,9 +308,9 @@
     document.querySelectorAll(".views button").forEach((b) => b.classList.toggle("on", b.dataset.v === view));
     const sv = sort + ":" + dir; if ([...$("sort-sel").options].some((o) => o.value === sv)) $("sort-sel").value = sv;
     $("list").classList.toggle("list", view === "list");
-    $("count").textContent = rows.length.toLocaleString() + (rows.length === 1 ? " result" : " results");
+    $("count").textContent = rows.length.toLocaleString() + (here ? " near you" : rows.length === 1 ? " result" : " results");
     shown = 0; $("list").innerHTML = "";
-    if (!rows.length) { $("list").innerHTML = '<div class="empty" style="grid-column:1/-1">' + (all.length ? "Nothing matches. Try fewer filters." : 'No music yet. <a href="upload.html">Be the first →</a>') + "</div>"; $("more").hidden = true; return; }
+    if (!rows.length) { $("list").innerHTML = '<div class="empty" style="grid-column:1/-1">' + (all.length ? "" + (here ? "No drops with a location match yet." : "Nothing matches. Try fewer filters.") + "" : 'No music yet. <a href="upload.html">Be the first →</a>') + "</div>"; $("more").hidden = true; return; }
     more();
   }
   function more() {
@@ -342,6 +349,14 @@
     render();
   }));
   $("sort-sel").onchange = () => { const [s2, d2] = $("sort-sel").value.split(":"); sort = s2; dir = +d2; render(); };
+  $("near").onclick = async () => {
+    if (here) { here = null; $("near").classList.remove("btn-primary"); $("near").textContent = "Near me"; return render(); }
+    $("near").disabled = true; $("near").textContent = "Finding you…";
+    try { here = await App.hereNow(); $("near").classList.add("btn-primary"); $("near").textContent = "Near me ✕"; }
+    catch (e) { App.toast(/denied|blocked/i.test(e.message) ? "Location is off for this site. Turn it on in your phone's settings to use Near me." : e.message, true); $("near").textContent = "Near me"; }
+    $("near").disabled = false;
+    render();
+  };
   $("filters-btn").onclick = () => $("side").classList.toggle("open");
   let tm;
   $("q").addEventListener("input", () => { clearTimeout(tm); tm = setTimeout(render, 200); });
