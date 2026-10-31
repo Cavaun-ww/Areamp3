@@ -181,7 +181,7 @@
   document.querySelectorAll(".js-wavmb").forEach((e) => (e.textContent = C.MAX_WAV_MB || 50));
   document.querySelectorAll(".js-prev").forEach((e) => (e.textContent = C.PREVIEW_SECONDS));
   document.querySelectorAll(".js-cur").forEach((e) => (e.textContent = C.CURRENCY));
-  $("price-hint").textContent = App.money(C.MIN_PRICE) + " to " + App.money(C.MAX_PRICE) + ". You get " + App.artistCut() + "% of every sale, paid out to your PayPal.";
+  $("price-hint").textContent = "Any price you want. You get " + App.artistCut() + "% of every sale, paid out to your PayPal.";
 
   const session = await App.requireAuth();
   const uid = session.user.id;
@@ -635,7 +635,7 @@
     const selling = lock === "buy" || (lock === "none" && mode === "sell");
     if (selling) {
       const p = +$("price").value;
-      if (!(p >= C.MIN_PRICE && p <= C.MAX_PRICE)) { $("price-box").open = true; return ["Set a price between " + App.money(C.MIN_PRICE) + " and " + App.money(C.MAX_PRICE) + ".", "price"]; }
+      if (!(p >= C.MIN_PRICE && p <= C.MAX_PRICE)) { $("price-box").open = true; return ["Enter a price above " + App.money(0) + ".", "price"]; }
       if (!seller) {
         $("price-box").open = true;
         if ($("s-name").value.trim().length < 2) return ["Fill in your legal name on the seller form.", "s-name"];
