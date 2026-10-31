@@ -240,7 +240,7 @@ body.desktop .steps, body.desktop #start { display: none; }
     $("title").textContent = "Explore";
     $("by").innerHTML = "Loading songs…";
     $("step2").innerHTML = "Point your phone at <b>any " + esc(C.SITE_NAME) + " image</b>: a poster, sticker, mural or cover";
-    $("song-btn").textContent = "Find secret songs"; $("song-btn").href = "explore.html?tab=secret";
+    $("song-btn").textContent = "Explore music"; $("song-btn").href = "explore.html";
     var cols = "id, slug, owner, title, price, currency, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, pop_scale, lift, key_mode, photo_hidden, has_location, place_name, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, created_at, profiles!owner(handle, display_name, avatar_path)";
     var base = function () { return sb.from("tracks").select(cols).eq("is_published", true).eq("is_private", false).not("mind_path", "is", null); };
     session = (await sb.auth.getSession()).data.session;

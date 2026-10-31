@@ -35,7 +35,7 @@
 <body>
 <main class="wrap wrap-wide">
   <div class="head-row"><div><div class="label">Browse</div><h1 style="font-size:1.8rem;margin-top:4px">Explore</h1></div><a class="btn btn-primary" href="ar.html?explore=1" id="ar-btn"><span class="vf" aria-hidden="true"></span>Open AR camera</a></div>
-  <div class="tabs" id="tabs"><button type="button" data-t="all" class="on">All music</button><button type="button" data-t="secret">Secret songs</button><button type="button" data-t="following">Following</button></div>
+  <div class="tabs" id="tabs"><button type="button" data-t="all" class="on">All music</button><button type="button" data-t="following">Following</button></div>
   <div id="map-wrap" hidden style="margin-bottom:18px">
     <div id="map" style="height:340px;border:1px solid var(--line)"></div>
     <div class="row" style="margin-top:10px"><button class="btn btn-sm" type="button" id="near">Near me</button><span class="small muted" id="near-msg">Circles show the area. The exact spot is up to you to find.</span></div>
@@ -63,7 +63,7 @@
   const GENRES = ["All", "Hip-Hop", "R&B", "Pop", "Rock", "Electronic", "House", "Afrobeats", "Latin", "Reggae", "Jazz", "Soul", "Gospel", "Country", "Indie", "Lo-fi", "Instrumental", "Spoken Word", "Other"];
   const PAGE = 24;
   const startTab = new URLSearchParams(location.search).get("tab");
-  let tab = startTab === "following" || startTab === "secret" ? startTab : "all";
+  let tab = startTab === "following" ? startTab : "all";
   let here = null, mapObj = null, layer = null;
   let genre = "All", page = 0, followIds = null;
   $("genres").innerHTML = GENRES.map((g) => '<button type="button" data-g="' + esc(g) + '"' + (g === "All" ? ' class="on"' : "") + ">" + esc(g) + "</button>").join("");
@@ -107,7 +107,7 @@
     const html = rows.map((t) => App.trackCard(t, here && t.area_lat != null ? { actions: '<div class="meta">' + App.distLabel(App.milesBetween(here, { lat: t.area_lat, lng: t.area_lng })).toUpperCase() + "</div>" } : {})).join("");
     if (reset) $("list").innerHTML = html || '<div class="empty" style="grid-column:1/-1">Nothing matches yet.</div>';
     else $("list").insertAdjacentHTML("beforeend", html);
-    $("count").textContent = (count || 0) + (tab === "secret" ? (count === 1 ? " secret song" : " secret songs") : count === 1 ? " track" : " tracks");
+    $("count").textContent = (count || 0) + (tab === "secret" ? (count === 1 ? " song on the map" : " songs on the map") : count === 1 ? " track" : " tracks");
     $("more").hidden = (page + 1) * PAGE >= (count || 0);
   }
 
