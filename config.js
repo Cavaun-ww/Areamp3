@@ -21,8 +21,8 @@ window.APP_CONFIG = {
 
   // Plans (shown on the site). PayPal's fee comes off each sale first, then the site keeps:
   //   Free artists: FREE_FEE_PERCENT · Pro artists: PRO_FEE_PERCENT · Pro costs PRO_PRICE a year.
-  // The real numbers live on the server (defaults 5 / 0 / 29.99); keep these the same.
-  FREE_FEE_PERCENT: 5,
+  // The real numbers live on the server (defaults 7 / 0 / 29.99); keep these the same.
+  FREE_FEE_PERCENT: 7,
   PRO_FEE_PERCENT: 0,
   PRO_PRICE: 29.99,
 
