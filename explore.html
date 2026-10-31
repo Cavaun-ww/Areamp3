@@ -47,6 +47,16 @@
   .yr { display: flex; align-items: center; gap: 6px; }
   .yr input { width: 100%; padding: 6px 8px; font-family: var(--mono); font-size: .84rem; text-align: center; }
   .yr span { color: var(--muted); }
+  /* artists matching the search (they show even before they've posted anything) */
+  .people { margin-bottom: 18px; }
+  .people h4 { font-family: var(--mono); font-weight: 400; font-size: .76rem; letter-spacing: .14em; text-transform: uppercase; color: var(--text-2); margin-bottom: 8px; }
+  .people .row-p { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .people .row-p::-webkit-scrollbar { display: none; }
+  .people a { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; border: 1px solid var(--line); text-decoration: none; color: var(--text); max-width: 260px; }
+  .people a:hover { border-color: var(--text); }
+  .people a span { min-width: 0; }
+  .people a b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .people a small { display: block; font-family: var(--mono); color: var(--muted); font-size: .76rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .chips-on { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
   .chips-on button { display: inline-flex; gap: 6px; align-items: center; padding: 4px 9px; border: 1px solid var(--text); background: none; color: var(--text); font-family: var(--mono); font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; border-radius: 2px; }
   .chips-on button::after { content: "x"; color: var(--muted); }
@@ -143,6 +153,7 @@
           </div>
         </div>
       </div>
+      <div class="people" id="people" hidden></div>
       <div class="chips-on" id="on"></div>
       <div class="tiles" id="list"><p class="muted mono small">Loading<span class="cursor"></span></p></div>
       <div style="text-align:center;margin-top:24px"><button class="btn" id="more" hidden>Load more</button></div>
@@ -310,7 +321,7 @@
     $("list").classList.toggle("list", view === "list");
     $("count").textContent = rows.length.toLocaleString() + (here ? " near you" : rows.length === 1 ? " result" : " results");
     shown = 0; $("list").innerHTML = "";
-    if (!rows.length) { $("list").innerHTML = '<div class="empty" style="grid-column:1/-1">' + (all.length ? "" + (here ? "No drops with a location match yet." : "Nothing matches. Try fewer filters.") + "" : 'No music yet. <a href="upload.html">Be the first →</a>') + "</div>"; $("more").hidden = true; return; }
+    if (!rows.length) { $("list").innerHTML = '<div class="empty" style="grid-column:1/-1">' + (all.length || q ? "" + (here ? "No drops with a location match yet." : "Nothing matches. Try fewer filters.") + "" : 'No music yet. <a href="upload.html">Be the first →</a>') + "</div>"; $("more").hidden = true; return; }
     more();
   }
   function more() {
@@ -359,7 +370,24 @@
   };
   $("filters-btn").onclick = () => $("side").classList.toggle("open");
   let tm;
-  $("q").addEventListener("input", () => { clearTimeout(tm); tm = setTimeout(render, 200); });
+  $("q").addEventListener("input", () => { clearTimeout(tm); tm = setTimeout(() => { render(); loadPeople(); }, 200); });
+
+  // artists whose name or @handle matches the search
+  let peopleRun = 0;
+  async function loadPeople() {
+    const q = $("q").value.trim().replace(/[%,()*\\:"]/g, " ").trim().slice(0, 60);
+    const run = ++peopleRun;
+    if (q.length < 2) { $("people").hidden = true; $("people").innerHTML = ""; return; }
+    const { data } = await sb.from("profiles").select("id, handle, display_name, avatar_path").not("handle", "is", null)
+      .or("handle.ilike.*" + q + "*,display_name.ilike.*" + q + "*").limit(20);
+    if (run !== peopleRun) return;
+    const list = data || [];
+    const drops = {}; all.forEach((t) => (drops[t.owner] = (drops[t.owner] || 0) + 1));
+    $("people").hidden = !list.length;
+    $("people").innerHTML = list.length ? "<h4>Artists</h4><div class=\"row-p\">" + list.map((p) =>
+      '<a href="' + esc(App.profileLink(p.handle)) + '">' + App.avatarHTML(p, 36) + "<span><b>" + esc(App.artistName(p)) + "</b><small>@" + esc(p.handle) + " · " + (drops[p.id] || 0) + ((drops[p.id] || 0) === 1 ? " drop" : " drops") + "</small></span></a>").join("") + "</div>" : "";
+    if (list.length && !rows.length) $("list").innerHTML = '<div class="empty" style="grid-column:1/-1">No songs match yet. Tap the artist above to see their page.</div>';
+  }
   $("more").onclick = more;
   $("tabs").onclick = (e) => {
     const b = e.target.closest("button"); if (!b) return;
