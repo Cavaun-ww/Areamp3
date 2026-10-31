@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My page · {site}</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#000000">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="styles.css?v=3">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js?v=3"></script>
+<script src="app.js?v=3"></script>
+<style>
+  .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
+  .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
+  .head h1 { font-size: 1.6rem; text-transform: none; letter-spacing: .03em; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); margin-bottom: 18px; }
+  .stats > div { padding: 14px; }
+  .stats > div + div { border-left: 1px solid var(--line); }
+  .stats b { display: block; font-family: var(--mono); font-weight: 400; font-size: 1.4rem; margin-top: 2px; }
+  @media (max-width: 620px) { .stats { grid-template-columns: 1fr 1fr; } .stats > div:nth-child(3) { border-left: 0; } .stats > div:nth-child(n+3) { border-top: 1px solid var(--line); } }
+  .avatar-edit { display: flex; align-items: center; gap: 16px; }
+  .avatar-edit .avatar { cursor: pointer; }
+  .tk .badge-hidden { position: absolute; left: 10px; bottom: 10px; }
+  .panel { max-width: 640px; }
+</style>
+</head>
+<body>
+<main class="wrap wrap-wide">
+  <div class="head">
+    <div id="head-av"></div>
+    <div style="flex:1;min-width:200px"><div class="label">My page</div><h1 id="head-name">…</h1><div class="small muted mono" id="head-handle"></div></div>
+    <a class="btn btn-sm" href="messages.html">Messages <span class="count-badge" id="msgs-count" hidden></span></a>
+    <a class="btn btn-sm" id="admin-link" href="admin.html" hidden>Admin</a>
+    <a class="btn btn-sm" id="view-public" hidden>View public page →</a>
+    <a class="btn btn-sm btn-primary" href="upload.html">+ Upload</a>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button type="button" data-p="tracks">My tracks<span class="n" id="n-tracks"></span></button>
+    <button type="button" data-p="selling">Selling</button>
+    <button type="button" data-p="purchases">Purchases<span class="n" id="n-purchases"></span></button>
+    <button type="button" data-p="following">Following<span class="n" id="n-following"></span></button>
+    <button type="button" data-p="profile">Profile</button>
+  </div>
+
+  <!-- MY TRACKS -->
+  <section data-panel="tracks" hidden>
+    <div id="tracks"><p class="muted mono small">Loading<span class="cursor"></span></p></div>
+  </section>
+
+  <!-- SELLING -->
+  <section data-panel="selling" hidden>
+    <div class="stats">
+      <div><span class="label">Sales</span><b id="s-count">0</b></div>
+      <div><span class="label">You earned</span><b id="s-total">$0</b></div>
+      <div><span class="label">Paid to you</span><b id="s-paid">$0</b></div>
+      <div><span class="label">Waiting payout</span><b id="s-owed">$0</b></div>
+    </div>
+    <p class="small muted" style="margin:-6px 0 18px" id="split-note"></p>
+    <div class="grid2" style="align-items:start;gap:18px">
+      <form class="card stack" id="seller-form" style="margin:0">
+        <div><h3>Seller form</h3><p class="small muted" style="margin-top:4px">Needed before you can set prices. Your earnings are paid out to this PayPal email. Only you can see this.</p></div>
+        <label class="field"><span>Legal name</span><input class="input" id="f-name" maxlength="100" required autocomplete="name"></label>
+        <label class="field"><span>PayPal email (payouts)</span><input class="input" id="f-email" type="email" maxlength="200" required autocomplete="email"></label>
+        <label class="field"><span>Country</span><input class="input" id="f-country" maxlength="60" required autocomplete="country-name"></label>
+        <label class="field"><span>Default price for new uploads</span>
+          <div class="input-prefix" style="max-width:220px"><span class="pre js-cur">USD</span><input class="input mono" id="f-price" type="number" step="0.01" inputmode="decimal" required></div></label>
+        <label class="check"><input type="checkbox" id="f-rights" required> <span>I only sell music I wrote, own, or have the rights to sell, and I agree to the <a href="terms.html" target="_blank">Terms</a>.</span></label>
+        <button class="btn btn-primary" type="submit" id="f-save">Save seller form</button>
+        <p class="small muted" id="f-status"></p>
+      </form>
+      <div>
+        <h3 style="margin-bottom:10px">Recent sales</h3>
+        <div id="sales"><p class="muted small">No sales yet.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PURCHASES -->
+  <section data-panel="purchases" hidden>
+    <p class="small muted" style="margin-bottom:12px">Every song you buy stays here. Download it again on any phone or computer.</p>
+    <div id="purchases"><p class="muted mono small">Loading<span class="cursor"></span></p></div>
+  </section>
+
+  <!-- FOLLOWING -->
+  <section data-panel="following" hidden>
+    <div class="row" style="margin-bottom:12px"><span class="small muted" id="followers-line"></span><span class="spacer"></span><a class="btn btn-sm" href="explore.html?tab=following">New from artists I follow →</a></div>
+    <div id="following"><p class="muted mono small">Loading<span class="cursor"></span></p></div>
+  </section>
+
+  <!-- PROFILE -->
+  <section data-panel="profile" hidden>
+    <form class="card stack panel" id="profile-form">
+      <div class="avatar-edit">
+        <div id="avatar-slot" title="Change photo"></div>
+        <div>
+          <button class="btn btn-sm" type="button" id="avatar-btn">Change photo</button>
+          <button class="btn btn-sm btn-ghost" type="button" id="avatar-remove" hidden>Remove</button>
+        </div>
+        <input type="file" id="avatar-file" accept="image/jpeg,image/png,image/webp" hidden>
+      </div>
+      <label class="field"><span>Page name</span>
+        <input class="input mono" id="handle" maxlength="30" autocapitalize="off" autocomplete="off" spellcheck="false">
+        <span class="small muted mono" id="handle-preview" style="display:block;margin-top:6px;overflow-wrap:anywhere;text-transform:none;letter-spacing:0"></span>
+        <span class="small" id="handle-msg" style="display:block;margin-top:2px;text-transform:none;letter-spacing:0"></span>
+      </label>
+      <label class="field"><span>Artist / display name</span><input class="input" id="display_name" maxlength="60"></label>
+      <label class="field"><span>Bio</span><textarea class="input" id="bio" maxlength="280" placeholder="Where you're from, what you make, links…"></textarea></label>
+      <div class="row"><button class="btn btn-primary" type="submit" id="save">Save profile</button><button class="btn btn-ghost" type="button" id="share-page">Share my page</button></div>
+      <hr class="rule">
+      <div class="row small"><span class="muted mono" id="email"></span><span class="spacer"></span><a href="#" id="signout">Sign out</a></div>
+    </form>
+  </section>
+</main>
+
+<script>
+(async function () {
+  App.mountHeader("me");
+  const C = App.C, sb = App.sb, $ = (id) => document.getElementById(id), esc = App.esc;
+  document.querySelectorAll(".js-cur").forEach((e) => (e.textContent = C.CURRENCY));
+
+  sb.auth.onAuthStateChange(async (ev) => {
+    if (ev === "PASSWORD_RECOVERY") {
+      const pw = prompt("Choose a new password (8+ characters):");
+      if (pw && pw.length >= 8) { const { error } = await sb.auth.updateUser({ password: pw }); App.toast(error ? error.message : "Password updated", !!error); }
+    }
+  });
+
+  const session = await App.requireAuth();
+  const uid = session.user.id;
+  $("email").textContent = session.user.email;
+  $("signout").onclick = async (e) => { e.preventDefault(); await sb.auth.signOut(); location.href = "index.html"; };
+
+  // tabs (remembered in the address: dashboard.html#selling)
+  function show(p) {
+    if (!document.querySelector('[data-panel="' + p + '"]')) p = "tracks";
+    document.querySelectorAll("[data-panel]").forEach((s) => (s.hidden = s.dataset.panel !== p));
+    document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("on", b.dataset.p === p));
+    history.replaceState(null, "", "#" + p);
+  }
+  $("tabs").onclick = (e) => { const b = e.target.closest("button"); if (b) show(b.dataset.p); };
+  show(location.hash.slice(1) || "tracks");
+
+  // ── profile ────────────────────────────────────────────────
+  let profile = {};
+  async function loadProfile() {
+    try { await App.ensureHandle(session); } catch (e) {}
+    const { data } = await sb.from("profiles").select("handle, display_name, bio, avatar_path").eq("id", uid).maybeSingle();
+    profile = data || {};
+    $("head-av").innerHTML = App.avatarHTML(profile);
+    $("head-name").textContent = profile.display_name || profile.handle || "Me";
+    $("head-handle").textContent = profile.handle ? "@" + profile.handle : "";
+    $("avatar-slot").innerHTML = App.avatarHTML(profile);
+    $("avatar-slot").firstChild.onclick = () => $("avatar-file").click();
+    $("avatar-remove").hidden = !profile.avatar_path;
+    $("handle").value = profile.handle || "";
+    $("handle-msg").textContent = "";
+    linkPreview();
+    $("display_name").value = profile.display_name || "";
+    $("bio").value = profile.bio || "";
+    if (profile.handle) { $("view-public").hidden = false; $("view-public").href = App.profileLink(profile.handle); }
+  }
+  const linkPreview = () => ($("handle-preview").textContent = App.siteRoot.replace(/^https?:\/\//, "") + "u.html?h=" + ($("handle").value || "…"));
+  let handleOk = true, ht;
+  async function checkHandle() {
+    const v = $("handle").value, msg = $("handle-msg");
+    if (v === (profile.handle || "")) { handleOk = true; msg.textContent = ""; return; }
+    if (!/^[a-z0-9_]{3,30}$/.test(v)) { handleOk = false; msg.textContent = "3–30 lowercase letters, numbers or _"; msg.style.color = "var(--muted)"; return; }
+    const { data } = await sb.from("profiles").select("id").eq("handle", v).maybeSingle();
+    if ($("handle").value !== v) return;
+    handleOk = !data || data.id === uid;
+    msg.textContent = handleOk ? "✓ Available. Your old page link stops working after you save." : "✕ Already taken";
+    msg.style.color = handleOk ? "var(--text)" : "var(--text-2)";
+  }
+  $("handle").addEventListener("input", () => {
+    $("handle").value = $("handle").value.toLowerCase().replace(/[^a-z0-9_]/g, "");
+    linkPreview(); handleOk = false; clearTimeout(ht); ht = setTimeout(checkHandle, 350);
+  });
+  $("avatar-btn").onclick = () => $("avatar-file").click();
+  $("avatar-file").onchange = async () => {
+    const f = $("avatar-file").files[0]; $("avatar-file").value = "";
+    if (!f) return;
+    $("avatar-btn").disabled = true; $("avatar-btn").textContent = "Uploading…";
+    try {
+      const blob = await App.squareJpeg(f, 400);
+      const path = uid + "/avatar/" + Date.now() + ".jpg";
+      const up = await sb.storage.from("media").upload(path, blob, { contentType: "image/jpeg", cacheControl: "31536000" });
+      if (up.error) throw up.error;
+      const old = profile.avatar_path;
+      const { error } = await sb.from("profiles").update({ avatar_path: path }).eq("id", uid);
+      if (error) throw error;
+      if (old) sb.storage.from("media").remove([old]);
+      App.toast("Photo updated"); await loadProfile();
+    } catch (e) { App.toast(e.message || "Upload failed", true); }
+    finally { $("avatar-btn").disabled = false; $("avatar-btn").textContent = "Change photo"; }
+  };
+  $("avatar-remove").onclick = async () => {
+    const old = profile.avatar_path;
+    const { error } = await sb.from("profiles").update({ avatar_path: null }).eq("id", uid);
+    if (error) return App.toast(error.message, true);
+    if (old) sb.storage.from("media").remove([old]);
+    loadProfile();
+  };
+  $("share-page").onclick = () => profile.handle && App.share(profile.display_name || profile.handle, App.profileLink(profile.handle));
+  $("profile-form").onsubmit = async (e) => {
+    e.preventDefault();
+    clearTimeout(ht); await checkHandle();
+    if (!handleOk) return App.toast($("handle-msg").textContent || "Pick a different page name", true);
+    $("save").disabled = true;
+    const { error } = await sb.from("profiles").update({
+      handle: $("handle").value, display_name: $("display_name").value.trim() || null, bio: $("bio").value.trim() || null,
+    }).eq("id", uid);
+    $("save").disabled = false;
+    if (error) return App.toast(error.code === "23505" ? "That page name was just taken, try another" : error.message, true);
+    App.toast("Profile saved"); loadProfile();
+  };
+
+  // ── my tracks ──────────────────────────────────────────────
+  let mine = [];
+  async function loadTracks() {
+    const { data, error } = await sb.from("tracks").select(App.TRACK_COLS + ", is_published").eq("owner", uid).order("created_at", { ascending: false });
+    if (error) { $("tracks").innerHTML = '<p class="muted">' + esc(error.message) + "</p>"; return; }
+    mine = data; App.registerTracks(data);
+    $("n-tracks").textContent = data.length || "";
+    if (!data.length) { $("tracks").innerHTML = '<div class="empty"><p style="margin-bottom:16px">No tracks yet.</p><a class="btn btn-primary" href="upload.html">Upload your first track</a></div>'; return; }
+    $("tracks").innerHTML = '<div class="grid">' + data.map((t) => App.trackCard(t, {
+      hideArtist: true,
+      actions: '<div class="small muted mono">' + (t.is_published ? "PUBLIC" : "HIDDEN") + (t.mind_path ? " · AR" : "") + "</div>" +
+        '<div class="actions">' +
+          '<button class="btn btn-sm" data-act="price" data-id="' + t.id + '">Price</button>' +
+          '<button class="btn btn-sm" data-act="edit" data-id="' + t.id + '">Edit</button>' +
+          '<button class="btn btn-sm" data-act="vis" data-id="' + t.id + '">' + (t.is_published ? "Hide" : "Publish") + "</button>" +
+          '<button class="btn btn-sm btn-danger" data-act="del" data-id="' + t.id + '" aria-label="Delete">✕</button>' +
+        "</div>",
+    })).join("") + "</div>";
+  }
+  $("tracks").addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-act]"); if (!b) return;
+    const t = mine.find((x) => x.id === b.dataset.id); if (!t) return;
+    const act = b.dataset.act;
+    if (act === "vis") {
+      b.disabled = true;
+      const { error } = await sb.from("tracks").update({ is_published: !t.is_published }).eq("id", t.id);
+      if (error) { b.disabled = false; return App.toast(error.message, true); }
+      App.toast(t.is_published ? "Hidden from your page and Explore" : "Published"); loadTracks();
+    } else if (act === "del") {
+      if (!confirm('Delete "' + t.title + '"? Its page and preview go away. People who bought it keep their copy in their purchases list, but can\'t download it again. This can\'t be undone.')) return;
+      const full = await sb.from("tracks").select("audio_path, cover_path, preview_path, mind_path, video_path").eq("id", t.id).single();
+      const { error } = await sb.from("tracks").delete().eq("id", t.id);
+      if (error) return App.toast(error.message, true);
+      const f = full.data || {};
+      sb.storage.from("media").remove([f.cover_path, f.preview_path, f.mind_path, f.video_path].filter(Boolean));
+      if (f.audio_path) sb.storage.from("songs").remove([f.audio_path]);
+      App.toast("Deleted"); loadTracks();
+    } else if (act === "price") openPrice(t);
+    else if (act === "edit") openEdit(t);
+  });
+
+  function modal(html) {
+    const bg = document.createElement("div");
+    bg.className = "modal-bg show";
+    bg.innerHTML = '<div class="modal">' + html + "</div>";
+    document.body.appendChild(bg);
+    bg.onclick = (e) => { if (e.target === bg) bg.remove(); };
+    return bg;
+  }
+  function openPrice(t) {
+    if (!seller) { App.toast("Fill out the seller form first.", true); show("selling"); return; }
+    const free = !(+t.price > 0);
+    const bg = modal(
+      '<div class="label">Price</div><h3 style="margin:6px 0 16px;text-transform:none;letter-spacing:.02em">' + esc(t.title) + "</h3>" +
+      '<div class="seg" id="m-seg"><button type="button" data-m="sell"' + (free ? "" : ' class="on"') + '>Sell</button><button type="button" data-m="free"' + (free ? ' class="on"' : "") + ">Free</button></div>" +
+      '<div id="m-sell" style="margin-top:14px"' + (free ? " hidden" : "") + '><div class="input-prefix" style="max-width:220px"><span class="pre">' + esc(C.CURRENCY) + '</span><input class="input mono" id="m-price" type="number" step="0.01" inputmode="decimal"></div>' +
+      '<p class="small muted" style="margin-top:6px">' + App.money(C.MIN_PRICE) + " to " + App.money(C.MAX_PRICE) + "</p></div>" +
+      '<div class="row" style="margin-top:18px"><button class="btn btn-primary" id="m-save">Save</button><button class="btn btn-ghost" id="m-cancel">Cancel</button></div>');
+    let m = free ? "free" : "sell";
+    bg.querySelector("#m-price").value = (+t.price > 0 ? +t.price : +seller.default_price || 1.29).toFixed(2);
+    bg.querySelector("#m-seg").onclick = (e) => {
+      const b = e.target.closest("button"); if (!b) return; m = b.dataset.m;
+      bg.querySelectorAll("#m-seg button").forEach((x) => x.classList.toggle("on", x === b));
+      bg.querySelector("#m-sell").hidden = m !== "sell";
+    };
+    bg.querySelector("#m-cancel").onclick = () => bg.remove();
+    bg.querySelector("#m-save").onclick = async () => {
+      const price = m === "free" ? 0 : +(+bg.querySelector("#m-price").value).toFixed(2);
+      if (m === "sell" && !(price >= C.MIN_PRICE && price <= C.MAX_PRICE)) return App.toast("Price must be " + App.money(C.MIN_PRICE) + " to " + App.money(C.MAX_PRICE), true);
+      const { error } = await sb.from("tracks").update({ price }).eq("id", t.id);
+      if (error) return App.toast(error.message, true);
+      bg.remove(); App.toast(price ? "Price set to " + App.money(price) : "Now a free download"); loadTracks();
+    };
+  }
+  function openEdit(t) {
+    const bg = modal(
+      '<div class="label">Edit track</div>' +
+      '<div class="stack" style="margin-top:12px">' +
+        '<label class="field"><span>Title</span><input class="input" id="e-title" maxlength="100"></label>' +
+        '<label class="field"><span>Genre</span><input class="input" id="e-genre" maxlength="40"></label>' +
+        '<label class="field"><span>Description</span><textarea class="input" id="e-desc" maxlength="1000"></textarea></label>' +
+        '<div class="row"><button class="btn btn-primary" id="e-save">Save</button><button class="btn btn-ghost" id="e-cancel">Cancel</button><span class="spacer"></span>' +
+        '<button class="btn btn-sm" id="e-dl">↓ My ' + App.fileType(t) + "</button></div>" +
+      "</div>");
+    bg.querySelector("#e-title").value = t.title || "";
+    bg.querySelector("#e-genre").value = t.genre || "";
+    bg.querySelector("#e-desc").value = t.description || "";
+    bg.querySelector("#e-cancel").onclick = () => bg.remove();
+    bg.querySelector("#e-dl").onclick = (e) => App.download(t, e.currentTarget);
+    bg.querySelector("#e-save").onclick = async () => {
+      const title = bg.querySelector("#e-title").value.trim();
+      if (!title) return App.toast("Give it a title.", true);
+      const { error } = await sb.from("tracks").update({ title: title.slice(0, 100), genre: bg.querySelector("#e-genre").value.trim() || null, description: bg.querySelector("#e-desc").value.trim() || null }).eq("id", t.id);
+      if (error) return App.toast(error.message, true);
+      bg.remove(); App.toast("Saved"); loadTracks();
+    };
+  }
+
+  // ── selling ────────────────────────────────────────────────
+  let seller = null;
+  async function loadSelling() {
+    const { data } = await sb.from("seller_settings").select("legal_name, paypal_email, country, default_price").eq("user_id", uid).maybeSingle();
+    seller = data || null;
+    $("f-name").value = seller ? seller.legal_name : "";
+    $("f-email").value = seller ? seller.paypal_email : (session.user.email || "");
+    $("f-country").value = seller ? seller.country : "";
+    $("f-price").value = (seller ? +seller.default_price : 1.29).toFixed(2);
+    $("f-rights").checked = !!seller;
+    $("f-status").textContent = seller ? "✓ On file. Payouts go to " + seller.paypal_email + "." : "Not filled out yet. You can upload free tracks until you do.";
+    $("split-note").textContent = "You get " + App.artistCut() + "% of every sale (the site keeps " + (+C.PLATFORM_FEE_PERCENT) + "%). Your share is sent to your PayPal in regular payouts.";
+    const s = await sb.rpc("my_sales");
+    if (!s.error && s.data) {
+      const d = s.data;
+      $("s-count").textContent = d.count; $("s-total").textContent = App.money(d.total, d.currency);
+      $("s-paid").textContent = App.money(d.paid, d.currency);
+      $("s-owed").textContent = App.money(+d.owed + +d.processing, d.currency);
+    }
+    const { data: sales } = await sb.from("purchases").select("track_title, amount, artist_share, currency, created_at, payout_status").eq("seller", uid).order("created_at", { ascending: false }).limit(30);
+    const ST = { owed: "WAITING", failed: "WAITING", processing: "SENDING", paid: "PAID ✓" };
+    $("sales").innerHTML = sales && sales.length
+      ? '<div class="list">' + sales.map((r) => '<div class="li"><div class="grow"><b>' + esc(r.track_title) + "</b><span>" + esc(App.timeAgo(r.created_at) + " · sold for " + App.money(r.amount, r.currency) + " · " + ST[r.payout_status]) + "</span></div><b class=\"mono\">+" + esc(App.money(r.artist_share, r.currency)) + "</b></div>").join("") + "</div>"
+      : '<p class="muted small">No sales yet. Share your track links and QR codes.</p>';
+  }
+  $("seller-form").onsubmit = async (e) => {
+    e.preventDefault();
+    const price = +(+$("f-price").value).toFixed(2);
+    if (!(price === 0 || (price >= C.MIN_PRICE && price <= C.MAX_PRICE))) return App.toast("Default price must be " + App.money(C.MIN_PRICE) + " to " + App.money(C.MAX_PRICE), true);
+    if (!$("f-rights").checked) return App.toast("Please confirm you have the rights to the music you sell.", true);
+    $("f-save").disabled = true;
+    const { error } = await sb.from("seller_settings").upsert({
+      user_id: uid, legal_name: $("f-name").value.trim(), paypal_email: $("f-email").value.trim().toLowerCase(),
+      country: $("f-country").value.trim(), default_price: price, owns_rights: true, updated_at: new Date().toISOString(),
+    });
+    $("f-save").disabled = false;
+    if (error) return App.toast(/check constraint/i.test(error.message) ? "Check each field and try again." : error.message, true);
+    App.toast("Seller form saved"); loadSelling();
+  };
+
+  // ── purchases ──────────────────────────────────────────────
+  async function loadPurchases() {
+    const { data } = await sb.from("purchases").select("id, track_id, track_title, amount, currency, created_at, tracks(id, slug, owner, title, cover_path, price, audio_format, profiles!owner(handle, display_name))").eq("buyer", uid).order("created_at", { ascending: false });
+    const rows = data || [];
+    $("n-purchases").textContent = rows.length || "";
+    $("purchases").innerHTML = rows.length
+      ? '<div class="list">' + rows.map((r, i) => {
+          const t = r.tracks;
+          return '<div class="li">' + (t ? '<img alt="" src="' + esc(App.publicUrl(t.cover_path)) + '">' : '<img alt="">') +
+            '<div class="grow"><b>' + (t ? '<a href="' + esc(App.trackLink(t.slug)) + '" style="text-decoration:none">' + esc(r.track_title) + "</a>" : esc(r.track_title)) + "</b>" +
+            "<span>" + esc((t && App.artistName(t.profiles) ? App.artistName(t.profiles) + " · " : "") + App.money(r.amount, r.currency) + " · " + App.timeAgo(r.created_at)) + "</span></div>" +
+            (t ? '<button class="btn btn-sm btn-primary" data-dl="' + i + '">↓ ' + App.fileType(t) + "</button>" : '<span class="small muted mono">REMOVED</span>') + "</div>";
+        }).join("") + "</div>"
+      : '<div class="empty">Nothing bought yet. <a href="explore.html">Find music →</a></div>';
+    $("purchases").querySelectorAll("[data-dl]").forEach((b) => (b.onclick = () => App.download(rows[+b.dataset.dl].tracks, b)));
+  }
+
+  // ── following ──────────────────────────────────────────────
+  async function loadFollowing() {
+    const [{ data }, followers] = await Promise.all([
+      sb.from("follows").select("created_at, profiles!following(id, handle, display_name, avatar_path)").eq("follower", uid).order("created_at", { ascending: false }),
+      App.followerCount(uid),
+    ]);
+    const rows = (data || []).filter((r) => r.profiles && r.profiles.handle);
+    $("n-following").textContent = rows.length || "";
+    $("followers-line").textContent = followers + (followers === 1 ? " person follows" : " people follow") + " you";
+    $("following").innerHTML = rows.length
+      ? '<div class="list">' + rows.map((r) => '<div class="li">' + App.avatarHTML(r.profiles, 44) +
+          '<div class="grow"><b>' + esc(App.artistName(r.profiles)) + "</b><span>@" + esc(r.profiles.handle) + "</span></div>" +
+          '<a class="btn btn-sm" href="' + esc(App.profileLink(r.profiles.handle)) + '">View</a></div>').join("") + "</div>"
+      : '<div class="empty">You\'re not following anyone yet. Find artists on <a href="explore.html">Explore</a>.</div>';
+  }
+
+  sb.rpc("unread_count").then(({ data }) => { if (data > 0) { $("msgs-count").hidden = false; $("msgs-count").textContent = data > 99 ? "99+" : data; } });
+  App.callFunction("am_admin").then((r) => { if (r.admin) $("admin-link").hidden = false; }).catch(() => {});
+  await Promise.all([loadProfile(), loadSelling(), loadTracks(), loadPurchases(), loadFollowing()]);
+})();
+</script>
+</body>
+</html>

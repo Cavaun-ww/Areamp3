@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>AR · Area MP3</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#000000">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<!-- A-Frame + MindAR load before the page so their elements are ready -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/aframe/1.4.2/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js?v=3"></script>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; font-family: "Chakra Petch", ui-monospace, monospace; color: #f4f4f4; }
+/* no body background: the camera must show through */
+a-scene { position: fixed !important; inset: 0 !important; width: 100% !important; height: 100% !important; z-index: 2; }
+#splash { position: fixed; inset: 0; z-index: 1000; background: #000; display: flex; flex-direction: column; align-items: center; padding: 24px 20px; overflow-y: auto; text-align: center; }
+.inner { margin: auto 0; width: 100%; max-width: 360px; display: flex; flex-direction: column; align-items: center; }
+.brand img { height: 20px; margin-bottom: 22px; }
+#cover { width: 100%; aspect-ratio: 1; object-fit: cover; border: 1px solid #222; margin-bottom: 18px; background: #050505; }
+.label { font-family: "Share Tech Mono", monospace; font-size: .74rem; letter-spacing: .14em; text-transform: uppercase; color: #6e6e6e; }
+h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: .03em; margin-top: 4px; overflow-wrap: anywhere; }
+.by { color: #a9a9a9; margin-top: 2px; }
+.by a { color: inherit; }
+.steps { text-align: left; width: 100%; margin: 20px 0; display: grid; gap: 8px; font-size: .92rem; color: #a9a9a9; }
+.steps span { font-family: "Share Tech Mono", monospace; color: #f4f4f4; margin-right: 8px; }
+.btn { display: block; width: 100%; padding: 15px; border: 1px solid #f4f4f4; background: #f4f4f4; color: #000; font: inherit; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; cursor: pointer; text-decoration: none; border-radius: 4px; }
+.btn.alt { background: transparent; color: #f4f4f4; border-color: #363636; margin-top: 10px; }
+.btn:disabled { background: #141414; color: #6e6e6e; border-color: #222; }
+#status { font-family: "Share Tech Mono", monospace; font-size: .8rem; color: #6e6e6e; margin-top: 10px; min-height: 1.2em; }
+.desk { display: none; margin-top: 18px; width: 100%; border: 1px solid #222; padding: 18px; }
+.desk.show { display: block; }
+.desk p { color: #a9a9a9; font-size: .9rem; margin: 6px 0 14px; }
+#qr { background: #fff; padding: 8px; display: inline-block; }
+body.desktop .steps, body.desktop #start { display: none; }
+.hud { display: none; position: fixed; z-index: 2000; }
+.hud.show { display: flex; }
+#close { top: 16px; right: 16px; width: 44px; height: 44px; border-radius: 50%; border: 1px solid #363636; background: rgba(0,0,0,.7); color: #fff; align-items: center; justify-content: center; font-size: 1rem; cursor: pointer; }
+#hint { left: 50%; bottom: 28px; transform: translateX(-50%); padding: 10px 16px; background: rgba(0,0,0,.75); border: 1px solid #363636; font-family: "Share Tech Mono", monospace; font-size: .82rem; white-space: nowrap; letter-spacing: .08em; }
+#np { left: 12px; right: 72px; top: 16px; align-items: center; gap: 10px; padding: 6px 12px 6px 6px; background: rgba(0,0,0,.75); border: 1px solid #363636; text-decoration: none; color: #fff; }
+#np img { width: 34px; height: 34px; object-fit: cover; }
+#np div { min-width: 0; flex: 1; }
+#np b, #np span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#np b { font-size: .88rem; }
+#np span { font-family: "Share Tech Mono", monospace; font-size: .74rem; color: #a9a9a9; }
+#np em { font-style: normal; font-family: "Share Tech Mono", monospace; font-size: .8rem; border: 1px solid #f4f4f4; padding: 4px 8px; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div id="splash">
+  <div class="inner">
+    <a class="brand" href="index.html"><img src="logo.png" alt="Area MP3"></a>
+    <img id="cover" alt="" hidden>
+    <div class="label" id="lbl">AR</div>
+    <h1 id="title">Loading…</h1>
+    <div class="by" id="by"></div>
+    <div class="steps">
+      <div><span>01</span>Tap Start and allow the camera</div>
+      <div><span>02</span>Point your phone at the cover art</div>
+      <div><span>03</span>Turn your sound up and listen</div>
+    </div>
+    <button class="btn" id="start" disabled>Loading…</button>
+    <a class="btn alt" id="buy" href="#">Buy the song</a>
+    <div id="status"></div>
+    <div class="desk" id="desk">
+      <div class="label">Open on your phone</div>
+      <p>AR uses your phone's camera. Scan this code with your phone, then point it at the cover above.</p>
+      <div id="qr"></div>
+    </div>
+  </div>
+</div>
+
+<button class="hud" id="close" aria-label="Close camera">✕</button>
+<div class="hud" id="hint">POINT AT THE COVER</div>
+<a class="hud" id="np" href="#"><img alt=""><div><b></b><span></span></div><em>BUY</em></a>
+
+<script>
+(function () {
+  var C = window.APP_CONFIG;
+  var $ = function (id) { return document.getElementById(id); };
+  var sb = window.supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY, { auth: { persistSession: true } });
+  var slug = new URLSearchParams(location.search).get("s") || "";
+  var t = null, audio = null, video = null;
+  function pub(p) { return p ? sb.storage.from("media").getPublicUrl(p).data.publicUrl : ""; }
+  function status(m) { $("status").textContent = m || ""; }
+  function money(n) { try { return new Intl.NumberFormat(undefined, { style: "currency", currency: (t && t.currency) || C.CURRENCY || "USD" }).format(n); } catch (e) { return "$" + (+n).toFixed(2); } }
+  var trackUrl = function () { return "t.html?s=" + encodeURIComponent(slug); };
+
+  var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.userAgent));
+  if (!isMobile) {
+    document.body.classList.add("desktop"); $("desk").classList.add("show");
+    var s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
+    s.onload = function () { new QRCode($("qr"), { text: location.href, width: 160, height: 160, colorDark: "#000", colorLight: "#fff" }); };
+    document.head.appendChild(s);
+  }
+
+  (async function load() {
+    if (typeof AFRAME === "undefined") { status("AR library failed to load. Refresh to try again."); return; }
+    var r = await sb.from("tracks").select("id, slug, title, price, currency, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, profiles!owner(handle, display_name)").eq("slug", slug).maybeSingle();
+    if (r.error || !r.data) { $("title").textContent = "Track not found"; $("start").textContent = "Unavailable"; $("buy").hidden = true; return; }
+    t = r.data;
+    var p = t.profiles || {}, name = p.display_name || (p.handle ? "@" + p.handle : "");
+    document.title = t.title + " · AR · " + C.SITE_NAME;
+    $("title").textContent = t.title;
+    $("lbl").textContent = "AR · " + (+t.price > 0 ? money(t.price) : "FREE");
+    if (p.handle) { var a = document.createElement("a"); a.href = "u.html?h=" + encodeURIComponent(p.handle); a.textContent = name; $("by").appendChild(a); }
+    $("cover").src = pub(t.cover_path); $("cover").hidden = false;
+    $("buy").href = trackUrl() + "&buy=1";
+    $("buy").textContent = +t.price > 0 ? "Buy the song · " + money(t.price) : "Download free";
+    $("np").href = trackUrl() + "&buy=1";
+    $("np").querySelector("img").src = pub(t.cover_path);
+    $("np").querySelector("b").textContent = t.title;
+    $("np").querySelector("span").textContent = (name ? name + " · " : "") + "PREVIEW";
+    $("np").querySelector("em").textContent = +t.price > 0 ? "BUY " + money(t.price) : "FREE";
+    if (!t.mind_path) { $("start").textContent = "AR isn't set up for this track"; status("The artist didn't make this cover scannable."); return; }
+    $("start").textContent = "Start camera";
+    $("start").disabled = !isMobile;
+  })();
+
+  // bars that dance over the cover when there's no music video
+  function EqTexture() {
+    var cv = document.createElement("canvas"); cv.width = cv.height = 512;
+    // (drawn, not measured: routing the song through Web Audio can mute it on some phones)
+    var ctx = cv.getContext("2d"), tex = new THREE.CanvasTexture(cv);
+    this.texture = tex;
+    this.draw = function (time) {
+      ctx.clearRect(0, 0, 512, 512);
+      var n = 16, w = 512 / n;
+      for (var i = 0; i < n; i++) {
+        var wob = Math.abs(Math.sin(time / 170 + i * 0.9) * 0.6 + Math.sin(time / 97 + i * 2.1) * 0.4);
+        var v = 0.15 + wob * (audio && !audio.paused ? 0.85 : 0.1);
+        var h = Math.max(6, v * 300);
+        ctx.fillStyle = "rgba(255,255,255,0.88)";
+        ctx.fillRect(i * w + 6, 512 - h - 40, w - 12, h);
+      }
+      ctx.fillStyle = "rgba(0,0,0,.72)"; ctx.fillRect(0, 0, 512, 56);
+      ctx.fillStyle = "#fff"; ctx.font = "600 26px 'Chakra Petch', monospace"; ctx.textBaseline = "middle";
+      ctx.fillText((audio.paused ? "PAUSED  " : "PLAYING  ") + t.title.slice(0, 30), 18, 28);
+      tex.needsUpdate = true;
+    };
+  }
+
+  if (typeof AFRAME !== "undefined") {
+    AFRAME.registerComponent("song-overlay", {
+      init: function () {
+        var self = this, el = this.el, target = el.parentNode;
+        var texture, aspect = 1;
+        if (video) { texture = new THREE.VideoTexture(video); aspect = t.video_aspect || 16 / 9; }
+        else { this.eq = new EqTexture(); texture = this.eq.texture; }
+        texture.minFilter = THREE.LinearFilter;
+        var w = 1, h = 1 / aspect; if (aspect < 1) { h = 1; w = aspect; }
+        var mat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false });
+        el.setObject3D("mesh", new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat));
+        this.mat = mat; this.visible = false;
+        target.addEventListener("targetFound", function () {
+          self.visible = true;
+          $("hint").classList.remove("show"); $("np").classList.add("show");
+          audio.play().catch(function () {});
+          if (video) video.play().catch(function () {});
+        });
+        target.addEventListener("targetLost", function () {
+          self.visible = false;
+          $("hint").classList.add("show");
+          audio.pause(); if (video) video.pause();
+        });
+      },
+      tick: function (time) {
+        if (!this.mat) return;
+        if (this.eq) this.eq.draw(time);
+        this.mat.opacity += ((this.visible ? 1 : 0) - this.mat.opacity) * 0.2;
+      },
+    });
+  }
+
+  $("start").onclick = function () {
+    if (!t || !t.mind_path || !isMobile) return;
+    // set up sound inside the tap (phones block it otherwise)
+    audio = new Audio(); audio.loop = true; audio.playsInline = true;
+    if (t.preview_path) {
+      audio.src = pub(t.preview_path);
+      audio.play().then(function () { audio.pause(); audio.currentTime = 0; }).catch(function () {});
+    }
+    if (t.video_path) {
+      video = document.createElement("video");
+      video.src = pub(t.video_path); video.crossOrigin = "anonymous"; video.muted = true; video.loop = true;
+      video.playsInline = true; video.setAttribute("playsinline", ""); video.setAttribute("webkit-playsinline", "");
+      video.style.cssText = "position:fixed;bottom:-9999px;width:1px;height:1px;opacity:0";
+      document.body.appendChild(video);
+      video.play().then(function () { video.pause(); }).catch(function () {});
+    }
+    $("splash").style.display = "none";
+    $("close").classList.add("show"); $("hint").classList.add("show");
+
+    // bring MindAR's camera feed forward as soon as it appears
+    var obs = new MutationObserver(function (ms) {
+      ms.forEach(function (m) { m.addedNodes.forEach(function (n) {
+        if (n.nodeType === 1 && n.tagName === "VIDEO" && n !== video) {
+          [["position", "fixed"], ["top", "0"], ["left", "0"], ["width", "100vw"], ["height", "100vh"], ["object-fit", "cover"], ["z-index", "1"]].forEach(function (kv) { n.style.setProperty(kv[0], kv[1], "important"); });
+          obs.disconnect();
+        }
+      }); });
+    });
+    obs.observe(document.body, { childList: true, subtree: true });
+
+    var scene = document.createElement("a-scene");
+    scene.setAttribute("mindar-image", "imageTargetSrc: " + pub(t.mind_path) + "; maxTrack: 1; uiLoading: no; uiScanning: no; uiError: no; filterMinCF: 0.001; filterBeta: 0.001; warmupTolerance: 5; missTolerance: 5");
+    scene.setAttribute("vr-mode-ui", "enabled: false");
+    scene.setAttribute("device-orientation-permission-ui", "enabled: false");
+    scene.setAttribute("renderer", "colorManagement: true; alpha: true;");
+    scene.setAttribute("embedded", "");
+    var cam = document.createElement("a-camera"); cam.setAttribute("look-controls", "enabled: false"); scene.appendChild(cam);
+    var target = document.createElement("a-entity"); target.setAttribute("mindar-image-target", "targetIndex: 0");
+    var ov = document.createElement("a-entity"); ov.setAttribute("position", "0 0 0.01"); target.appendChild(ov);
+    scene.appendChild(target);
+    scene.addEventListener("loaded", function () { ov.setAttribute("song-overlay", ""); });
+    scene.addEventListener("arError", function () { closeAR(); status("Couldn't start the camera. Check camera permission and try again."); });
+    document.body.appendChild(scene);
+  };
+
+  function closeAR() {
+    var s = document.querySelector("a-scene");
+    if (s) { try { var sys = s.systems["mindar-image-system"]; if (sys) sys.stop(); } catch (e) {} s.remove(); }
+    document.querySelectorAll("video").forEach(function (v) { if (v.srcObject) { v.srcObject.getTracks().forEach(function (tr) { tr.stop(); }); v.remove(); } });
+    if (audio) { audio.pause(); audio = null; }
+    if (video) { video.pause(); video.remove(); video = null; }
+    ["close", "hint", "np"].forEach(function (id) { $(id).classList.remove("show"); });
+    $("splash").style.display = "";
+  }
+  $("close").onclick = closeAR;
+})();
+</script>
+</body>
+</html>

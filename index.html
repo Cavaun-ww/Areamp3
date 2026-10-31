@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{site} — sell your music straight to their phone</title>
+<meta name="description" content="Upload your MP3s or WAVs, set your price, and sell downloads straight to fans' phones. Your cover art plays the song when scanned with a phone camera.">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#000000">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="styles.css?v=3">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js?v=3"></script>
+<script src="app.js?v=3"></script>
+<style>
+  .hero { min-height: min(78vh, 720px); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 60px 20px 50px; border-bottom: 1px solid var(--line); }
+  .hero .logo { width: min(440px, 78vw); margin-bottom: 44px; }
+  .hero .l1, .hero .l2 { font-size: clamp(1.15rem, 3.4vw, 2rem); letter-spacing: .14em; text-transform: uppercase; font-weight: 600; line-height: 1.35; }
+  .hero .l2 { color: var(--muted); }
+  .hero .cta { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 40px; }
+  .hero .boot { font-family: var(--mono); font-size: .8rem; color: var(--dim); margin-top: 26px; letter-spacing: .08em; }
+  .sec { max-width: 1080px; margin: 0 auto; padding: 64px 16px 0; }
+  .sec-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .sec-head h2 { font-size: clamp(1.3rem, 3.4vw, 1.9rem); }
+  .sec-head h2 span { color: var(--muted); }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); }
+  .steps > div { padding: 24px 22px; }
+  .steps > div + div { border-left: 1px solid var(--line); }
+  .steps .n { font-family: var(--mono); color: var(--muted); font-size: .9rem; }
+  .steps h3 { margin: 10px 0 8px; }
+  .steps p { color: var(--text-2); font-size: .95rem; }
+  @media (max-width: 760px) { .steps { grid-template-columns: 1fr; } .steps > div + div { border-left: 0; border-top: 1px solid var(--line); } }
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--line); }
+  .split > div { padding: 26px 24px; }
+  .split > div + div { border-left: 1px solid var(--line); }
+  .split ul { list-style: none; display: grid; gap: 10px; margin-top: 14px; }
+  .split li { color: var(--text-2); display: flex; gap: 10px; }
+  .split li::before { content: ">"; font-family: var(--mono); color: var(--text); }
+  @media (max-width: 760px) { .split { grid-template-columns: 1fr; } .split > div + div { border-left: 0; border-top: 1px solid var(--line); } }
+  .faq { display: grid; gap: 0; border: 1px solid var(--line); }
+  .faq details { padding: 16px 18px; }
+  .faq details + details { border-top: 1px solid var(--line); }
+  .faq summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; gap: 12px; font-weight: 600; letter-spacing: .03em; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after { content: "+"; font-family: var(--mono); color: var(--muted); }
+  .faq details[open] summary::after { content: "−"; }
+  .faq p { margin-top: 10px; color: var(--text-2); }
+  .end { text-align: center; padding: 90px 16px 70px; }
+  .end .l2 { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <section class="hero">
+    <img class="logo" src="logo.png" alt="Area MP3">
+    <div class="l1">Sell your music</div>
+    <div class="l2">straight to their phone</div>
+    <div class="cta">
+      <a class="btn btn-primary btn-lg" href="upload.html">Upload a track</a>
+      <a class="btn btn-lg" href="explore.html">Explore music</a>
+    </div>
+    <div class="boot cursor">MP3 › PRICE › PAID › DOWNLOADED</div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head"><h2>How it works <span>/ 3 steps</span></h2></div>
+    <div class="steps">
+      <div><div class="n">01</div><h3>Upload MP3 or WAV</h3><p>Add the song and its cover art. A 30-second preview is made automatically so fans can listen before they buy.</p></div>
+      <div><div class="n">02</div><h3>Set your price</h3><p>Fill out the seller form once with your PayPal email, then price each song, or make it a free download.</p></div>
+      <div><div class="n">03</div><h3>Fans pay &amp; download</h3><p>They pay with PayPal or any card, right on the page, and the song saves straight to their phone.</p></div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head"><h2>New music <span>/ latest uploads</span></h2><a class="btn btn-sm" href="explore.html">See all →</a></div>
+    <div class="grid" id="latest"><p class="muted mono small">Loading<span class="cursor"></span></p></div>
+  </section>
+
+  <section class="sec">
+    <div class="split">
+      <div>
+        <h3>For artists</h3>
+        <ul>
+          <li>Keep 77.78% of every sale, paid to your PayPal</li>
+          <li>Your own page with followers, likes and comments</li>
+          <li>See every sale on your dashboard</li>
+          <li>Sell MP3 or lossless WAV; full files stay locked until someone pays</li>
+        </ul>
+      </div>
+      <div>
+        <h3>For fans</h3>
+        <ul>
+          <li>Hear a preview before you buy</li>
+          <li>Pay once, download any time from My page</li>
+          <li>Follow, like, comment and message artists</li>
+          <li>Scan the cover art to play the song in AR</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head"><h2>Questions</h2></div>
+    <div class="faq">
+      <details><summary>How do I get paid?</summary><p>You keep 77.78% of every sale and Area MP3 keeps 22.22%. Your share builds up on My page › Selling and is paid out to the PayPal email on your seller form.</p></details>
+      <details><summary>Where does the song go on my phone?</summary><p>It downloads as the file the artist uploaded: an MP3 or a WAV. On iPhone it lands in the Files app under Downloads; on Android it's in your Downloads folder. You can download it again any time from My page › Purchases.</p></details>
+      <details><summary>Can people steal the full song?</summary><p>The full song file is stored privately. The site only plays a short preview, and download links are made one at a time, after payment, and expire in 10 minutes.</p></details>
+      <details><summary>What's the AR part?</summary><p>Your cover art becomes a scannable target. Print it on a poster, flyer or merch; anyone who points their phone at it hears your song and sees your video play right on top of it.</p></details>
+      <details><summary>Can I give songs away?</summary><p>Yes. Set the price to Free and anyone signed in can download it.</p></details>
+    </div>
+  </section>
+
+  <section class="end">
+    <h2 style="font-size:clamp(1.3rem,4vw,2rem)">Made by a human</h2>
+    <h2 class="l2" style="font-size:clamp(1.3rem,4vw,2rem)">Sold by a human</h2>
+    <div style="margin-top:30px"><a class="btn btn-primary btn-lg" href="upload.html">Start selling</a></div>
+  </section>
+</main>
+<footer class="footer"><span id="foot-name"></span> · Content is user-uploaded · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></footer>
+
+<script>
+(async function () {
+  App.mountHeader();
+  const $ = (id) => document.getElementById(id);
+  $("foot-name").textContent = "© " + new Date().getFullYear() + " " + App.C.SITE_NAME;
+  if (!App.configured) { $("latest").innerHTML = '<div class="empty" style="grid-column:1/-1">Tracks show up here once the site is connected.</div>'; return; }
+  try {
+    const { data, error } = await App.sb.from("tracks").select(App.TRACK_COLS).eq("is_published", true).order("created_at", { ascending: false }).limit(8);
+    if (error) throw error;
+    App.registerTracks(data);
+    $("latest").innerHTML = data.length ? data.map((t) => App.trackCard(t)).join("")
+      : '<div class="empty" style="grid-column:1/-1">No tracks yet. <a href="upload.html">Be the first →</a></div>';
+  } catch (e) {
+    $("latest").innerHTML = '<div class="empty" style="grid-column:1/-1"><a href="explore.html">See music on Explore →</a></div>';
+  }
+})();
+</script>
+</body>
+</html>

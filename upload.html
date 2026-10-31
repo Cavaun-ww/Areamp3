@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Upload · {site}</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#000000">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="styles.css?v=3">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js?v=3"></script>
+<script src="app.js?v=3"></script>
+<style>
+  .wave { width: 100%; height: 64px; display: block; background: #050505; border: 1px solid var(--line); margin-top: 12px; }
+  .rng { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: .82rem; color: var(--text-2); }
+  .rng input { width: 100%; accent-color: #fff; }
+  .sell-box { margin-top: 14px; display: grid; gap: 14px; }
+  .seller-form { border: 1px solid var(--line-2); padding: 16px; display: grid; gap: 12px; background: #070707; }
+  .cover-drop .preview { aspect-ratio: 1; object-fit: cover; max-width: 280px; margin: 0 auto; }
+  .ar-row { display: flex; gap: 12px; align-items: flex-start; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div id="loading" class="muted mono" style="text-align:center;padding:60px 0">Loading<span class="cursor"></span></div>
+
+  <div id="creator" hidden>
+    <div style="margin-bottom:20px">
+      <div class="label">New release</div>
+      <h1 style="font-size:1.8rem;margin-top:4px">Upload a track</h1>
+    </div>
+
+    <!-- 01 MP3 -->
+    <div class="card">
+      <div class="step-head"><span class="step-num" id="n1">01</span><div><div class="step-title">The song</div><div class="step-sub">Your finished MP3 or WAV. Buyers get this exact file.</div></div></div>
+      <div class="drop" id="drop-mp3">
+        <input type="file" id="file-mp3" accept="audio/mpeg,.mp3,audio/wav,audio/x-wav,audio/wave,.wav">
+        <div class="empty-state"><div class="icon">[ MP3 / WAV ]</div><div>Drop your song here or <span class="browse">browse</span></div><div class="hint">MP3 UP TO <span class="js-mp3mb"></span> MB · WAV UP TO <span class="js-wavmb"></span> MB</div></div>
+      </div>
+      <div id="preview-box" hidden>
+        <div class="label" style="margin-top:16px">Free preview · <span class="js-prev"></span> seconds</div>
+        <canvas class="wave" id="wave" width="1200" height="128"></canvas>
+        <div class="rng"><span>START</span><input type="range" id="prev-start" min="0" step="1" value="0"><span id="prev-start-t">0:00</span></div>
+        <div class="row" style="margin-top:10px"><button class="btn btn-sm" type="button" id="prev-listen">Listen to preview</button><span class="small muted">This is what everyone hears before they buy.</span></div>
+      </div>
+      <p class="small muted" id="no-preview" hidden style="margin-top:12px">This device couldn't read the song to make a preview. It will still upload; the track page just won't have a preview player.</p>
+    </div>
+
+    <!-- 02 Cover -->
+    <div class="card">
+      <div class="step-head"><span class="step-num" id="n2">02</span><div><div class="step-title">Cover art</div><div class="step-sub">Square works best. It also becomes the AR target fans can scan.</div></div></div>
+      <div class="drop cover-drop" id="drop-img">
+        <input type="file" id="file-img" accept="image/jpeg,image/png,image/webp">
+        <div class="empty-state"><div class="icon">[ IMG ]</div><div>Drop cover art here or <span class="browse">browse</span></div><div class="hint">JPG · PNG · WEBP</div></div>
+      </div>
+    </div>
+
+    <!-- 03 Details -->
+    <div class="card">
+      <div class="step-head"><span class="step-num" id="n3">03</span><div><div class="step-title">Details</div><div class="step-sub">How the track shows up on your page and Explore.</div></div></div>
+      <div class="stack">
+        <label class="field"><span>Title</span><input class="input" id="title" maxlength="100" placeholder="Track name"></label>
+        <div class="grid2">
+          <label class="field"><span>Genre</span>
+            <select class="input" id="genre">
+              <option value="">Choose…</option>
+              <option>Hip-Hop</option><option>R&amp;B</option><option>Pop</option><option>Rock</option><option>Electronic</option>
+              <option>House</option><option>Afrobeats</option><option>Latin</option><option>Reggae</option><option>Jazz</option>
+              <option>Soul</option><option>Gospel</option><option>Country</option><option>Indie</option><option>Lo-fi</option>
+              <option>Instrumental</option><option>Spoken Word</option><option>Other</option>
+            </select>
+          </label>
+          <div class="field"><span>Your page</span><div class="input mono small" id="handle-box" style="color:var(--text-2);overflow-wrap:anywhere">…</div></div>
+        </div>
+        <label class="field"><span>Description (optional)</span><textarea class="input" id="desc" maxlength="1000" placeholder="Credits, story, features…"></textarea></label>
+      </div>
+    </div>
+
+    <!-- 04 Price -->
+    <div class="card">
+      <div class="step-head"><span class="step-num" id="n4">04</span><div><div class="step-title">Price</div><div class="step-sub">Sell the download, or give it away free.</div></div></div>
+      <div class="seg" id="mode-seg"><button type="button" data-m="sell" class="on">Sell</button><button type="button" data-m="free">Free</button></div>
+      <div class="sell-box" id="sell-box">
+        <label class="field"><span>Price per download</span>
+          <div class="input-prefix" style="max-width:220px"><span class="pre js-cur">USD</span><input class="input mono" id="price" type="number" inputmode="decimal" step="0.01"></div>
+          <span class="small muted" style="display:block;margin-top:6px" id="price-hint"></span>
+        </label>
+        <div class="seller-form" id="seller-form" hidden>
+          <div><h3>Seller form</h3><p class="small muted" style="margin-top:4px">One time only. Your earnings are paid out to this PayPal. Only you can see it.</p></div>
+          <label class="field"><span>Legal name</span><input class="input" id="s-name" maxlength="100" autocomplete="name"></label>
+          <label class="field"><span>PayPal email (where you get paid)</span><input class="input" id="s-email" type="email" maxlength="200" autocomplete="email"></label>
+          <label class="field"><span>Country</span><input class="input" id="s-country" maxlength="60" autocomplete="country-name"></label>
+          <p class="small muted">No PayPal yet? Make a free account at paypal.com with this email first, or payments can't reach you.</p>
+        </div>
+        <div class="note small" id="seller-ok" hidden></div>
+      </div>
+      <label class="check" style="margin-top:16px"><input type="checkbox" id="rights"> <span>I wrote, own, or have the rights to sell this music, including any samples.</span></label>
+    </div>
+
+    <!-- 05 AR -->
+    <div class="card">
+      <div class="step-head"><span class="step-num" id="n5">05</span><div><div class="step-title">AR (optional)</div><div class="step-sub">Fans point their phone at your cover and the song plays.</div></div></div>
+      <label class="check"><input type="checkbox" id="ar-on" checked> <span>Make my cover art scannable. Takes 10–40 seconds when you publish.</span></label>
+      <div id="ar-video-box" style="margin-top:14px">
+        <div class="drop" id="drop-vid" style="min-height:120px;padding:22px">
+          <input type="file" id="file-vid" accept="video/mp4,video/webm,video/quicktime">
+          <div class="empty-state"><div class="icon">[ MP4 ]</div><div>Add a music video to play on the cover (optional)</div><div class="hint">MP4 · UP TO <span class="js-vidmb"></span> MB · SOUND COMES FROM THE SONG</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <button class="btn btn-primary btn-lg btn-block" id="publish">Publish track</button>
+      <div id="progress-wrap" hidden style="margin-top:14px">
+        <div class="progress"><div id="bar"></div></div>
+        <p class="small muted mono" id="progress-msg" style="margin-top:8px"></p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+(async function () {
+  App.mountHeader("upload");
+  const C = App.C, sb = App.sb, $ = (id) => document.getElementById(id);
+  document.querySelectorAll(".js-mp3mb").forEach((e) => (e.textContent = C.MAX_MP3_MB));
+  document.querySelectorAll(".js-wavmb").forEach((e) => (e.textContent = C.MAX_WAV_MB || 50));
+  document.querySelectorAll(".js-vidmb").forEach((e) => (e.textContent = C.MAX_VIDEO_MB));
+  document.querySelectorAll(".js-prev").forEach((e) => (e.textContent = C.PREVIEW_SECONDS));
+  document.querySelectorAll(".js-cur").forEach((e) => (e.textContent = C.CURRENCY));
+  $("price-hint").textContent = App.money(C.MIN_PRICE) + " to " + App.money(C.MAX_PRICE) + ". You get " + App.artistCut() + "% of every sale, paid out to your PayPal.";
+
+  const session = await App.requireAuth();
+  const uid = session.user.id;
+  let handle = null, seller = null;
+  try {
+    handle = await App.ensureHandle(session);
+    const r = await sb.from("seller_settings").select("paypal_email, legal_name, country, default_price").eq("user_id", uid).maybeSingle();
+    seller = r.data || null;
+  } catch (e) { App.toast(e.message, true); }
+  $("loading").hidden = true; $("creator").hidden = false;
+  $("handle-box").textContent = handle ? App.siteRoot.replace(/^https?:\/\//, "") + "u.html?h=" + handle : "…";
+  $("price").value = (seller ? +seller.default_price || 1.29 : 1.29).toFixed(2);
+  if (seller) {
+    $("seller-ok").hidden = false;
+    $("seller-ok").textContent = "PAYOUTS › " + seller.paypal_email + "  (change in My page › Selling)";
+  } else {
+    $("seller-form").hidden = false;
+    $("s-email").value = session.user.email || "";
+  }
+
+  // sell / free
+  let mode = "sell";
+  $("mode-seg").onclick = (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    mode = b.dataset.m;
+    $("mode-seg").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+    $("sell-box").hidden = mode !== "sell";
+  };
+  $("ar-on").onchange = () => ($("ar-video-box").hidden = !$("ar-on").checked);
+
+  function wireDrop(dropId, inputId, onFile) {
+    const drop = $(dropId), input = $(inputId);
+    ["dragenter", "dragover"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+    ["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, () => drop.classList.remove("over")));
+    drop.addEventListener("drop", (e) => { e.preventDefault(); if (e.dataTransfer.files[0]) onFile(e.dataTransfer.files[0]); });
+    input.addEventListener("change", () => input.files[0] && onFile(input.files[0]));
+  }
+  function showPreview(dropId, node, meta) {
+    const drop = $(dropId);
+    drop.classList.add("has-file");
+    drop.querySelector(".empty-state").hidden = true;
+    drop.querySelectorAll(".preview,.file-meta").forEach((n) => n.remove());
+    if (node) { node.classList.add("preview"); drop.append(node); }
+    const m = document.createElement("div"); m.className = "file-meta"; m.textContent = meta + " · tap to change";
+    drop.append(m);
+  }
+  const done = (id) => { $(id).classList.add("done"); };
+
+  // ── 01 MP3 + preview clip ──────────────────────────────────────
+  let mp3 = null;      // { file, duration, format: "mp3" | "wav" }
+  let pcm = null;      // decoded AudioBuffer for the preview
+  const PREV = C.PREVIEW_SECONDS || 30;
+  wireDrop("drop-mp3", "file-mp3", async (file) => {
+    const isWav = /^audio\/(wav|x-wav|wave|vnd\.wave)$/.test(file.type) || /\.wav$/i.test(file.name);
+    const isMp3 = !isWav && (/^audio\/(mpeg|mp3)$/.test(file.type) || /\.mp3$/i.test(file.name));
+    if (!isWav && !isMp3) return App.toast("Please choose an MP3 or WAV file.", true);
+    const maxMb = isWav ? (C.MAX_WAV_MB || 50) : C.MAX_MP3_MB;
+    if (file.size > maxMb * 1048576) return App.toast(isWav
+      ? "That WAV is over " + maxMb + " MB (about " + Math.floor(maxMb / 10.1) + " minutes at CD quality). Export it as 16-bit / 44.1 kHz, or upload an MP3."
+      : "That MP3 is over " + maxMb + " MB. Export at 320 kbps or lower.", true);
+    mp3 = { file, duration: 0, format: isWav ? "wav" : "mp3" }; pcm = null;
+    showPreview("drop-mp3", null, file.name + " · " + (file.size / 1048576).toFixed(1) + " MB · reading…");
+    done("n1");
+    if (!$("title").value) $("title").value = file.name.replace(/\.(mp3|wav)$/i, "").replace(/[_]+/g, " ").slice(0, 100);
+    $("preview-box").hidden = true; $("no-preview").hidden = true;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      const ac = new AC();
+      const buf = await file.arrayBuffer();
+      pcm = await new Promise((ok, no) => { const p = ac.decodeAudioData(buf, ok, no); if (p && p.catch) p.catch(no); });
+      ac.close && ac.close();
+      mp3.duration = pcm.duration;
+      showPreview("drop-mp3", null, file.name + " · " + App.fmtTime(pcm.duration) + " · " + (file.size / 1048576).toFixed(1) + " MB");
+      const maxStart = Math.max(0, Math.floor(pcm.duration - PREV));
+      $("prev-start").max = maxStart;
+      $("prev-start").value = Math.min(maxStart, pcm.duration > 90 ? 45 : 0); // skip the intro on longer songs
+      $("preview-box").hidden = false;
+      drawWave(); updStart();
+    } catch (e) {
+      console.warn("decode failed", e);
+      $("no-preview").hidden = false;
+      const a = new Audio(); a.preload = "metadata"; a.src = URL.createObjectURL(file);
+      a.onloadedmetadata = () => { mp3.duration = a.duration || 0; showPreview("drop-mp3", null, file.name + " · " + App.fmtTime(a.duration) + " · " + (file.size / 1048576).toFixed(1) + " MB"); };
+    }
+  });
+  function drawWave() {
+    const cv = $("wave"), ctx = cv.getContext("2d"), d = pcm.getChannelData(0), W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    const step = Math.max(1, Math.floor(d.length / W)), s = +$("prev-start").value, k = W / pcm.duration;
+    ctx.fillStyle = "rgba(255,255,255,.08)"; ctx.fillRect(s * k, 0, PREV * k, H);
+    for (let x = 0; x < W; x++) {
+      let m = 0; for (let i = x * step, e = i + step; i < e; i += 8) { const v = Math.abs(d[i] || 0); if (v > m) m = v; }
+      const inside = x >= s * k && x <= (s + PREV) * k;
+      ctx.fillStyle = inside ? "#f4f4f4" : "#3a3a3a";
+      const h = Math.max(1, m * H * 0.92); ctx.fillRect(x, (H - h) / 2, 1, h);
+    }
+  }
+  function updStart() { $("prev-start-t").textContent = App.fmtTime(+$("prev-start").value) + "–" + App.fmtTime(Math.min(pcm.duration, +$("prev-start").value + PREV)); drawWave(); }
+  $("prev-start").addEventListener("input", updStart);
+  let previewAudio = null;
+  $("prev-listen").onclick = () => {
+    if (previewAudio && !previewAudio.paused) { previewAudio.pause(); $("prev-listen").textContent = "Listen to preview"; return; }
+    previewAudio = previewAudio || new Audio(URL.createObjectURL(mp3.file));
+    const s = +$("prev-start").value;
+    previewAudio.currentTime = s; previewAudio.play();
+    $("prev-listen").textContent = "Stop";
+    previewAudio.ontimeupdate = () => { if (previewAudio.currentTime >= s + PREV) { previewAudio.pause(); $("prev-listen").textContent = "Listen to preview"; } };
+  };
+
+  // makes a small MP3 of the chosen part, with a short fade in and out
+  let lame = null;
+  function loadLame() {
+    if (window.lamejs) return Promise.resolve(window.lamejs);
+    return lame || (lame = new Promise((ok, no) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js";
+      s.onload = () => ok(window.lamejs); s.onerror = () => no(new Error("Couldn't load the preview maker."));
+      document.head.appendChild(s);
+    }));
+  }
+  async function makePreview(onPct) {
+    const L = await loadLame();
+    const rate = pcm.sampleRate, ch = Math.min(2, pcm.numberOfChannels);
+    const s0 = Math.floor(+$("prev-start").value * rate), n = Math.min(Math.floor(PREV * rate), pcm.length - s0);
+    const fade = Math.floor(rate * 1.2);
+    const toInt = (data) => {
+      const out = new Int16Array(n);
+      for (let i = 0; i < n; i++) {
+        let g = 1; if (i < fade) g = i / fade; else if (i > n - fade) g = (n - i) / fade;
+        const v = Math.max(-1, Math.min(1, data[s0 + i] * g));
+        out[i] = v < 0 ? v * 0x8000 : v * 0x7fff;
+      }
+      return out;
+    };
+    const left = toInt(pcm.getChannelData(0)), right = ch > 1 ? toInt(pcm.getChannelData(1)) : null;
+    const enc = new L.Mp3Encoder(ch, rate, 128), chunks = [], BLOCK = 1152 * 20;
+    for (let i = 0; i < n; i += BLOCK) {
+      const l = left.subarray(i, i + BLOCK);
+      const mp = right ? enc.encodeBuffer(l, right.subarray(i, i + BLOCK)) : enc.encodeBuffer(l);
+      if (mp.length) chunks.push(new Uint8Array(mp));
+      if (i % (BLOCK * 10) === 0) { onPct(i / n); await new Promise((r) => setTimeout(r, 0)); }
+    }
+    const end = enc.flush(); if (end.length) chunks.push(new Uint8Array(end));
+    return new Blob(chunks, { type: "audio/mpeg" });
+  }
+
+  // ── 02 cover ───────────────────────────────────────────────────
+  let cover = null; // { blob, el }
+  wireDrop("drop-img", "file-img", async (file) => {
+    try {
+      if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error("Please choose a JPG, PNG or WebP image.");
+      if (file.size > C.MAX_IMAGE_MB * 1048576) throw new Error("That image is too big. Try one under " + C.MAX_IMAGE_MB + " MB.");
+      const blob = await App.squareJpeg(file, 1200);
+      const el = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = URL.createObjectURL(blob); });
+      cover = { blob, el };
+      const p = new Image(); p.src = el.src; p.alt = "";
+      showPreview("drop-img", p, el.naturalWidth + "×" + el.naturalHeight);
+      done("n2");
+    } catch (e) { App.toast(e.message, true); }
+  });
+
+  // ── 05 optional AR video ───────────────────────────────────────
+  let vid = null; // { file, w, h }
+  wireDrop("drop-vid", "file-vid", (file) => {
+    if (!/^video\//.test(file.type)) return App.toast("Please choose a video (MP4 works on every phone).", true);
+    if (file.size > C.MAX_VIDEO_MB * 1048576) return App.toast("That video is over " + C.MAX_VIDEO_MB + " MB. Export a shorter or smaller clip.", true);
+    const v = document.createElement("video");
+    v.muted = true; v.playsInline = true; v.loop = true; v.autoplay = true; v.setAttribute("playsinline", "");
+    v.onloadedmetadata = () => { vid = { file, w: v.videoWidth || 16, h: v.videoHeight || 9 }; showPreview("drop-vid", v, "Video · " + App.fmtTime(v.duration)); done("n5"); };
+    v.onerror = () => App.toast("This browser can't play that video. MP4 (H.264) works everywhere.", true);
+    v.src = URL.createObjectURL(file);
+  });
+
+  // ── publish ────────────────────────────────────────────────────
+  function progress(pct, msg) {
+    $("progress-wrap").hidden = false;
+    $("bar").style.width = Math.max(0, Math.min(100, pct)) + "%";
+    if (msg != null) $("progress-msg").dataset.m = msg;
+    $("progress-msg").textContent = ($("progress-msg").dataset.m || "") + (pct < 100 ? " " + Math.floor(pct) + "%" : "");
+  }
+  async function uploadWithProgress(bucket, path, body, type, onPct) {
+    const { data } = await sb.auth.getSession();
+    const token = data.session ? data.session.access_token : C.SUPABASE_ANON_KEY;
+    const url = C.SUPABASE_URL + "/storage/v1/object/" + bucket + "/" + path.split("/").map(encodeURIComponent).join("/");
+    return new Promise((resolve, reject) => {
+      const x = new XMLHttpRequest();
+      x.open("POST", url);
+      x.setRequestHeader("Authorization", "Bearer " + token);
+      x.setRequestHeader("apikey", C.SUPABASE_ANON_KEY);
+      x.setRequestHeader("Content-Type", type);
+      x.setRequestHeader("cache-control", "max-age=31536000");
+      x.setRequestHeader("x-upsert", "false");
+      x.upload.onprogress = (e) => { if (e.lengthComputable) onPct(e.loaded / e.total); };
+      x.onload = () => {
+        if (x.status >= 200 && x.status < 300) return resolve();
+        let m = "Upload failed (" + x.status + ")";
+        try { const j = JSON.parse(x.responseText); m = j.message || j.error || m; } catch (_) {}
+        reject(new Error(m));
+      };
+      x.onerror = () => reject(new Error("Failed to fetch"));
+      x.send(body);
+    });
+  }
+  async function compileTarget(onPct) {
+    const gl = document.createElement("canvas");
+    if (!(gl.getContext("webgl2") || gl.getContext("webgl"))) throw new Error("no webgl");
+    const mod = await import("https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js");
+    const Compiler = mod.Compiler || (window.MINDAR && window.MINDAR.IMAGE.Compiler);
+    const c = new Compiler();
+    // compile from a 1024px copy: plenty for tracking, and faster on phones
+    const cv = document.createElement("canvas"); cv.width = cv.height = 1024;
+    cv.getContext("2d").drawImage(cover.el, 0, 0, 1024, 1024);
+    await c.compileImageTargets([cv], onPct);
+    return new Blob([await c.exportData()], { type: "application/octet-stream" });
+  }
+
+  function problem() {
+    if (!mp3) return ["Add your song (step 01).", "drop-mp3"];
+    if (!cover) return ["Add cover art (step 02).", "drop-img"];
+    if (!$("title").value.trim()) return ["Give the track a title.", "title"];
+    if (mode === "sell") {
+      const p = +$("price").value;
+      if (!(p >= C.MIN_PRICE && p <= C.MAX_PRICE)) return ["Set a price between " + App.money(C.MIN_PRICE) + " and " + App.money(C.MAX_PRICE) + ".", "price"];
+      if (!seller) {
+        if ($("s-name").value.trim().length < 2) return ["Fill in your legal name on the seller form.", "s-name"];
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test($("s-email").value.trim())) return ["Enter the PayPal email where you get paid.", "s-email"];
+        if ($("s-country").value.trim().length < 2) return ["Enter your country on the seller form.", "s-country"];
+      }
+    }
+    if (!$("rights").checked) return ["Confirm you have the rights to this music.", "rights"];
+    return null;
+  }
+
+  $("publish").onclick = async () => {
+    const m = problem();
+    if (m) {
+      App.toast(m[0], true);
+      const el = $(m[1]); el.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (el.focus && /INPUT|SELECT/.test(el.tagName)) setTimeout(() => el.focus(), 350);
+      return;
+    }
+    const btn = $("publish");
+    btn.disabled = true; btn.textContent = "Publishing…";
+    const uploaded = { media: [], songs: [] };
+    try {
+      // seller form first, so a priced track is allowed
+      if (mode === "sell" && !seller) {
+        progress(1, "Saving seller form…");
+        const s = { user_id: uid, legal_name: $("s-name").value.trim(), paypal_email: $("s-email").value.trim().toLowerCase(), country: $("s-country").value.trim(), default_price: +(+$("price").value).toFixed(2), owns_rights: true };
+        const { error } = await sb.from("seller_settings").upsert(s);
+        if (error) throw error;
+        seller = s;
+      }
+
+      let previewBlob = null;
+      if (pcm) {
+        progress(3, "Making the preview…");
+        try { previewBlob = await makePreview((p) => progress(3 + p * 8, null)); } catch (e) { console.warn(e); }
+      }
+
+      let mindBlob = null;
+      if ($("ar-on").checked) {
+        progress(12, "Making your cover scannable…");
+        try { mindBlob = await compileTarget((p) => progress(12 + p * 0.28, null)); }
+        catch (e) { console.warn("AR compile failed", e); App.toast("AR couldn't be set up on this device. Publishing without it."); }
+      }
+
+      const folder = uid + "/" + crypto.randomUUID();
+      const files = [
+        { bucket: "media", path: folder + "/cover.jpg", body: cover.blob, type: "image/jpeg", msg: "Uploading cover…", from: 40, to: 44 },
+      ];
+      if (previewBlob) files.push({ bucket: "media", path: folder + "/preview.mp3", body: previewBlob, type: "audio/mpeg", msg: "Uploading preview…", from: 44, to: 48 });
+      if (mindBlob) files.push({ bucket: "media", path: folder + "/target.mind", body: mindBlob, type: "application/octet-stream", msg: "Uploading AR target…", from: 48, to: 50 });
+      if (mindBlob && vid) {
+        const ext = (vid.file.name.split(".").pop() || "mp4").toLowerCase().replace(/[^a-z0-9]/g, "") || "mp4";
+        files.push({ bucket: "media", path: folder + "/video." + ext, body: vid.file, type: vid.file.type || "video/mp4", msg: "Uploading video…", from: 50, to: 64 });
+      }
+      files.push(mp3.format === "wav"
+        ? { bucket: "songs", path: folder + "/song.wav", body: mp3.file, type: "audio/wav", msg: "Uploading WAV…", from: 64, to: 97 }
+        : { bucket: "songs", path: folder + "/song.mp3", body: mp3.file, type: "audio/mpeg", msg: "Uploading song…", from: 64, to: 97 });
+      for (const f of files) {
+        progress(f.from, f.msg);
+        await uploadWithProgress(f.bucket, f.path, f.body, f.type, (r) => progress(f.from + (f.to - f.from) * r, null));
+        uploaded[f.bucket].push(f.path);
+      }
+
+      progress(98, "Saving…");
+      const pathOf = (name) => (files.find((f) => f.path.endsWith(name)) || {}).path || null;
+      const row = {
+        owner: uid,
+        title: $("title").value.trim().slice(0, 100),
+        genre: $("genre").value || null,
+        description: $("desc").value.trim() || null,
+        cover_path: pathOf("/cover.jpg"),
+        preview_path: pathOf("/preview.mp3"),
+        audio_path: pathOf("/song." + mp3.format),
+        audio_format: mp3.format,
+        mind_path: pathOf("/target.mind"),
+        video_path: files.find((f) => /\/video\./.test(f.path)) ? files.find((f) => /\/video\./.test(f.path)).path : null,
+        cover_aspect: 1,
+        video_aspect: vid ? vid.w / vid.h : null,
+        duration: Math.round(mp3.duration || 0) || null,
+        file_size: mp3.file.size,
+        price: mode === "sell" ? +(+$("price").value).toFixed(2) : 0,
+        currency: C.CURRENCY || "USD",
+      };
+      const { data, error } = await sb.from("tracks").insert(row).select("slug").single();
+      if (error) throw error;
+      progress(100, "Live ✓");
+      location.replace("t.html?s=" + encodeURIComponent(data.slug) + "&new=1");
+    } catch (e) {
+      console.error(e);
+      if (uploaded.media.length) sb.storage.from("media").remove(uploaded.media);
+      if (uploaded.songs.length) sb.storage.from("songs").remove(uploaded.songs);
+      App.toast(e.message || "Something went wrong", true);
+      btn.disabled = false; btn.textContent = "Publish track";
+    }
+  };
+})();
+</script>
+</body>
+</html>

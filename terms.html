@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terms · {site}</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#000000">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="styles.css?v=3">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js?v=3"></script>
+<script src="app.js?v=3"></script>
+<style>
+  .legal h2 { margin: 28px 0 8px; font-size: 1rem; }
+  .legal p, .legal li { color: var(--text-2); margin-top: 8px; }
+  .legal ul { padding-left: 20px; }
+</style>
+</head>
+<body>
+<main class="wrap legal">
+  <div class="label">Updated October 2026</div>
+  <h1 style="font-size:1.8rem;margin-top:4px">Terms</h1>
+
+  <p><span class="js-site"></span> lets artists upload music, sell MP3 and WAV downloads, and lets fans buy, download and follow artists. By using the site you agree to these terms.</p>
+  <h2>Your account</h2>
+  <p>You're responsible for your account and everything posted from it. You must be old enough to use PayPal in your country to buy or sell.</p>
+  <h2>Uploading and selling</h2>
+  <ul>
+    <li>Only upload music you wrote, own, or have permission to sell, including any samples, beats and cover art.</li>
+    <li>You keep ownership of your music. You give <span class="js-site"></span> permission to store it, show your cover art, play a short preview, and deliver the song file to people who buy or download it.</li>
+    <li>Buyers pay <span class="js-site"></span> through PayPal at the price you set. <span class="js-site"></span> keeps 22.22% of each sale as its fee, and you earn the other 77.78%.</li>
+    <li>Your earnings are paid out to the PayPal email on your seller form. Payouts are sent in batches, not instantly. You are responsible for any taxes on your earnings.</li>
+    <li>If a buyer gets a refund or a chargeback, the artist's share of that sale is removed from what you're owed, or deducted from a later payout.</li>
+    <li>The seller form must be accurate. Payments sent to a wrong PayPal email can't be recovered by us.</li>
+  </ul>
+  <h2>Buying</h2>
+  <ul>
+    <li>When you buy a song you get a personal license to download it and listen to it on your own devices. You may not resell, share or re-upload it.</li>
+    <li>Because downloads are delivered instantly, sales are final unless the file is broken or not as described. Contact the artist or us at <a class="js-mail"></a>; PayPal's buyer protection may also apply.</li>
+    <li>Your purchases stay in My page so you can download them again. If an artist deletes a song, it may no longer be downloadable.</li>
+  </ul>
+  <h2>Comments and messages</h2>
+  <p>Be respectful. You can block anyone, which stops them messaging you and commenting on your tracks, and you can report comments, tracks and people. Artists can delete comments on their own tracks.</p>
+  <h2>Not allowed</h2>
+  <p>Music or images you don't have rights to, hateful or illegal content, impersonating another artist, or trying to get around payments. We can remove content or accounts that break these rules.</p>
+  <h2>Copyright complaints</h2>
+  <p>If your work was uploaded without permission, email <a class="js-mail"></a> with a link to the track and proof you own it, and we'll take it down.</p>
+  <h2>The service</h2>
+  <p>The site is provided as is. We aren't liable for lost sales, downtime, or disputes between buyers and artists beyond what the law requires.</p>
+
+</main>
+<footer class="footer"><a href="index.html">Home</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></footer>
+<script>
+  App.mountHeader();
+  document.querySelectorAll(".js-site").forEach((e) => (e.textContent = App.C.SITE_NAME));
+  document.querySelectorAll(".js-mail").forEach((e) => { e.textContent = App.C.SUPPORT_EMAIL; e.href = "mailto:" + App.C.SUPPORT_EMAIL; });
+</script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in · {site}</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#000000">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="styles.css?v=3">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js?v=3"></script>
+<script src="app.js?v=3"></script>
+<style>
+  .btn-google { width: 100%; background: #fff; color: #111; border-color: #fff; gap: 12px; text-transform: none; letter-spacing: .02em; }
+  .btn-google svg { width: 20px; height: 20px; flex: 0 0 auto; }
+  .or { display: flex; align-items: center; gap: 12px; color: var(--muted); font-family: var(--mono); font-size: .78rem; margin: 18px 0; letter-spacing: .1em; }
+  .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+</style>
+</head>
+<body>
+<main class="wrap" style="max-width:440px">
+  <div class="card">
+    <h2 id="heading">Create account</h2>
+    <p class="muted" style="margin:4px 0 20px" id="why">Upload music, follow artists and keep your downloads.</p>
+    <div class="tabs" role="tablist">
+      <button id="tab-up" class="on" type="button">Sign up</button>
+      <button id="tab-in" type="button">Sign in</button>
+    </div>
+    <button class="btn btn-google" id="google" type="button" hidden>
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
+      <span>Continue with Google</span>
+    </button>
+    <div class="or" id="or" hidden>OR EMAIL</div>
+    <form id="form" class="stack">
+      <label class="field"><span>Email</span><input class="input" type="email" id="email" required autocomplete="email"></label>
+      <label class="field"><span>Password</span><input class="input" type="password" id="password" required minlength="8" autocomplete="new-password"></label>
+      <button class="btn btn-primary btn-block btn-lg" id="submit" type="submit">Create account</button>
+      <p class="small muted" style="text-align:center"><a href="#" id="forgot" hidden>Forgot password?</a></p>
+      <p class="small muted" style="text-align:center">By continuing you agree to the <a href="terms.html">Terms</a> and <a href="privacy.html">Privacy Policy</a>.</p>
+    </form>
+  </div>
+</main>
+<script>
+  App.mountHeader();
+  const params = new URLSearchParams(location.search);
+  const rawNext = params.get("next") || "dashboard.html";
+  const next = /^[a-z0-9_-]+\.html(\?.*)?$/i.test(rawNext) ? rawNext : "dashboard.html"; // stay on this site
+  let mode = params.get("mode") === "in" ? "in" : "up";
+  const $ = (id) => document.getElementById(id);
+  if (/buy=1/.test(next)) $("why").textContent = "Sign in to buy. Your songs stay in My page › Purchases.";
+  else if (/^upload/.test(next)) $("why").textContent = "Sign in to upload and sell your music.";
+
+  function setMode(m) {
+    mode = m;
+    $("tab-up").classList.toggle("on", m === "up");
+    $("tab-in").classList.toggle("on", m === "in");
+    $("heading").textContent = m === "up" ? "Create account" : "Welcome back";
+    $("submit").textContent = m === "up" ? "Create account" : "Sign in";
+    $("password").autocomplete = m === "up" ? "new-password" : "current-password";
+    $("forgot").hidden = m === "up";
+  }
+  if (App.C.GOOGLE_SIGN_IN) {
+    $("google").hidden = false; $("or").hidden = false;
+    $("google").onclick = async () => {
+      $("google").disabled = true;
+      const { error } = await App.sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: App.siteRoot + next } });
+      if (error) { App.toast(error.message, true); $("google").disabled = false; }
+    };
+  }
+  $("tab-up").onclick = () => setMode("up");
+  $("tab-in").onclick = () => setMode("in");
+  setMode(mode);
+  App.getSession().then((s) => { if (s) location.replace(next); });
+
+  $("form").onsubmit = async (e) => {
+    e.preventDefault();
+    const email = $("email").value.trim(), password = $("password").value;
+    $("submit").disabled = true;
+    try {
+      if (mode === "up") {
+        const { data, error } = await App.sb.auth.signUp({ email, password, options: { emailRedirectTo: App.siteRoot + next } });
+        if (error) throw error;
+        if (!data.session) { App.toast("Check your email to confirm your account."); $("submit").disabled = false; return; }
+      } else {
+        const { error } = await App.sb.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+      }
+      location.replace(next);
+    } catch (err) {
+      App.toast(err.message, true);
+      $("submit").disabled = false;
+    }
+  };
+  $("forgot").onclick = async (e) => {
+    e.preventDefault();
+    const email = $("email").value.trim();
+    if (!email) return App.toast("Enter your email first", true);
+    const { error } = await App.sb.auth.resetPasswordForEmail(email, { redirectTo: App.siteRoot + "dashboard.html" });
+    App.toast(error ? error.message : "Password reset email sent", !!error);
+  };
+</script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{site}</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#000000">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="styles.css?v=3">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js?v=3"></script>
+<script src="app.js?v=3"></script>
+<style>
+  .prof { display: flex; gap: 24px; align-items: center; padding: 18px 0 30px; border-bottom: 1px solid var(--line); margin-bottom: 26px; flex-wrap: wrap; }
+  .prof .avatar { width: 120px; height: 120px; font-size: 3rem; }
+  .prof .info { flex: 1; min-width: 240px; }
+  .prof h1 { text-transform: none; letter-spacing: .03em; font-size: clamp(1.6rem, 5vw, 2.4rem); overflow-wrap: anywhere; }
+  .prof .bio { color: var(--text-2); margin-top: 8px; max-width: 560px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .counts { display: flex; gap: 22px; margin-top: 14px; font-family: var(--mono); font-size: .86rem; color: var(--muted); flex-wrap: wrap; }
+  .counts b { color: var(--text); font-weight: 400; font-size: 1.05rem; margin-right: 6px; }
+  .acts { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+  @media (max-width: 520px) { .prof { flex-direction: column; text-align: center; } .counts, .acts { justify-content: center; } .prof .bio { margin-left: auto; margin-right: auto; } }
+</style>
+</head>
+<body>
+<main class="wrap wrap-wide">
+  <div id="content"><p class="muted mono" style="text-align:center;padding:60px 0">Loading<span class="cursor"></span></p></div>
+</main>
+<footer class="footer"><a href="index.html" id="made-with"></a> · <a href="upload.html">Sell your own music</a></footer>
+
+<script>
+(async function () {
+  App.mountHeader();
+  const sb = App.sb, esc = App.esc, $ = (id) => document.getElementById(id);
+  $("made-with").textContent = App.C.SITE_NAME;
+  const handle = (new URLSearchParams(location.search).get("h") || "").toLowerCase();
+  const box = $("content");
+
+  const { data: p } = handle && App.configured
+    ? await sb.from("profiles").select("id, handle, display_name, bio, avatar_path").eq("handle", handle).maybeSingle()
+    : { data: null };
+  if (!p) {
+    box.innerHTML = '<div class="empty"><h2>Artist not found</h2><p class="muted" style="margin:8px 0 18px">There\'s no page at this link.</p><a class="btn btn-primary" href="explore.html">Explore music</a></div>';
+    return;
+  }
+  const name = App.artistName(p);
+  document.title = name + " · " + App.C.SITE_NAME;
+
+  const [{ data: tracks }, followers, following] = await Promise.all([
+    sb.from("tracks").select(App.TRACK_COLS).eq("owner", p.id).eq("is_published", true).order("created_at", { ascending: false }),
+    App.followerCount(p.id),
+    sb.from("follows").select("following", { count: "exact", head: true }).eq("follower", p.id).then((r) => r.count || 0),
+  ]);
+  const list = tracks || [];
+  App.registerTracks(list);
+  let fc = followers;
+
+  box.innerHTML =
+    '<div class="prof">' + App.avatarHTML(p) +
+      '<div class="info">' +
+        '<div class="label">Artist</div>' +
+        "<h1>" + esc(name) + "</h1>" +
+        '<div class="muted mono small">@' + esc(p.handle) + "</div>" +
+        (p.bio ? '<p class="bio">' + esc(p.bio) + "</p>" : "") +
+        '<div class="counts"><span><b id="fc">' + fc + "</b>" + (fc === 1 ? "follower" : "followers") + '</span><span><b>' + following + "</b>following</span><span><b>" + list.length + "</b>" + (list.length === 1 ? "track" : "tracks") + "</span></div>" +
+        '<div class="acts"><button class="btn" id="follow" hidden></button><a class="btn" id="msg" hidden>Message</a><button class="btn" id="share">Share</button><button class="btn btn-ghost" id="block" hidden>Block</button><a class="btn btn-ghost" id="edit" href="dashboard.html" hidden>Edit my page</a></div>' +
+      "</div>" +
+    "</div>" +
+    '<div class="row" style="margin-bottom:14px"><h2>Tracks</h2></div>' +
+    (list.length ? '<div class="grid">' + list.map((t) => App.trackCard(t, { hideArtist: true })).join("") + "</div>"
+                 : '<div class="empty">No tracks yet. Follow to catch the first drop.</div>');
+
+  $("share").onclick = () => App.share(name + " on " + App.C.SITE_NAME, location.href);
+  const s = await App.getSession();
+  const me = s && s.user.id;
+  if (me === p.id) $("edit").hidden = false;
+  else {
+    const to = "messages.html?to=" + encodeURIComponent(p.handle);
+    $("msg").hidden = false; $("msg").href = me ? to : App.signInUrl(to);
+  }
+  if (me && me !== p.id) {
+    let blocked = !!(await sb.from("blocks").select("blocked").eq("blocker", me).eq("blocked", p.id).maybeSingle()).data;
+    const paint = () => ($("block").textContent = blocked ? "Unblock" : "Block");
+    paint(); $("block").hidden = false;
+    $("block").onclick = async () => {
+      if (!blocked && !confirm("Block " + name + "? They won't be able to message you or comment on your tracks.")) return;
+      const r = blocked ? await sb.from("blocks").delete().eq("blocker", me).eq("blocked", p.id) : await sb.from("blocks").insert({ blocker: me, blocked: p.id });
+      if (r.error) return App.toast("Couldn't update that. Try again.", true);
+      blocked = !blocked; paint(); App.toast(blocked ? "Blocked" : "Unblocked");
+    };
+  }
+  App.mountFollow($("follow"), p.id, (d) => {
+    fc = Math.max(0, fc + d);
+    $("fc").textContent = fc;
+    $("fc").nextSibling.textContent = fc === 1 ? "follower" : "followers";
+  });
+})();
+</script>
+</body>
+</html>

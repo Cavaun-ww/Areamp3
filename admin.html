@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Admin · {site}</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<meta name="theme-color" content="#000000">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="styles.css?v=3">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js?v=3"></script>
+<script src="app.js?v=3"></script>
+<style>
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); margin-bottom: 18px; }
+  .stats > div { padding: 14px; border-bottom: 1px solid var(--line); }
+  .stats > div:not(:nth-child(3n+1)) { border-left: 1px solid var(--line); }
+  .stats b { display: block; font-family: var(--mono); font-weight: 400; font-size: 1.4rem; margin-top: 2px; }
+  @media (max-width: 620px) { .stats { grid-template-columns: 1fr 1fr; } .stats > div { border-left: 0 !important; } .stats > div:nth-child(even) { border-left: 1px solid var(--line) !important; } }
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { font-family: var(--mono); font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 400; }
+  td.n { font-family: var(--mono); text-align: right; white-space: nowrap; }
+  th.n { text-align: right; }
+  .tbl { overflow-x: auto; border: 1px solid var(--line); }
+  td .sub { display: block; font-family: var(--mono); font-size: .74rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<main class="wrap wrap-wide">
+  <div class="label">Site owner</div>
+  <h1 style="font-size:1.8rem;margin:4px 0 18px">Admin · Sales &amp; payouts</h1>
+  <div id="content"><p class="muted mono">Loading<span class="cursor"></span></p></div>
+</main>
+<script>
+(async function () {
+  App.mountHeader("me");
+  const $ = (id) => document.getElementById(id), esc = App.esc, box = $("content");
+  await App.requireAuth();
+  let me;
+  try { me = await App.callFunction("am_admin"); } catch (e) { box.innerHTML = '<div class="empty">' + esc(e.message) + "</div>"; return; }
+  if (!me.admin) { box.innerHTML = '<div class="empty">This page is only for the site owner.<br><span class="small muted">Add your email to the ADMIN_EMAILS secret (see README).</span></div>'; return; }
+
+  async function load() {
+    const d = await App.callFunction("admin_overview");
+    const T = d.totals, m = (n) => App.money(n);
+    box.innerHTML =
+      '<div class="stats">' +
+        '<div><span class="label">Sales</span><b>' + T.sales + "</b></div>" +
+        '<div><span class="label">Gross sales</span><b>' + m(T.gross) + "</b></div>" +
+        '<div><span class="label">Your cut · ' + d.fee_percent + '%</span><b>' + m(T.fees) + "</b></div>" +
+        '<div><span class="label">Your cut this month</span><b>' + m(T.month_fees) + "</b></div>" +
+        '<div><span class="label">Owed to artists</span><b>' + m(T.owed) + "</b></div>" +
+        '<div><span class="label">Paid to artists</span><b>' + m(T.paid) + (T.processing ? '<span class="small muted"> +' + m(T.processing) + " sending</span>" : "") + "</b></div>" +
+      "</div>" +
+      '<div class="note" style="margin-bottom:16px">Buyers pay your PayPal. Each sale keeps ' + d.fee_percent + "% for you and owes the rest to the artist. " +
+        "<b>Pay all artists</b> sends every balance of $1 or more through PayPal Payouts from your PayPal balance (PayPal must turn Payouts on for your account first). " +
+        "If you'd rather pay someone yourself, send it in PayPal, then tap <b>Mark paid</b> on their row. PayPal's own fees come out of your cut.</div>" +
+      '<div class="row" style="margin-bottom:18px"><button class="btn btn-primary" id="pay"' + (T.owed >= 1 ? "" : " disabled") + ">Pay all artists · " + m(T.owed) + "</button>" +
+        '<button class="btn" id="refresh"' + (T.processing ? "" : " disabled") + ">Check payout status</button><span class=\"small muted mono\" id=\"msg\"></span></div>" +
+      (d.artists.length
+        ? '<div class="tbl"><table><thead><tr><th>Artist</th><th>Payout PayPal</th><th class="n">Sales</th><th class="n">Owed</th><th class="n">Sending</th><th class="n">Paid</th><th></th></tr></thead><tbody>' +
+          d.artists.map((a) => "<tr><td>" + (a.handle ? '<a href="' + esc(App.profileLink(a.handle)) + '">' + esc(a.name || "@" + a.handle) + "</a>" : esc(a.name || "Deleted account")) + '<span class="sub">' + esc(a.legal_name || "") + "</span></td>" +
+            "<td>" + (a.paypal_email ? esc(a.paypal_email) : '<span class="muted">no seller form</span>') + "</td>" +
+            '<td class="n">' + a.sales + '</td><td class="n">' + m(a.owed) + '</td><td class="n">' + m(a.processing) + '</td><td class="n">' + m(a.paid) + "</td>" +
+            "<td>" + (a.owed > 0 && a.seller ? '<button class="btn btn-sm" data-mark="' + esc(a.seller) + '" data-amt="' + esc(m(a.owed)) + '" data-who="' + esc(a.name || a.handle || "") + '">Mark paid</button>' : "") + "</td></tr>").join("") +
+          "</tbody></table></div>"
+        : '<div class="empty">No sales yet.</div>');
+
+    $("pay").onclick = async () => {
+      if (!confirm("Send " + m(T.owed) + " to artists through PayPal Payouts now? It comes out of your PayPal balance.")) return;
+      $("pay").disabled = true; $("msg").textContent = "Sending…";
+      try {
+        const r = await App.callFunction("payout", { min: 1 });
+        App.toast(r.sent ? "Payout sent to " + r.sent + " artist" + (r.sent === 1 ? "" : "s") + " (" + m(r.total) + ")" : r.message || "Nothing to pay");
+        load();
+      } catch (e) { App.toast(e.message, true); $("pay").disabled = false; $("msg").textContent = ""; }
+    };
+    $("refresh").onclick = async () => {
+      $("refresh").disabled = true;
+      try { const r = await App.callFunction("payout_refresh"); App.toast(r.paid + " paid · " + r.failed + " failed · " + r.waiting + " still sending"); load(); }
+      catch (e) { App.toast(e.message, true); $("refresh").disabled = false; }
+    };
+    box.querySelectorAll("[data-mark]").forEach((b) => (b.onclick = async () => {
+      if (!confirm("Did you already send " + b.dataset.amt + " to " + b.dataset.who + " yourself? This marks their sales as paid.")) return;
+      b.disabled = true;
+      try { const r = await App.callFunction("mark_paid", { seller: b.dataset.mark }); App.toast(r.marked + " sales marked paid"); load(); }
+      catch (e) { App.toast(e.message, true); b.disabled = false; }
+    }));
+  }
+  load().catch((e) => (box.innerHTML = '<div class="empty">' + esc(e.message) + "</div>"));
+})();
+</script>
+</body>
+</html>

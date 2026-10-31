@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{site}</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#000000">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="styles.css?v=3">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js?v=3"></script>
+<script src="app.js?v=3"></script>
+<style>
+  .rel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
+  @media (max-width: 760px) { .rel { grid-template-columns: 1fr; gap: 20px; } }
+  .rel .art { position: relative; aspect-ratio: 1; border: 1px solid var(--line); background: #050505; }
+  .rel .art img { width: 100%; height: 100%; object-fit: cover; }
+  .rel .art .pbtn { position: absolute; right: 16px; bottom: 16px; width: 62px; height: 62px; }
+  .rel .art .pbtn svg { width: 22px; height: 22px; }
+  .rel h1 { font-size: clamp(1.6rem, 4.6vw, 2.5rem); letter-spacing: .04em; text-transform: none; overflow-wrap: anywhere; }
+  .who { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  .who a.name { text-decoration: none; display: flex; align-items: center; gap: 10px; color: var(--text); }
+  .who a.name:hover b { text-decoration: underline; }
+  .price-big { font-family: var(--mono); font-size: 2rem; margin: 22px 0 6px; }
+  .facts { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); margin-top: 20px; }
+  .facts > div { padding: 10px 12px; }
+  .facts > div + div { border-left: 1px solid var(--line); }
+  .facts b { display: block; font-family: var(--mono); font-weight: 400; margin-top: 2px; }
+  .desc { white-space: pre-wrap; color: var(--text-2); margin-top: 20px; overflow-wrap: anywhere; }
+  .banner { border: 1px solid var(--text); padding: 12px 14px; margin-bottom: 22px; font-family: var(--mono); font-size: .88rem; }
+  #like.on { background: var(--text); color: #000; border-color: var(--text); }
+  #like.pop { animation: pop .3s ease; }
+  @keyframes pop { 50% { transform: scale(1.08); } }
+  .comments { margin-top: 48px; max-width: 720px; }
+  .c-form { display: flex; gap: 8px; align-items: flex-end; margin: 14px 0 6px; }
+  .c-form textarea { flex: 1; resize: none; min-height: 46px; max-height: 160px; font-size: 16px; }
+  .need { font-family: var(--mono); font-size: .8rem; color: var(--text-2); min-height: 1.2em; margin-bottom: 8px; }
+  .need a { color: var(--text); }
+  .cm { display: flex; gap: 12px; padding: 14px 0; border-top: 1px solid var(--line); }
+  .cm .main { flex: 1; min-width: 0; }
+  .cm .who { font-size: .86rem; color: var(--text-2); }
+  .cm .who a { color: var(--text); font-weight: 600; text-decoration: none; }
+  .cm .who .when { font-family: var(--mono); color: var(--muted); margin-left: 8px; font-size: .76rem; }
+  .cm .who .tagme { font-family: var(--mono); font-size: .68rem; border: 1px solid var(--line-2); padding: 1px 5px; margin-left: 6px; color: var(--text-2); }
+  .cm .txt { margin-top: 3px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .cm .acts { display: flex; gap: 14px; margin-top: 6px; }
+  .cm .acts button { background: none; border: 0; padding: 0; color: var(--muted); font-family: var(--mono); font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
+  .cm .acts button:hover { color: var(--text); }
+  .cm .cl { font-size: .68rem; letter-spacing: .08em; background: none; border: 0; color: var(--muted); cursor: pointer; font-family: var(--mono); font-size: .8rem; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 0 4px; }
+  .cm .cl.on { color: var(--text); }
+</style>
+</head>
+<body>
+<main class="wrap wrap-wide">
+  <div id="content"><p class="muted mono" style="text-align:center;padding:60px 0">Loading<span class="cursor"></span></p></div>
+  <section id="more-sec" hidden style="margin-top:56px">
+    <div class="row" style="margin-bottom:14px"><h2 id="more-h">More</h2><span class="spacer"></span><a class="btn btn-sm" id="more-all">Artist page →</a></div>
+    <div class="grid" id="more"></div>
+  </section>
+</main>
+
+<div class="modal-bg" id="qr-modal">
+  <div class="modal" style="text-align:center">
+    <div class="label">Scan to open</div>
+    <h3 id="qr-title" style="margin:6px 0 16px"></h3>
+    <div class="qr-box" id="qr-target"></div>
+    <p class="small muted" style="margin:14px 0">Print this next to your cover art on flyers, posters or merch.</p>
+    <div class="row" style="justify-content:center">
+      <a class="btn btn-sm" id="qr-download" download="areamp3-qr.png">Download QR</a>
+      <a class="btn btn-sm" id="qr-cover" target="_blank" download>Cover art</a>
+      <button class="btn btn-sm btn-ghost" id="qr-close">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(async function () {
+  App.mountHeader();
+  const sb = App.sb, esc = App.esc, $ = (id) => document.getElementById(id);
+  const qs = new URLSearchParams(location.search), slug = qs.get("s") || "";
+  const box = $("content");
+  const notFound = () => (box.innerHTML = '<div class="empty"><h2>Track not found</h2><p class="muted" style="margin:8px 0 18px">It may have been removed.</p><a class="btn btn-primary" href="explore.html">Explore music</a></div>');
+  if (!slug || !App.configured) return notFound();
+
+  const { data: t } = await sb.from("tracks").select(App.TRACK_COLS + ", is_published").eq("slug", slug).maybeSingle();
+  if (!t) return notFound();
+  App.registerTracks([t]);
+  const p = t.profiles || {}, name = App.artistName(p);
+  document.title = t.title + (name ? " · " + name : "") + " · " + App.C.SITE_NAME;
+  const session = await App.getSession();
+  const me = session && session.user.id, mine = me === t.owner;
+  const owned = await App.owns(t);
+  const paid = +t.price > 0;
+
+  box.innerHTML =
+    (qs.get("new") ? '<div class="banner">RELEASE IS LIVE ✓ — share the link, or print the QR code with your cover art.</div>' : "") +
+    (!t.is_published ? '<div class="banner">HIDDEN — only you can see this track. Publish it from My page.</div>' : "") +
+    '<div class="rel">' +
+      '<div class="art"><img alt="" src="' + esc(App.publicUrl(t.cover_path)) + '">' + (t.preview_path ? App.playButton(t) : "") + "</div>" +
+      "<div>" +
+        '<div class="label">' + esc(t.genre || "Single") + (t.preview_path ? " · " + App.C.PREVIEW_SECONDS + "s preview" : "") + "</div>" +
+        '<h1 style="margin-top:6px">' + esc(t.title) + "</h1>" +
+        '<div class="who">' +
+          (p.handle ? '<a class="name" href="' + esc(App.profileLink(p.handle)) + '">' + App.avatarHTML(p, 36) + "<b>" + esc(name) + "</b></a>" : "") +
+          '<button class="btn btn-sm" id="follow" hidden></button>' +
+        "</div>" +
+        '<div class="price-big">' + (owned && !mine && paid ? "OWNED ✓" : esc(App.priceLabel(t))) + "</div>" +
+        '<div class="small muted">' + (paid ? App.fileType(t) + " download · pay with PayPal or card · straight to your phone" : "Free " + App.fileType(t) + " download · sign in to save it") + "</div>" +
+        '<div class="stack" style="margin-top:20px">' +
+          '<button class="btn btn-primary btn-lg btn-block" id="buy"></button>' +
+          '<div class="row">' +
+            (t.mind_path ? '<a class="btn" style="flex:1" href="' + esc(App.arLink(t.slug)) + '">Scan cover in AR</a>' : "") +
+            '<button class="btn" style="flex:1" id="share">Share</button>' +
+            '<button class="btn" style="flex:1" id="qr">QR code</button>' +
+          "</div>" +
+          '<div class="row">' +
+            '<button class="btn" style="flex:1" id="like" aria-pressed="false">+ Like · <span id="like-n">' + App.nLikes(t) + "</span></button>" +
+            (mine || !p.handle ? "" : '<a class="btn" style="flex:1" id="msg" href="messages.html?to=' + encodeURIComponent(p.handle) + '">Message ' + esc(name) + "</a>") +
+          "</div>" +
+          '<div class="need" id="soc-need"></div>' +
+        "</div>" +
+        '<div class="facts">' +
+          '<div><span class="label">Length</span><b>' + (t.duration ? App.fmtTime(t.duration) : "—") + "</b></div>" +
+          '<div><span class="label">Format</span><b>' + App.fileType(t) + (t.audio_format === "wav" ? " · lossless" : "") + "</b></div>" +
+          '<div><span class="label">Released</span><b>' + new Date(t.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) + "</b></div>" +
+        "</div>" +
+        (t.description ? '<p class="desc">' + esc(t.description) + "</p>" : "") +
+        (mine ? '<p class="small muted" style="margin-top:18px">This is your track. Change the price or hide it from <a href="dashboard.html#tracks">My page</a>.</p>' : "") +
+        (!mine && me ? '<p class="small" style="margin-top:14px"><a href="#" id="report-track" class="muted">Report this track</a></p>' : "") +
+      "</div>" +
+    "</div>" +
+    '<section class="comments" id="comments">' +
+      '<h2>Comments <span class="muted mono" id="c-n" style="font-size:.9rem"></span></h2>' +
+      '<form class="c-form" id="c-form"><textarea class="input" id="c-input" rows="1" maxlength="500" placeholder="Say something about this track…"></textarea><button class="btn btn-primary" id="c-post" type="submit">Post</button></form>' +
+      '<div class="need" id="c-need"></div>' +
+      '<div id="c-list"></div>' +
+    "</section>";
+
+  const buyBtn = $("buy");
+  const label = () => (mine || owned || !paid ? "↓ Download " + App.fileType(t) : "Buy " + App.money(t.price, t.currency));
+  buyBtn.textContent = label();
+  buyBtn.onclick = () => App.buy(t, () => { $("content").querySelector(".price-big").textContent = "OWNED ✓"; buyBtn.textContent = "↓ Download " + App.fileType(t); });
+  $("share").onclick = () => App.share(t.title + (name ? " — " + name : ""), App.trackLink(t.slug));
+  $("qr").onclick = async () => {
+    $("qr-title").textContent = t.title;
+    $("qr-modal").classList.add("show");
+    await App.renderQR($("qr-target"), t.mind_path ? App.arLink(t.slug) : App.trackLink(t.slug), 220);
+    setTimeout(() => { const c = $("qr-target").querySelector("canvas"); if (c) $("qr-download").href = c.toDataURL("image/png"); }, 50);
+    $("qr-cover").href = App.publicUrl(t.cover_path);
+  };
+  $("qr-close").onclick = () => $("qr-modal").classList.remove("show");
+  $("qr-modal").onclick = (e) => { if (e.target.id === "qr-modal") $("qr-modal").classList.remove("show"); };
+  App.mountFollow($("follow"), t.owner);
+
+  // ── likes, comments, messages ─────────────────────────────────
+  const signIn = (box) => { $(box).innerHTML = '› <a href="' + App.signInUrl("t.html?s=" + encodeURIComponent(slug)) + '">Sign in</a> to like, comment and message.'; };
+  if ($("msg")) $("msg").onclick = (e) => { if (!me) { e.preventDefault(); signIn("soc-need"); } };
+  const setLiked = (on) => {
+    $("like").classList.toggle("on", on); $("like").setAttribute("aria-pressed", on);
+    $("like").firstChild.textContent = (on ? "Liked ✓ · " : "+ Like · ");
+  };
+  if (me) {
+    const { data: l } = await sb.from("likes").select("user_id").eq("user_id", me).eq("track_id", t.id).maybeSingle();
+    setLiked(!!l);
+  }
+  $("like").onclick = async () => {
+    if (!me) return signIn("soc-need");
+    const on = !$("like").classList.contains("on"), n = +$("like-n").textContent;
+    setLiked(on); $("like-n").textContent = Math.max(0, n + (on ? 1 : -1));
+    if (on) { $("like").classList.remove("pop"); void $("like").offsetWidth; $("like").classList.add("pop"); }
+    const r = on ? await sb.from("likes").insert({ user_id: me, track_id: t.id }) : await sb.from("likes").delete().eq("user_id", me).eq("track_id", t.id);
+    if (r.error && !/duplicate/i.test(r.error.message)) { setLiked(!on); $("like-n").textContent = n; App.toast("That didn't save. Try again.", true); }
+  };
+  if ($("report-track")) $("report-track").onclick = async (e) => {
+    e.preventDefault();
+    const why = prompt("What's wrong with this track? (stolen music, offensive cover…)"); if (why === null) return;
+    const { error } = await sb.from("reports").insert({ reporter: me, kind: "track", target_id: t.id, reason: why.slice(0, 500) || null });
+    App.toast(error ? "Couldn't send the report." : "Thanks, we'll take a look.", !!error);
+  };
+
+  let myCL = {};
+  async function loadComments() {
+    const { data } = await sb.from("comments").select("id, body, created_at, user_id, profiles!user_id(handle, display_name, avatar_path), comment_likes(count)")
+      .eq("track_id", t.id).order("created_at", { ascending: true }).limit(300);
+    const list = data || [];
+    myCL = {};
+    if (me && list.length) {
+      const m = await sb.from("comment_likes").select("comment_id").eq("user_id", me).in("comment_id", list.map((c) => c.id));
+      (m.data || []).forEach((x) => (myCL[x.comment_id] = true));
+    }
+    $("c-n").textContent = list.length ? "/ " + list.length : "";
+    $("c-list").innerHTML = list.length ? list.map(commentHTML).join("") : '<p class="muted small" style="padding:10px 0">No comments yet. Be the first.</p>';
+  }
+  function commentHTML(c) {
+    const cp = c.profiles || {}, nm = App.artistName(cp) || "Someone";
+    const link = cp.handle ? App.profileLink(cp.handle) : "#";
+    const n = (c.comment_likes && c.comment_likes[0] && c.comment_likes[0].count) || 0, on = !!myCL[c.id];
+    const canDel = me && (me === c.user_id || mine), canRep = me && me !== c.user_id;
+    return '<div class="cm" data-id="' + c.id + '">' +
+      '<a href="' + esc(link) + '" style="text-decoration:none">' + App.avatarHTML(cp, 36) + "</a>" +
+      '<div class="main"><div class="who"><a href="' + esc(link) + '">' + esc(nm) + "</a>" + (c.user_id === t.owner ? '<span class="tagme">ARTIST</span>' : "") + '<span class="when">' + esc(App.timeAgo(c.created_at)) + "</span></div>" +
+        '<div class="txt">' + esc(c.body) + "</div>" +
+        '<div class="acts">' + (canDel ? '<button data-act="del">Delete</button>' : "") + (canRep ? '<button data-act="report">Report</button>' : "") + "</div></div>" +
+      '<button class="cl' + (on ? " on" : "") + '" data-act="clike" data-n="' + n + '" aria-label="Like comment"><span>' + (on ? "LIKED" : "LIKE") + "</span><span>" + n + "</span></button>" +
+    "</div>";
+  }
+  $("c-list").addEventListener("click", async (e) => {
+    const b = e.target.closest("button[data-act]"); if (!b) return;
+    const id = b.closest(".cm").dataset.id, act = b.dataset.act;
+    if (act === "clike") {
+      if (!me) return signIn("c-need");
+      const on = !b.classList.contains("on"), n = +b.dataset.n + (on ? 1 : -1);
+      b.classList.toggle("on", on); b.dataset.n = n; b.innerHTML = "<span>" + (on ? "LIKED" : "LIKE") + "</span><span>" + n + "</span>"; myCL[id] = on;
+      const r = on ? await sb.from("comment_likes").insert({ user_id: me, comment_id: id }) : await sb.from("comment_likes").delete().eq("user_id", me).eq("comment_id", id);
+      if (r.error && !/duplicate/i.test(r.error.message)) App.toast("Didn't save. Try again.", true);
+    } else if (act === "del") {
+      if (!confirm("Delete this comment?")) return;
+      const d = await sb.from("comments").delete().eq("id", id);
+      if (d.error) return App.toast("Couldn't delete it.", true);
+      loadComments();
+    } else if (act === "report") {
+      const why = prompt("What's wrong with this comment? (optional)"); if (why === null) return;
+      const r = await sb.from("reports").insert({ reporter: me, kind: "comment", target_id: id, reason: why.slice(0, 500) || null });
+      b.textContent = r.error ? "Couldn't report" : "Reported ✓"; b.disabled = true;
+    }
+  });
+  $("c-input").addEventListener("focus", function () { if (!me) { this.blur(); signIn("c-need"); } });
+  $("c-input").addEventListener("input", function () { this.style.height = "auto"; this.style.height = Math.min(this.scrollHeight, 160) + "px"; });
+  $("c-form").onsubmit = async (e) => {
+    e.preventDefault();
+    if (!me) return signIn("c-need");
+    const body = $("c-input").value.trim(); if (!body) return;
+    $("c-post").disabled = true;
+    const r = await sb.from("comments").insert({ track_id: t.id, user_id: me, body: body.slice(0, 500) });
+    $("c-post").disabled = false;
+    if (r.error) return App.toast(/slow down/i.test(r.error.message) ? "Slow down a little, then try again." : /row-level/i.test(r.error.message) ? "You can't comment on this track." : "Didn't post. Try again.", true);
+    $("c-input").value = ""; $("c-input").style.height = "";
+    loadComments();
+  };
+  loadComments();
+  if (location.hash === "#comments") setTimeout(() => $("comments").scrollIntoView(), 300);
+
+  if (qs.get("buy") && session && !mine) { history.replaceState(null, "", "t.html?s=" + encodeURIComponent(slug)); buyBtn.click(); }
+
+  // more from this artist
+  const { data: more } = await sb.from("tracks").select(App.TRACK_COLS).eq("owner", t.owner).eq("is_published", true).neq("id", t.id).order("created_at", { ascending: false }).limit(4);
+  if (more && more.length && p.handle) {
+    App.registerTracks(more);
+    $("more-h").textContent = "More from " + name;
+    $("more-all").href = App.profileLink(p.handle);
+    $("more").innerHTML = more.map((x) => App.trackCard(x, { hideArtist: true })).join("");
+    $("more-sec").hidden = false;
+  }
+})();
+</script>
+</body>
+</html>

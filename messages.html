@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Messages · {site}</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#000000">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="styles.css?v=3">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js?v=3"></script>
+<script src="app.js?v=3"></script>
+<style>
+  .wrap.chat-wrap { max-width: 640px; padding-bottom: 0; }
+  .convo { display: flex; gap: 12px; align-items: center; padding: 12px 10px; text-decoration: none; color: var(--text); border-bottom: 1px solid var(--line); }
+  .convo:hover { background: var(--card); }
+  .convo .mid { flex: 1; min-width: 0; }
+  .convo .nm { font-weight: 600; }
+  .convo .last { color: var(--muted); font-size: .88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .convo.unread .last { color: var(--text); }
+  .convo .side { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; font-family: var(--mono); font-size: .74rem; color: var(--muted); white-space: nowrap; }
+  .new-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text); }
+  .act-line { font-size: .92rem; line-height: 1.35; color: var(--text-2); }
+  .act-line b { color: var(--text); font-weight: 600; }
+  .kind { font-family: var(--mono); font-size: .7rem; letter-spacing: .1em; color: var(--muted); }
+  /* chat */
+  .chat-head { display: flex; align-items: center; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+  .chat-head .back { text-decoration: none; color: var(--text-2); font-family: var(--mono); font-size: 1.2rem; padding-right: 4px; }
+  .chat-head .nm { flex: 1; min-width: 0; }
+  .chat-head .nm a { color: var(--text); text-decoration: none; font-weight: 600; }
+  .chat-head .nm .h { color: var(--muted); font-family: var(--mono); font-size: .78rem; }
+  .thread { display: flex; flex-direction: column; gap: 6px; padding: 16px 0; min-height: 45vh; }
+  .bubble { max-width: 78%; padding: 9px 13px; font-size: .95rem; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid var(--line-2); }
+  .bubble.them { align-self: flex-start; background: var(--card-2); }
+  .bubble.me { align-self: flex-end; background: var(--text); color: #000; border-color: var(--text); }
+  .photo { display: block; max-width: 70%; line-height: 0; border: 1px solid var(--line-2); background: #050505; }
+  .photo.me { align-self: flex-end; } .photo.them { align-self: flex-start; }
+  .photo img { width: 100%; max-height: 360px; min-height: 120px; min-width: 120px; object-fit: cover; }
+  .stamp { align-self: center; font-family: var(--mono); font-size: .72rem; color: var(--muted); margin: 8px 0 2px; }
+  .seen { align-self: flex-end; font-family: var(--mono); font-size: .72rem; color: var(--muted); }
+  .composer { position: sticky; bottom: 0; display: flex; gap: 8px; align-items: flex-end; padding: 12px 0 18px; background: linear-gradient(transparent, #000 30%); }
+  .composer textarea { flex: 1; resize: none; min-height: 46px; max-height: 140px; font-size: 16px; }
+  .pic-btn { flex: 0 0 auto; width: 46px; height: 46px; display: grid; place-items: center; border: 1px solid var(--line-2); cursor: pointer; font-family: var(--mono); color: var(--text-2); border-radius: var(--radius); }
+  .pic-btn:hover { border-color: var(--text); color: var(--text); }
+  .pic-preview { position: relative; width: 96px; margin: 8px 0 0 auto; }
+  .pic-preview img { width: 96px; height: 96px; object-fit: cover; border: 1px solid var(--line-2); }
+  .pic-preview button { position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line-2); background: #000; color: #fff; cursor: pointer; font-size: .75rem; }
+  .notice { text-align: center; color: var(--text-2); padding: 16px; border: 1px dashed var(--line-2); margin: 12px 0 20px; }
+</style>
+</head>
+<body>
+<main class="wrap chat-wrap" id="main"><p class="muted mono" style="text-align:center;padding:60px 0">Loading<span class="cursor"></span></p></main>
+
+<script>
+(async function () {
+  App.mountHeader("me");
+  const sb = App.sb, esc = App.esc, $ = (id) => document.getElementById(id);
+  const session = await App.requireAuth();
+  const me = session.user.id, main = $("main");
+  const to = (new URLSearchParams(location.search).get("to") || "").toLowerCase();
+
+  // ── inbox: chats + activity ────────────────────────────────
+  if (!to) {
+    const startTab = new URLSearchParams(location.search).get("tab") === "activity" ? "activity" : "chats";
+    const [{ data, error }, act] = await Promise.all([sb.rpc("my_conversations"), sb.rpc("my_activity")]);
+    if (error) { main.innerHTML = '<p class="muted" style="text-align:center;padding:40px 0">Couldn\'t load messages: ' + esc(error.message) + "</p>"; return; }
+    const rows = data || [], acts = act.data || [];
+    const chatUnread = rows.reduce((n, c) => n + Number(c.unread || 0), 0);
+    const actUnread = acts.filter((a) => a.is_new).length;
+    const chatsHTML = rows.length
+      ? rows.map((c) =>
+          '<a class="convo' + (c.unread > 0 ? " unread" : "") + '" href="messages.html?to=' + encodeURIComponent(c.handle) + '">' + App.avatarHTML(c, 46) +
+            '<div class="mid"><div class="nm">' + esc(App.artistName(c)) + (c.blocked ? ' <span class="muted small mono">· BLOCKED</span>' : "") + "</div>" +
+            '<div class="last">' + (c.last_from_me ? "You: " : "") + esc(c.last_body) + "</div></div>" +
+            '<div class="side"><span>' + esc(App.timeAgo(c.last_at)) + "</span>" + (c.unread > 0 ? '<span class="count-badge">' + c.unread + "</span>" : "") + "</div></a>").join("")
+      : '<div class="empty"><p style="margin-bottom:6px">No messages yet.</p><p class="muted small">Open an artist\'s page and tap Message.</p><a class="btn btn-primary" style="margin-top:14px" href="explore.html">Explore</a></div>';
+
+    // likes on the same track become one row ("A, B and 3 others liked …")
+    const groups = [], likeGroup = {};
+    acts.forEach((a) => {
+      if (a.kind === "like" && a.slug) {
+        const g = likeGroup[a.slug];
+        if (g) { g.people.push(a); if (a.is_new) g.isNew = true; return; }
+        likeGroup[a.slug] = { kind: "like", people: [a], first: a, isNew: a.is_new }; groups.push(likeGroup[a.slug]); return;
+      }
+      groups.push({ kind: a.kind, people: [a], first: a, isNew: a.is_new });
+    });
+    const nameOf = (a) => esc(a.actor_name || "@" + a.actor_handle);
+    const who = (g) => {
+      const ps = g.people, n = ps.length;
+      if (n === 1) return "<b>" + nameOf(ps[0]) + "</b>";
+      if (n === 2) return "<b>" + nameOf(ps[0]) + "</b> and <b>" + nameOf(ps[1]) + "</b>";
+      return "<b>" + nameOf(ps[0]) + "</b>, <b>" + nameOf(ps[1]) + "</b> and " + (n - 2) + " other" + (n - 2 === 1 ? "" : "s");
+    };
+    const WHAT = { like: "liked", comment: "commented on", comment_like: "liked your comment on", follow: "started following you", sale: "bought" };
+    const LABEL = { like: "LIKE", comment: "COMMENT", comment_like: "COMMENT LIKE", follow: "NEW FOLLOWER", sale: "SALE" };
+    const rowHTML = (g) => {
+      const a = g.first, p = { handle: a.actor_handle, display_name: a.actor_name, avatar_path: a.actor_avatar };
+      const href = a.slug ? "t.html?s=" + encodeURIComponent(a.slug) + (a.kind.indexOf("comment") === 0 ? "#comments" : "") : "u.html?h=" + encodeURIComponent(a.actor_handle);
+      return '<a class="convo' + (g.isNew ? " unread" : "") + '" href="' + esc(href) + '">' + App.avatarHTML(p, 46) +
+        '<div class="mid"><div class="kind">' + LABEL[a.kind] + '</div><div class="act-line">' + who(g) + " " + WHAT[a.kind] + (a.title ? " <b>" + esc(a.title) + "</b>" : "") + "</div>" +
+          (a.snippet ? '<div class="last">"' + esc(a.snippet) + '"</div>' : "") + "</div>" +
+        '<div class="side"><span>' + esc(App.timeAgo(a.created_at)) + "</span>" + (g.isNew ? '<span class="new-dot"></span>' : "") + "</div></a>";
+    };
+    let shown = 30;
+    const actHTML = () => !groups.length
+      ? '<div class="empty"><p style="margin-bottom:6px">No activity yet.</p><p class="muted small">Likes, comments, new followers and sales show up here.</p></div>'
+      : groups.slice(0, shown).map(rowHTML).join("") + (groups.length > shown ? '<button class="btn btn-ghost btn-block" id="act-more" style="margin-top:10px">Show more</button>' : "");
+
+    main.innerHTML = '<div class="label">Inbox</div><h1 style="font-size:1.8rem;margin:4px 0 14px">Messages</h1>' +
+      '<div class="tabs"><button data-t="chats">Chats' + (chatUnread ? ' <span class="count-badge">' + chatUnread + "</span>" : "") + "</button>" +
+      '<button data-t="activity">Activity' + (actUnread ? ' <span class="count-badge">' + actUnread + "</span>" : "") + "</button></div>" +
+      '<div id="pane"></div>';
+    const show = (t) => {
+      main.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("on", b.dataset.t === t));
+      $("pane").innerHTML = t === "activity" ? actHTML() : chatsHTML;
+      history.replaceState(null, "", t === "activity" ? "messages.html?tab=activity" : "messages.html");
+      if (t === "activity") {
+        const more = () => { const m = $("act-more"); if (m) m.onclick = () => { shown += 30; $("pane").innerHTML = actHTML(); more(); }; };
+        more();
+        if (actUnread) sb.rpc("mark_activity_read").then(() => {
+          const b = main.querySelector('.tabs [data-t="activity"] .count-badge'); if (b) b.remove();
+          const d = $("inbox-dot"); if (d && !d.hidden) { const n = Math.max(0, (parseInt(d.textContent) || 0) - actUnread); d.hidden = !n; d.textContent = n; }
+        });
+      }
+    };
+    main.querySelectorAll(".tabs button").forEach((b) => (b.onclick = () => show(b.dataset.t)));
+    show(startTab === "chats" && !chatUnread && actUnread ? "activity" : startTab);
+    return;
+  }
+
+  // ── one conversation ───────────────────────────────────────
+  const { data: them } = await sb.from("profiles").select("id, handle, display_name, avatar_path").eq("handle", to).maybeSingle();
+  if (!them) { main.innerHTML = '<div class="empty"><h2>Person not found</h2><a class="btn" style="margin-top:14px" href="messages.html">Back to messages</a></div>'; return; }
+  if (them.id === me) { location.replace("messages.html"); return; }
+  const name = App.artistName(them);
+  document.title = name + " · Messages";
+  main.innerHTML =
+    '<div class="chat-head"><a class="back" href="messages.html" aria-label="Back">‹</a><a href="' + esc(App.profileLink(them.handle)) + '" style="text-decoration:none">' + App.avatarHTML(them, 40) + "</a>" +
+      '<div class="nm"><a href="' + esc(App.profileLink(them.handle)) + '">' + esc(name) + '</a><div class="h">@' + esc(them.handle) + "</div></div>" +
+      '<button class="btn btn-sm btn-ghost" id="block-btn">Block</button><button class="btn btn-sm btn-ghost" id="report-btn">Report</button></div>' +
+    '<div class="thread" id="thread"></div><div id="gate"></div>' +
+    '<div class="pic-preview" id="pic-preview" hidden><img id="pic-thumb" alt=""><button type="button" id="pic-x" aria-label="Remove photo">✕</button></div>' +
+    '<form class="composer" id="composer" hidden><label class="pic-btn" aria-label="Add a photo"><input type="file" id="pic" accept="image/*" hidden>IMG</label>' +
+      '<textarea class="input" id="body" rows="1" maxlength="1000" placeholder="Message ' + esc(name) + '…"></textarea>' +
+      '<button class="btn btn-primary" id="send" type="submit">Send</button></form>';
+
+  let blocked = false, msgs = [];
+  async function refreshGate() {
+    const [{ data: b }, { data: can }] = await Promise.all([
+      sb.from("blocks").select("blocked").eq("blocker", me).eq("blocked", them.id).maybeSingle(),
+      sb.rpc("can_message", { other: them.id }),
+    ]);
+    blocked = !!b;
+    $("block-btn").textContent = blocked ? "Unblock" : "Block";
+    $("gate").innerHTML = blocked ? '<div class="notice">You blocked ' + esc(name) + ". Unblock them to send messages.</div>"
+      : !can ? '<div class="notice">You can\'t message ' + esc(name) + ".</div>" : "";
+    $("composer").hidden = blocked || !can;
+  }
+  const urls = {}; // message photos are private: short-lived links only the two of you can open
+  async function fillPhotos() {
+    const need = [...new Set(msgs.filter((m) => m.image_path && !urls[m.image_path]).map((m) => m.image_path))];
+    if (need.length) {
+      const { data } = await sb.storage.from("dm").createSignedUrls(need, 60 * 60 * 6);
+      (data || []).forEach((d) => { if (d.signedUrl) urls[d.path] = d.signedUrl; });
+    }
+    document.querySelectorAll("#thread [data-path]").forEach((el) => {
+      const u = urls[el.getAttribute("data-path")]; if (!u) return;
+      if (el.tagName === "IMG") { if (el.getAttribute("src") !== u) { el.onload = () => { if (atBottom()) toBottom(); }; el.src = u; } }
+      else el.href = u;
+    });
+  }
+  function render() {
+    const t = $("thread");
+    if (!msgs.length) { t.innerHTML = '<p class="muted small mono" style="text-align:center;margin:auto">Say hi to ' + esc(name) + "<span class=\"cursor\"></span></p>"; return; }
+    let html = "", lastTime = 0;
+    msgs.forEach((m) => {
+      const tm = new Date(m.created_at).getTime();
+      if (tm - lastTime > 30 * 60 * 1000) html += '<div class="stamp">' + new Date(m.created_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) + "</div>";
+      lastTime = tm;
+      const w = m.sender === me ? "me" : "them";
+      if (m.image_path) html += '<a class="photo ' + w + '" target="_blank" data-path="' + esc(m.image_path) + '"><img alt="Photo" data-path="' + esc(m.image_path) + '"' + (urls[m.image_path] ? ' src="' + esc(urls[m.image_path]) + '"' : "") + "></a>";
+      if (m.body && m.body.trim()) html += '<div class="bubble ' + w + '">' + esc(m.body) + "</div>";
+    });
+    const last = msgs[msgs.length - 1];
+    if (last.sender === me && last.read_at) html += '<div class="seen">SEEN</div>';
+    t.innerHTML = html;
+    fillPhotos();
+  }
+  const atBottom = () => window.innerHeight + window.scrollY >= document.body.scrollHeight - 80;
+  const toBottom = () => window.scrollTo(0, document.body.scrollHeight);
+  async function load() {
+    const { data } = await sb.from("messages").select("id, sender, recipient, body, image_path, created_at, read_at")
+      .or("and(sender.eq." + me + ",recipient.eq." + them.id + "),and(sender.eq." + them.id + ",recipient.eq." + me + ")")
+      .order("created_at", { ascending: true }).limit(500);
+    const fresh = data || [];
+    const changed = fresh.length !== msgs.length || (fresh.length && msgs.length && fresh[fresh.length - 1].read_at !== msgs[msgs.length - 1].read_at);
+    const stick = atBottom() || !msgs.length;
+    msgs = fresh;
+    if (changed || !$("thread").innerHTML) { render(); if (stick) toBottom(); }
+    if (msgs.some((m) => m.recipient === me && !m.read_at)) sb.rpc("mark_read", { other: them.id });
+  }
+  await Promise.all([refreshGate(), load()]);
+  toBottom();
+  setInterval(() => { if (!document.hidden) load(); }, 4000); // check for new messages every few seconds
+
+  const box = $("body");
+  box.addEventListener("input", () => { box.style.height = "auto"; box.style.height = Math.min(box.scrollHeight, 140) + "px"; });
+  box.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !/iPhone|Android/i.test(navigator.userAgent)) { e.preventDefault(); $("composer").requestSubmit(); } });
+
+  let pic = null;
+  function shrinkPhoto(file) {
+    return new Promise((resolve, reject) => {
+      if (file.type === "image/gif") {
+        if (file.size > 10 * 1048576) return reject(new Error("That GIF is too big."));
+        return resolve({ blob: file, type: "image/gif", ext: "gif" });
+      }
+      const img = new Image();
+      img.onload = () => {
+        const s = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+        const c = document.createElement("canvas"); c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        c.toBlob((b) => (b ? resolve({ blob: b, type: "image/jpeg", ext: "jpg" }) : reject(new Error("Couldn't read that photo."))), "image/jpeg", 0.85);
+      };
+      img.onerror = () => reject(new Error("Couldn't read that photo. Try a JPG or PNG."));
+      img.src = URL.createObjectURL(file);
+    });
+  }
+  const clearPic = () => { pic = null; $("pic").value = ""; $("pic-preview").hidden = true; };
+  $("pic").addEventListener("change", async () => {
+    const f = $("pic").files[0]; if (!f) return;
+    try { pic = await shrinkPhoto(f); $("pic-thumb").src = URL.createObjectURL(pic.blob); $("pic-preview").hidden = false; toBottom(); }
+    catch (err) { App.toast(err.message, true); clearPic(); }
+  });
+  $("pic-x").onclick = clearPic;
+
+  $("composer").onsubmit = async (e) => {
+    e.preventDefault();
+    const body = box.value.trim();
+    if (!body && !pic) return;
+    $("send").disabled = true;
+    let image_path = null;
+    if (pic) {
+      $("send").textContent = "Sending…";
+      image_path = me + "/" + them.id + "/" + crypto.randomUUID() + "." + pic.ext;
+      const up = await sb.storage.from("dm").upload(image_path, pic.blob, { contentType: pic.type, upsert: false });
+      if (up.error) { $("send").disabled = false; $("send").textContent = "Send"; App.toast("Photo didn't upload. Try again.", true); return; }
+    }
+    const { error } = await sb.from("messages").insert({ sender: me, recipient: them.id, body: body.slice(0, 1000), image_path });
+    $("send").disabled = false; $("send").textContent = "Send";
+    if (error) { App.toast(/slow down/i.test(error.message) ? "Slow down a little, then try again." : "Message not sent. Try again.", true); refreshGate(); return; }
+    box.value = ""; box.style.height = ""; clearPic();
+    await load(); toBottom();
+  };
+  $("block-btn").onclick = async () => {
+    if (!blocked && !confirm("Block " + name + "? They won't be able to message you or comment on your tracks.")) return;
+    const r = blocked ? await sb.from("blocks").delete().eq("blocker", me).eq("blocked", them.id) : await sb.from("blocks").insert({ blocker: me, blocked: them.id });
+    if (r.error) return App.toast("Couldn't update that.", true);
+    App.toast(blocked ? "Unblocked" : "Blocked"); refreshGate();
+  };
+  $("report-btn").onclick = async () => {
+    const why = prompt("Tell us what's wrong (optional). We'll review this conversation."); if (why === null) return;
+    const { error } = await sb.from("reports").insert({ reporter: me, kind: "user", target_id: them.id, reason: why.slice(0, 500) || null });
+    App.toast(error ? "Couldn't send the report." : "Thanks, we'll take a look.", !!error);
+  };
+})();
+</script>
+</body>
+</html>
