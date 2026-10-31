@@ -210,7 +210,7 @@ body.desktop .steps, body.desktop #start { display: none; }
     // secret song: what you get, and whether you already have it
     if (locked()) {
       $("secret").hidden = false;
-      $("secret-what").textContent = "Find the real image at its spot and scan it to unlock " + (t.song_lock === "buy" ? REWARD.buy + " for " + money(t.price) : REWARD[t.song_lock]) + ".";
+      $("secret-what").textContent = (t.has_location ? "Find the real image at its spot and scan it to unlock " : "Find the real image and scan it to unlock ") + (t.song_lock === "buy" ? REWARD.buy + " for " + money(t.price) : REWARD[t.song_lock]) + ".";
       if (t.hint) { $("secret-hint").hidden = false; $("secret-hint").textContent = "HINT: " + t.hint; }
       if (me) {
         if (me === t.owner) unlocked = true;
@@ -468,9 +468,10 @@ body.desktop .steps, body.desktop #start { display: none; }
     if (!locked() || unlocked || trying || Date.now() - lastTry < 6000) return;
     if (!me) { pill("<b>Sign in to unlock</b><span>You found it! Sign in so the song unlocks for you, then scan again.</span><a href=\"auth.html?next=" + encodeURIComponent("ar.html?s=" + slug) + "\">Sign in</a><button class=\"alt\" data-close>Keep watching</button>"); return; }
     trying = true; lastTry = Date.now();
-    pill("<b>Checking the spot…</b><span>Hold still. Making sure you're really here.</span>");
+    pill("<b>" + (t.has_location ? "Checking the spot…" : "Unlocking…") + "</b><span>" + (t.has_location ? "Hold still. Making sure you're really here." : "You found it. One sec.") + "</span>");
     try {
-      var pos = await new Promise(function (res, rej) {
+      // no pinned spot: scanning the real image is enough
+      var pos = !t.has_location ? { latitude: null, longitude: null, accuracy: null } : await new Promise(function (res, rej) {
         if (!navigator.geolocation) return rej(new Error("This phone can't share its location."));
         navigator.geolocation.getCurrentPosition(function (p) { res(p.coords); }, function (e) {
           rej(new Error(e.code === 1 ? "Allow location for this site so we can check you're at the spot." : "Couldn't get your location. Try again outside."));
