@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=15">
+<link rel="stylesheet" href="styles.css?v=16">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=15"></script>
-<script src="app.js?v=15"></script>
+<script src="config.js?v=16"></script>
+<script src="app.js?v=16"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -441,7 +441,7 @@
           '<h3 style="margin:4px 0 6px">' + (pro ? 'Pro <span class="pill solid">PRO</span>' : "Free") + "</h3>" +
           '<p class="small muted">' + (pro
             ? "You keep " + App.artistCut(true) + "% of every sale after PayPal's fee. Pro until " + esc(fmtDay(profile.pro_until)) + "."
-            : "The site keeps " + C.FREE_FEE_PERCENT + "% of each sale after PayPal's fee. Go Pro for " + App.money(C.PRO_PRICE) + "/year and the site keeps just " + C.PRO_FEE_PERCENT + "%. Pro pays for itself once you sell about $" + even + " a year.") + "</p>" +
+            : "The site keeps " + C.FREE_FEE_PERCENT + "% of each sale after PayPal's fee. Go Pro for " + App.money(C.PRO_PRICE) + "/year and " + (+C.PRO_FEE_PERCENT ? "the site keeps just " + C.PRO_FEE_PERCENT + "%." : "you keep 100%. The site takes nothing.") + " Pro pays for itself once you sell about $" + even + " a year.") + "</p>" +
         "</div>" +
         '<button class="btn ' + (pro ? "" : "btn-primary") + '" id="go-pro" type="button">' + (pro ? "Renew · adds a year" : "Go Pro · " + App.money(C.PRO_PRICE) + "/year") + "</button>" +
       "</div>" +
