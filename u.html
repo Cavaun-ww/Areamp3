@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=16">
+<link rel="stylesheet" href="styles.css?v=17">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=16"></script>
-<script src="app.js?v=16"></script>
+<script src="config.js?v=17"></script>
+<script src="app.js?v=17"></script>
 <style>
   .prof { display: flex; gap: 24px; align-items: center; padding: 18px 0 30px; border-bottom: 1px solid var(--line); margin-bottom: 26px; flex-wrap: wrap; }
   .prof .avatar { width: 120px; height: 120px; font-size: 3rem; }
@@ -40,7 +40,7 @@
   const box = $("content");
 
   const { data: p } = handle && App.configured
-    ? await sb.from("profiles").select("id, handle, display_name, bio, avatar_path, pro_until").eq("handle", handle).maybeSingle()
+    ? await sb.from("profiles").select("id, handle, display_name, bio, avatar_path, pro_until, verified").eq("handle", handle).maybeSingle()
     : { data: null };
   if (!p) {
     box.innerHTML = '<div class="empty"><h2>Artist not found</h2><p class="muted" style="margin:8px 0 18px">There\'s no page at this link.</p><a class="btn btn-primary" href="explore.html">Explore music</a></div>';
@@ -62,7 +62,7 @@
     '<div class="prof">' + App.avatarHTML(p) +
       '<div class="info">' +
         '<div class="label">Artist</div>' +
-        "<h1>" + esc(name) + (App.isPro(p) ? " " + App.proBadge(p) : "") + "</h1>" +
+        "<h1>" + esc(name) + App.vBadge(p) + (App.isPro(p) ? " " + App.proBadge(p) : "") + "</h1>" +
         '<div class="muted mono small">@' + esc(p.handle) + "</div>" +
         (p.bio ? '<p class="bio">' + esc(p.bio) + "</p>" : "") +
         '<div class="counts"><span><b id="fc">' + fc + "</b>" + (fc === 1 ? "follower" : "followers") + '</span><span><b>' + following + "</b>following</span><span><b>" + list.length + "</b>" + (list.length === 1 ? "track" : "tracks") + "</span></div>" +

@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=16">
+<link rel="stylesheet" href="styles.css?v=17">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=16"></script>
-<script src="app.js?v=16"></script>
+<script src="config.js?v=17"></script>
+<script src="app.js?v=17"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -150,11 +150,11 @@
   let profile = {};
   async function loadProfile() {
     try { await App.ensureHandle(session); } catch (e) {}
-    const { data } = await sb.from("profiles").select("handle, display_name, bio, avatar_path, pro_until").eq("id", uid).maybeSingle();
+    const { data } = await sb.from("profiles").select("handle, display_name, bio, avatar_path, pro_until, verified").eq("id", uid).maybeSingle();
     profile = data || {};
     $("head-av").innerHTML = App.avatarHTML(profile);
     $("head-name").textContent = profile.display_name || profile.handle || "Me";
-    $("head-name").insertAdjacentHTML("beforeend", App.proBadge(profile) ? " " + App.proBadge(profile) : "");
+    $("head-name").insertAdjacentHTML("beforeend", App.vBadge(profile) + (App.proBadge(profile) ? " " + App.proBadge(profile) : ""));
     paintPlan();
     $("head-handle").textContent = profile.handle ? "@" + profile.handle : "";
     $("avatar-slot").innerHTML = App.avatarHTML(profile);
@@ -464,7 +464,7 @@
             profile.pro_until = out.pro_until;
             App.toast("You're Pro until " + fmtDay(out.pro_until));
             $("head-name").textContent = profile.display_name || profile.handle || "Me";
-            $("head-name").insertAdjacentHTML("beforeend", " " + App.proBadge(profile));
+            $("head-name").insertAdjacentHTML("beforeend", App.vBadge(profile) + " " + App.proBadge(profile));
             paintPlan(); loadSelling();
           } catch (e) { $("pro-msg").textContent = "Payment went through but we couldn't confirm it yet (" + e.message + "). Refresh in a minute, or contact us."; }
         },

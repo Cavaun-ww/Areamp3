@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=16">
+<link rel="stylesheet" href="styles.css?v=17">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=16"></script>
-<script src="app.js?v=16"></script>
+<script src="config.js?v=17"></script>
+<script src="app.js?v=17"></script>
 <style>
   .head-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
   .head-row .vf { display: inline-block; width: 13px; height: 13px; margin-right: 10px; vertical-align: -1px; border: 2px solid currentColor; border-radius: 2px; box-shadow: inset 0 0 0 2px var(--text), inset 0 0 0 5px currentColor; }
@@ -281,7 +281,7 @@
       '<div class="cov"><a href="' + link + '"><img loading="lazy" alt=""' + (t.photo_hidden ? ' class="blurred"' : "") + ' src="' + esc(App.publicUrl(t.cover_path)) + '"></a>' +
         (t.photo_hidden ? '<span class="hide-badge">FIND IT IN PERSON</span>' : "") + (App.hasSong(t) && !App.isLocked(t) ? App.playButton(t) : "") + "</div>" +
       '<div class="info"><a class="t" href="' + link + '">' + esc(t.title) + "</a>" +
-        (p.handle ? '<a class="a" href="' + esc(App.profileLink(p.handle)) + '">' + esc(artistLabel(t)) + "</a>" : "") +
+        (p.handle ? '<a class="a" href="' + esc(App.profileLink(p.handle)) + '">' + esc(artistLabel(t)) + App.vBadge(p) + "</a>" : "") +
         (t.has_location && (t.place_name || t.place_area || here) ? '<div class="loc">[ ' + esc([t.place_name || t.place_area, here && t.area_lat != null ? App.distLabel(App.milesBetween(here, { lat: t.area_lat, lng: t.area_lng })) : ""].filter(Boolean).join(" · ").toUpperCase()) + " ]</div>" : "") +
         '<div class="extra">' + esc([t.genre, t.duration ? App.fmtTime(t.duration) : "", new Date(t.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })].filter(Boolean).join(" · ")) + "</div></div>" +
       '<div class="stats"><span class="ty">' + esc(!App.hasSong(t) ? "VIDEO" : App.hasVid(t) ? App.songType(t) + "+VID" : App.songType(t)) + "</span>" +
@@ -378,14 +378,14 @@
     const q = $("q").value.trim().replace(/[%,()*\\:"]/g, " ").trim().slice(0, 60);
     const run = ++peopleRun;
     if (q.length < 2) { $("people").hidden = true; $("people").innerHTML = ""; return; }
-    const { data } = await sb.from("profiles").select("id, handle, display_name, avatar_path").not("handle", "is", null)
+    const { data } = await sb.from("profiles").select("id, handle, display_name, avatar_path, verified").not("handle", "is", null)
       .or("handle.ilike.*" + q + "*,display_name.ilike.*" + q + "*").limit(20);
     if (run !== peopleRun) return;
     const list = data || [];
     const drops = {}; all.forEach((t) => (drops[t.owner] = (drops[t.owner] || 0) + 1));
     $("people").hidden = !list.length;
     $("people").innerHTML = list.length ? "<h4>Artists</h4><div class=\"row-p\">" + list.map((p) =>
-      '<a href="' + esc(App.profileLink(p.handle)) + '">' + App.avatarHTML(p, 36) + "<span><b>" + esc(App.artistName(p)) + "</b><small>@" + esc(p.handle) + " · " + (drops[p.id] || 0) + ((drops[p.id] || 0) === 1 ? " drop" : " drops") + "</small></span></a>").join("") + "</div>" : "";
+      '<a href="' + esc(App.profileLink(p.handle)) + '">' + App.avatarHTML(p, 36) + "<span><b>" + esc(App.artistName(p)) + App.vBadge(p) + "</b><small>@" + esc(p.handle) + " · " + (drops[p.id] || 0) + ((drops[p.id] || 0) === 1 ? " drop" : " drops") + "</small></span></a>").join("") + "</div>" : "";
     if (list.length && !rows.length) $("list").innerHTML = '<div class="empty" style="grid-column:1/-1">No songs match yet. Tap the artist above to see their page.</div>';
   }
   $("more").onclick = more;
