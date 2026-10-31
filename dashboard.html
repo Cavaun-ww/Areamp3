@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=6">
+<link rel="stylesheet" href="styles.css?v=7">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=6"></script>
-<script src="app.js?v=6"></script>
+<script src="config.js?v=7"></script>
+<script src="app.js?v=7"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -240,7 +240,7 @@
     if (!data.length) { $("tracks").innerHTML = '<div class="empty"><p style="margin-bottom:16px">Nothing here yet.</p><a class="btn btn-primary" href="upload.html">Create your first experience</a></div>'; return; }
     $("tracks").innerHTML = '<div class="grid">' + data.map((t) => App.trackCard(t, {
       hideArtist: true,
-      actions: '<div class="small muted mono">' + [t.is_published ? (t.is_private ? "PRIVATE" : "PUBLIC") : "HIDDEN", t.photo_hidden ? "BLURRED" : "", App.isLocked(t) ? "LOCKED · " + (finds[t.id] || 0) + " FOUND" : ""].filter(Boolean).join(" · ") + "</div>" +
+      actions: '<div class="small muted mono">' + [t.is_published ? (t.is_private ? "PRIVATE" : "PUBLIC") : "HIDDEN", t.photo_hidden || App.isLocked(t) ? "BLURRED · " + (finds[t.id] || 0) + " FOUND" : ""].filter(Boolean).join(" · ") + "</div>" +
         '<div class="actions">' +
           '<button class="btn btn-sm" data-act="price" data-id="' + t.id + '">Price</button>' +
           '<button class="btn btn-sm" data-act="edit" data-id="' + t.id + '">Edit</button>' +
@@ -249,10 +249,9 @@
         "</div>" +
         '<details class="box" data-more="' + t.id + '"' + (openMore.has(t.id) ? " open" : "") + '><summary>Settings</summary><div class="stack" style="margin-top:10px">' +
           '<button class="btn btn-sm btn-block" data-act="priv" data-id="' + t.id + '">' + (t.is_private ? "Make public" : "Make private") + "</button>" +
-          '<button class="btn btn-sm btn-block" data-act="blur" data-id="' + t.id + '">' + (t.photo_hidden ? "Show image clearly" : "Blur image (find it in person)") + "</button>" +
+          '<button class="btn btn-sm btn-block" data-act="lock" data-id="' + t.id + '">' + (t.photo_hidden || App.isLocked(t) ? "Blur settings: " + esc(App.lockTag(t)) : "Blur (find it in person)") + "</button>" +
           '<button class="btn btn-sm btn-block" data-act="fx" data-id="' + t.id + '">' + (App.effectsSummary(t) ? "Effects: " + esc(App.effectsSummary(t)) : "Pop-out effects") + "</button>" +
           '<button class="btn btn-sm btn-block" data-act="loc" data-id="' + t.id + '">' + (t.has_location ? "Location: " + esc(t.place_name || "set") : "Add location") + "</button>" +
-          '<button class="btn btn-sm btn-block" data-act="lock" data-id="' + t.id + '">' + (App.isLocked(t) ? "Unlock settings: " + esc(App.lockTag(t)) : "Lock song until found") + "</button>" +
         "</div></details>",
     })).join("") + "</div>";
   }
@@ -276,12 +275,12 @@
       App.toast("Deleted"); loadTracks();
     } else if (act === "price") openPrice(t);
     else if (act === "edit") openEdit(t);
-    else if (act === "priv" || act === "blur") {
+    else if (act === "priv") {
       b.disabled = true;
-      const upd = act === "priv" ? { is_private: !t.is_private } : { photo_hidden: !t.photo_hidden };
+      const upd = { is_private: !t.is_private };
       const { error } = await sb.from("tracks").update(upd).eq("id", t.id);
       if (error) { b.disabled = false; return App.toast(error.message, true); }
-      App.toast(act === "priv" ? (t.is_private ? "Now public: it shows on Explore" : "Now private: hidden from Explore") : (t.photo_hidden ? "Image shows clearly again" : "Image is blurred. Fans have to find the real one"));
+      App.toast(t.is_private ? "Now public: it shows on Explore" : "Now private: hidden from Explore");
       loadTracks();
     } else if (act === "fx") openEffects(t);
     else if (act === "loc") changeLocation(t);
@@ -315,9 +314,10 @@
     }
     const r = await App.pickLocation(cur);
     if (r === undefined) return;
-    if (r === null && App.isLocked(t) && !confirm("Removing the location also unlocks the song for everyone (it goes back to a normal release). Continue?")) return;
+    const blurred = t.photo_hidden || App.isLocked(t);
+    if (r === null && blurred && !confirm("Removing the location also turns off the blur, so the image and song are open to everyone. Continue?")) return;
     const upd = App.locationColumns(r);
-    if (r === null && App.isLocked(t)) Object.assign(upd, { song_lock: "none" });
+    if (r === null && blurred) Object.assign(upd, { song_lock: "none", photo_hidden: false });
     if (r) {
       const sp = await sb.from("track_spots").upsert({ track_id: t.id, lat: r.lat, lng: r.lng });
       if (sp.error) return App.toast("Couldn't save the location. Try again.", true);
@@ -327,14 +327,16 @@
     if (r === null) await sb.from("track_spots").delete().eq("track_id", t.id);
     App.toast(r ? "Location saved" : "Location removed"); loadTracks();
   }
+  // blur = the image is blurred on the site AND the song unlocks only when a fan scans the real image at the spot
   function openLock(t) {
-    if (!t.has_location) { App.toast("Add a location first, so fans know where to go.", true); return changeLocation(t); }
-    const cur = t.song_lock || "none";
+    if (!t.has_location) { App.toast("Add the spot where fans can find the real image.", true); return changeLocation(t); }
+    const on = t.photo_hidden || App.isLocked(t);
+    const cur = App.isLocked(t) ? t.song_lock : "free";
     const bg = modal(
-      '<div class="label">Unlock settings</div><h3 style="margin:6px 0 14px;text-transform:none;letter-spacing:.02em">' + esc(t.title) + "</h3>" +
+      '<div class="label">Blur · find it in person</div><h3 style="margin:6px 0 14px;text-transform:none;letter-spacing:.02em">' + esc(t.title) + "</h3>" +
       '<div class="radio-list" id="l-mode">' +
-        [["none", "Not locked", "A normal release: preview for everyone, free or for sale."],
-         ["free", "Free download when found", "Fans who find it keep the full song for free."],
+      '<p class="small muted" style="margin-bottom:12px">Your image shows blurred on the site, so nobody can scan it off a screen. Fans have to find the real one at your location and scan it there. What do they get when they do?</p>' +
+        [["free", "Free download when found", "Fans who find it keep the full song for free."],
          ["listen", "Listen only when found", "Fans who find it can play the full song any time, not download it."],
          ["buy", "Right to buy when found", "Only fans who found it can buy it."]].map((o) =>
           '<label><input type="radio" name="l-mode" value="' + o[0] + '"' + (o[0] === cur ? " checked" : "") + "> <span><b>" + o[1] + '</b><br><span class="small muted">' + o[2] + "</span></span></label>").join("") +
@@ -344,7 +346,8 @@
         [[50, "Right at it · about 150 ft"], [100, "Close · about 330 ft"], [250, "Nearby · about 800 ft"], [600, "Same area · about 1/3 mile"]].map((o) => '<option value="' + o[0] + '"' + (+t.unlock_radius_m === o[0] ? " selected" : "") + ">" + o[1] + "</option>").join("") +
       "</select></label>" +
       '<label class="field" style="margin-top:12px"><span>Hint for fans</span><textarea class="input" id="l-hint" maxlength="300"></textarea></label>' +
-      '<div class="row" style="margin-top:18px"><button class="btn btn-primary" id="l-save">Save</button><button class="btn btn-ghost" id="l-cancel">Cancel</button></div>');
+      '<div class="row" style="margin-top:18px"><button class="btn btn-primary" id="l-save">' + (on ? "Save" : "Turn on blur") + '</button><button class="btn btn-ghost" id="l-cancel">Cancel</button>' +
+        (on ? '<button class="btn btn-ghost" id="l-off" style="margin-left:auto">Turn off blur</button>' : "") + "</div>");
     const q = (sel) => bg.querySelector(sel);
     q("#l-price").value = (+t.price > 0 ? +t.price : (seller ? +seller.default_price : 0) || 1.29).toFixed(2);
     q("#l-hint").value = t.hint || "";
@@ -352,8 +355,8 @@
     q("#l-mode").addEventListener("change", paint); paint();
     q("#l-cancel").onclick = () => bg.remove();
     q("#l-save").onclick = async () => {
-      const m = (q('input[name="l-mode"]:checked') || {}).value || "none";
-      const upd = { song_lock: m, unlock_radius_m: +q("#l-radius").value || 100, hint: q("#l-hint").value.trim() || null };
+      const m = (q('input[name="l-mode"]:checked') || {}).value || "free";
+      const upd = { photo_hidden: true, song_lock: m, unlock_radius_m: +q("#l-radius").value || 100, hint: q("#l-hint").value.trim() || null };
       if (m === "free" || m === "listen") upd.price = 0;
       if (m === "buy") {
         const p = +(+q("#l-price").value).toFixed(2);
@@ -363,11 +366,17 @@
       }
       const { error } = await sb.from("tracks").update(upd).eq("id", t.id);
       if (error) return App.toast(error.message, true);
-      bg.remove(); App.toast(m === "none" ? "Song unlocked for everyone" : "Unlock settings saved"); loadTracks();
+      bg.remove(); App.toast(on ? "Blur settings saved" : "Blurred. Fans have to find the real one"); loadTracks();
+    };
+    if (q("#l-off")) q("#l-off").onclick = async () => {
+      if (!confirm("Turn off the blur? The image shows clearly and the song is open to everyone (preview, plus free or for sale).")) return;
+      const { error } = await sb.from("tracks").update({ photo_hidden: false, song_lock: "none" }).eq("id", t.id);
+      if (error) return App.toast(error.message, true);
+      bg.remove(); App.toast("Image shows clearly again"); loadTracks();
     };
   }
   function openPrice(t) {
-    if (App.isLocked(t)) { App.toast("This song is locked. Change it in Settings › Unlock settings.", true); return openLock(t); }
+    if (App.isLocked(t)) { App.toast("This song is blurred until found. Change what fans get in Settings › Blur settings.", true); return openLock(t); }
     if (!seller) { App.toast("Fill out the seller form first.", true); show("selling"); return; }
     const free = !(+t.price > 0);
     const bg = modal(

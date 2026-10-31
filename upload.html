@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=6">
+<link rel="stylesheet" href="styles.css?v=7">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=6"></script>
-<script src="app.js?v=6"></script>
+<script src="config.js?v=7"></script>
+<script src="app.js?v=7"></script>
 <style>
   .wave { width: 100%; height: 64px; display: block; background: #050505; border: 1px solid var(--line); margin-top: 12px; }
   .rng { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: .82rem; color: var(--text-2); }
@@ -100,9 +100,7 @@
               <div class="small muted" style="margin-top:6px">Let people find the real image and scan it in person.</div>
             </div>
             <label class="toggle"><input type="checkbox" id="photo-hidden"><span class="switch" aria-hidden="true"></span>
-              <span><b>Blur the image</b><br><span class="small muted">Your image shows blurred on the site, so people can't scan it off a screen. They have to find the real one.</span></span></label>
-            <label class="toggle disabled" id="lock-toggle"><input type="checkbox" id="lock-on" disabled><span class="switch" aria-hidden="true"></span>
-              <span><b>Lock the song until they find it</b><br><span class="small muted" id="lock-why">Add a location first. Fans have to be at the spot and scan the real image to unlock the full song.</span></span></label>
+              <span><b>Blur the image</b><br><span class="small muted">Your image shows blurred on the site, so nobody can scan it off a screen to hear the song or see the video. Fans have to go find the real one at your location and scan it there.</span></span></label>
             <div class="lock-box" id="lock-box" hidden>
               <div class="field"><span>What fans unlock when they find it</span>
                 <div class="radio-list" id="reward">
@@ -543,18 +541,14 @@
 
   // ── 05 privacy, location & unlock ────────────────────────────────
   let loc = null;
-  const lockValue = () => ($("lock-on").checked ? (document.querySelector('input[name="reward"]:checked') || {}).value || "free" : "none");
+  // blurred = hidden until found: the image is blurred AND the song unlocks only at the spot
+  const isLocked = () => $("photo-hidden").checked && !!loc;
+  const lockValue = () => (isLocked() ? (document.querySelector('input[name="reward"]:checked') || {}).value || "free" : "none");
   function lockState() {
-    const has = !!loc;
-    $("lock-on").disabled = !has;
-    $("lock-toggle").classList.toggle("disabled", !has);
-    if (!has) $("lock-on").checked = false;
-    $("lock-why").textContent = has
-      ? "Fans have to be at the spot and scan the image to unlock the full song."
-      : "Add a location first. Fans have to be at the spot and scan the image to unlock the full song.";
-    $("lock-box").hidden = !$("lock-on").checked;
+    if (!loc) $("photo-hidden").checked = false; // blur needs a spot to find it at
+    const locked = isLocked();
+    $("lock-box").hidden = !locked;
     const reward = (document.querySelector('input[name="reward"]:checked') || {}).value;
-    const locked = $("lock-on").checked;
     const noPrice = locked && (reward === "free" || reward === "listen");
     $("price-area").hidden = noPrice;
     $("price-locked-note").hidden = !locked;
@@ -575,15 +569,22 @@
     const lock = lockValue();
     const bits = [$("is-private").checked ? "Private" : "Public"];
     if (loc) bits.push("@ " + (loc.place_name || "location set"));
-    if ($("photo-hidden").checked) bits.push("blurred");
-    if (lock !== "none") bits.push("song locked");
+    if (lock !== "none") bits.push("blurred until found");
     $("priv-sum").textContent = bits.join(" · ");
     const sell = lock === "buy" || (lock === "none" && mode === "sell");
     $("price-sum").textContent = lock === "free" ? "Free when found" : lock === "listen" ? "Not for sale" : sell ? App.money(+$("price").value || 0) : "Free";
   }
-  ["is-private", "photo-hidden"].forEach((id) => $(id).addEventListener("change", summaries));
+  $("is-private").addEventListener("change", summaries);
+  // turning blur on asks where the real image is
+  $("photo-hidden").addEventListener("change", async () => {
+    if ($("photo-hidden").checked && !loc) {
+      App.toast("Add the spot where fans can find the real image.");
+      const r = await App.pickLocation(null);
+      if (r) { loc = r; $("loc-label").textContent = (loc.place_name || "Location added") + (loc.loc_approx ? " (approx.)" : "") + " · change"; }
+    }
+    lockState();
+  });
   $("price").addEventListener("input", summaries);
-  $("lock-on").addEventListener("change", lockState);
   $("reward").addEventListener("change", lockState);
   lockState();
 
