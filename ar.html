@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=12"></script>
+<script src="config.js?v=13"></script>
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; font-family: "Chakra Petch", ui-monospace, monospace; color: #f4f4f4; }
@@ -78,6 +78,10 @@ body.desktop .steps, body.desktop #start { display: none; }
 .hud.show { display: flex; }
 #close { top: 16px; right: 16px; width: 44px; height: 44px; border-radius: 50%; border: 1px solid #363636; background: rgba(0,0,0,.7); color: #fff; align-items: center; justify-content: center; font-size: 1rem; cursor: pointer; }
 #hint { left: 50%; bottom: 28px; transform: translateX(-50%); padding: 10px 16px; background: rgba(0,0,0,.78); border: 1px solid #363636; font-family: "Share Tech Mono", monospace; font-size: .8rem; white-space: nowrap; letter-spacing: .08em; }
+/* watermark: the viewer's @name drifts around the screen, so screen recordings can be traced */
+#wm { left: 8%; top: 30%; display: none; pointer-events: none; font-family: "Share Tech Mono", monospace; font-size: .9rem; letter-spacing: .12em;
+  color: rgba(255,255,255,.34); text-shadow: 0 0 2px rgba(0,0,0,.5); white-space: nowrap; transform: rotate(-12deg); transition: left 3s linear, top 3s linear; z-index: 1900; }
+#wm.show { display: block; }
 #unmute { left: 50%; bottom: 84px; transform: translateX(-50%); padding: 10px 16px; background: #f4f4f4; color: #000; border: 0; font: inherit; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
 #np { left: 12px; right: 72px; top: 16px; align-items: center; gap: 10px; padding: 6px 10px 6px 6px; background: rgba(0,0,0,.8); border: 1px solid #363636; text-decoration: none; color: #fff; }
 #np img { width: 36px; height: 36px; object-fit: cover; }
@@ -133,6 +137,7 @@ body.desktop .steps, body.desktop #start { display: none; }
 
 <button class="hud" id="close" aria-label="Close camera">✕</button>
 <div class="hud" id="hint">POINT AT THE IMAGE</div>
+<div class="hud" id="wm" aria-hidden="true"></div>
 <button class="hud" id="unmute">Tap for sound</button>
 <a class="hud" id="np" href="#"><img alt=""><div><b></b><span></span></div><em></em></a>
 <div class="hud" id="unlock-pill"></div>
@@ -590,6 +595,7 @@ body.desktop .steps, body.desktop #start { display: none; }
     $("splash").style.display = "none";
     $("hint").textContent = isExplore ? "POINT AT ANY IMAGE" : "POINT AT THE IMAGE";
     $("close").classList.add("show"); $("hint").classList.add("show");
+    startWatermark();
 
     // bring MindAR's camera feed forward as soon as it appears
     var obs = new MutationObserver(function (ms) {
@@ -628,6 +634,23 @@ body.desktop .steps, body.desktop #start { display: none; }
     $("unmute").classList.remove("show");
   };
 
+  // ── watermark: "@name · AREA MP3 · date" moves around while the camera is on ──
+  var wmTimer = null, wmName = null;
+  async function startWatermark() {
+    var el = $("wm");
+    if (wmName === null) {
+      wmName = "";
+      try {
+        if (me) { var pr = await sb.from("profiles").select("handle").eq("id", me).maybeSingle(); if (pr.data && pr.data.handle) wmName = "@" + pr.data.handle; }
+      } catch (e) {}
+    }
+    var d = new Date();
+    el.textContent = (wmName ? wmName + " · " : "") + C.SITE_NAME.toUpperCase() + " · " + (d.getMonth() + 1) + "/" + d.getDate() + "/" + String(d.getFullYear()).slice(2);
+    var move = function () { el.style.left = (5 + Math.random() * 45) + "%"; el.style.top = (12 + Math.random() * 70) + "%"; };
+    move(); el.classList.add("show");
+    clearInterval(wmTimer); wmTimer = setInterval(move, 3000);
+  }
+
   function closeAR() {
     var s = document.querySelector("a-scene");
     if (s) { try { var sys = s.systems["mindar-image-system"]; if (sys) sys.stop(); } catch (e) {} s.remove(); }
@@ -635,7 +658,8 @@ body.desktop .steps, body.desktop #start { display: none; }
     if (song) { song.pause(); song = null; }
     vids.forEach(function (v) { if (v) { v.pause(); v.removeAttribute("src"); v.load(); v.remove(); } }); vids = [];
     if (isExplore) { if (cur >= 0 && st[cur]) { st[cur].unlocked = unlocked; st[cur].fullUrl = fullUrl; } cur = -1; }
-    ["close", "hint", "np", "unmute", "unlock-pill"].forEach(function (id) { $(id).classList.remove("show"); });
+    ["close", "hint", "np", "unmute", "unlock-pill", "wm"].forEach(function (id) { $(id).classList.remove("show"); });
+    clearInterval(wmTimer);
     $("splash").style.display = "";
     if (!isExplore && locked()) $("secret-state").textContent = unlocked ? "UNLOCKED ✓ — you found it." : $("secret-state").textContent;
   }

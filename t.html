@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=12">
+<link rel="stylesheet" href="styles.css?v=13">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=12"></script>
-<script src="app.js?v=12"></script>
+<script src="config.js?v=13"></script>
+<script src="app.js?v=13"></script>
 <style>
   .rel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
   @media (max-width: 760px) { .rel { grid-template-columns: 1fr; gap: 20px; } }
@@ -156,6 +156,7 @@
         (t.description ? '<p class="desc">' + esc(t.description) + "</p>" : "") +
         (mine ? '<p class="small muted" style="margin-top:18px">This is your track. Change the price or hide it from <a href="dashboard.html#tracks">My page</a>.</p>' : "") +
         (!mine && me ? '<p class="small" style="margin-top:14px"><a href="#" id="report-track" class="muted">Report this track</a></p>' : "") +
+        (mine ? '<p class="small" style="margin-top:8px"><a href="#" id="report-leak" class="muted">Report a leak</a> <span class="muted">· saw this reposted or screen-recorded somewhere?</span></p>' : "") +
       "</div>" +
     "</div>" +
     '<section class="comments" id="comments">' +
@@ -221,6 +222,14 @@
     const why = prompt("What's wrong with this track? (stolen music, offensive cover…)"); if (why === null) return;
     const { error } = await sb.from("reports").insert({ reporter: me, kind: "track", target_id: t.id, reason: why.slice(0, 500) || null });
     App.toast(error ? "Couldn't send the report." : "Thanks, we'll take a look.", !!error);
+  };
+
+  if ($("report-leak")) $("report-leak").onclick = async (e) => {
+    e.preventDefault();
+    const where = prompt("Where did you see it? Paste the link (and the @name in the watermark, if you can see one)."); if (where === null) return;
+    if (!where.trim()) return App.toast("Paste the link where you saw it.", true);
+    const { error } = await sb.from("reports").insert({ reporter: me, kind: "leak", target_id: t.id, reason: where.trim().slice(0, 1000) });
+    App.toast(error ? "Couldn't send the report." : "Thanks. We'll look into it and help get it taken down.", !!error);
   };
 
   let myCL = {};

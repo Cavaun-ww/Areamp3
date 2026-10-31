@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=12">
+<link rel="stylesheet" href="styles.css?v=13">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=12"></script>
-<script src="app.js?v=12"></script>
+<script src="config.js?v=13"></script>
+<script src="app.js?v=13"></script>
 <style>
   .stats { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); margin-bottom: 18px; }
   .stats > div { padding: 14px; border-bottom: 1px solid var(--line); }
@@ -33,6 +33,11 @@
   <div class="label">Site owner</div>
   <h1 style="font-size:1.8rem;margin:4px 0 18px">Admin · Sales &amp; payouts</h1>
   <div id="content"><p class="muted mono">Loading<span class="cursor"></span></p></div>
+<div id="rep-wrap" hidden>
+  <h2 style="margin:34px 0 12px">Reports</h2>
+  <p class="small muted" style="margin-bottom:12px">Leaks reported by artists, plus reported tracks, comments, people and messages. Newest first.</p>
+  <div id="reports"><p class="muted mono small">Loading<span class="cursor"></span></p></div>
+  </div>
 </main>
 <script>
 (async function () {
@@ -91,6 +96,23 @@
     }));
   }
   load().catch((e) => (box.innerHTML = '<div class="empty">' + esc(e.message) + "</div>"));
+
+  // reports (leaks first in mind: where an artist saw their work reposted)
+  const KIND = { leak: "LEAK", track: "TRACK", comment: "COMMENT", user: "PERSON", message: "MESSAGE" };
+  const linkify = (s) => esc(s || "").replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+  $("rep-wrap").hidden = false;
+  App.callFunction("admin_reports").then((d) => {
+    const list = d.reports || [];
+    $("reports").innerHTML = list.length
+      ? '<div class="tbl"><table><thead><tr><th>Type</th><th>What</th><th>Details</th><th>From</th><th>When</th></tr></thead><tbody>' +
+        list.map((r) => "<tr><td><span class=\"pill" + (r.kind === "leak" ? " solid" : "") + "\">" + (KIND[r.kind] || esc(r.kind)) + "</span></td>" +
+          "<td>" + (r.track ? '<a href="' + esc(App.trackLink(r.track.slug)) + '">' + esc(r.track.title) + "</a>" : '<span class="muted mono small">' + esc(String(r.target_id).slice(0, 8)) + "</span>") + "</td>" +
+          '<td style="max-width:340px;overflow-wrap:anywhere">' + (r.reason ? linkify(r.reason) : '<span class="muted">no details</span>') + "</td>" +
+          "<td>" + (r.who && r.who.handle ? '<a href="' + esc(App.profileLink(r.who.handle)) + '">@' + esc(r.who.handle) + "</a>" : '<span class="muted">unknown</span>') + "</td>" +
+          '<td class="small muted">' + esc(App.timeAgo ? App.timeAgo(r.created_at) : new Date(r.created_at).toLocaleDateString()) + "</td></tr>").join("") +
+        "</tbody></table></div>"
+      : '<div class="empty">No reports.</div>';
+  }).catch((e) => ($("reports").innerHTML = '<div class="empty small">' + esc(e.message) + "</div>"));
 })();
 </script>
 </body>
