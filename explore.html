@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=3">
+<link rel="stylesheet" href="styles.css?v=6">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=3"></script>
-<script src="app.js?v=3"></script>
+<script src="config.js?v=6"></script>
+<script src="app.js?v=6"></script>
 <style>
   .tools { display: grid; gap: 12px; margin-bottom: 20px; }
   .search { position: relative; }
@@ -26,13 +26,20 @@
   .bar2 select { width: auto; padding: 7px 34px 7px 10px; font-size: .84rem; }
   .artists { display: flex; gap: 10px; overflow-x: auto; margin-bottom: 20px; scrollbar-width: none; }
   .artists a { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; border: 1px solid var(--line); text-decoration: none; }
+  .head-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
+  .head-row .vf { display: inline-block; width: 13px; height: 13px; margin-right: 10px; vertical-align: -1px; border: 2px solid currentColor; border-radius: 2px; box-shadow: inset 0 0 0 2px var(--text), inset 0 0 0 5px currentColor; }
+  @media (max-width: 520px) { .head-row #ar-btn { width: 100%; justify-content: center; } }
   .artists a:hover { border-color: var(--text); }
 </style>
 </head>
 <body>
 <main class="wrap wrap-wide">
-  <div style="margin-bottom:16px"><div class="label">Browse</div><h1 style="font-size:1.8rem;margin-top:4px">Explore</h1></div>
-  <div class="tabs" id="tabs"><button type="button" data-t="all" class="on">All music</button><button type="button" data-t="following">Following</button></div>
+  <div class="head-row"><div><div class="label">Browse</div><h1 style="font-size:1.8rem;margin-top:4px">Explore</h1></div><a class="btn btn-primary" href="ar.html?explore=1" id="ar-btn"><span class="vf" aria-hidden="true"></span>Open AR camera</a></div>
+  <div class="tabs" id="tabs"><button type="button" data-t="all" class="on">All music</button><button type="button" data-t="secret">Secret songs</button><button type="button" data-t="following">Following</button></div>
+  <div id="map-wrap" hidden style="margin-bottom:18px">
+    <div id="map" style="height:340px;border:1px solid var(--line)"></div>
+    <div class="row" style="margin-top:10px"><button class="btn btn-sm" type="button" id="near">Near me</button><span class="small muted" id="near-msg">Circles show the area. The exact spot is up to you to find.</span></div>
+  </div>
   <div class="tools">
     <div class="search"><input class="input" type="search" id="q" placeholder="Search songs or artists" autocomplete="off" enterkeyhint="search"></div>
     <div class="chips" id="genres"></div>
@@ -55,7 +62,9 @@
   const sb = App.sb, esc = App.esc, $ = (id) => document.getElementById(id);
   const GENRES = ["All", "Hip-Hop", "R&B", "Pop", "Rock", "Electronic", "House", "Afrobeats", "Latin", "Reggae", "Jazz", "Soul", "Gospel", "Country", "Indie", "Lo-fi", "Instrumental", "Spoken Word", "Other"];
   const PAGE = 24;
-  let tab = new URLSearchParams(location.search).get("tab") === "following" ? "following" : "all";
+  const startTab = new URLSearchParams(location.search).get("tab");
+  let tab = startTab === "following" || startTab === "secret" ? startTab : "all";
+  let here = null, mapObj = null, layer = null;
   let genre = "All", page = 0, followIds = null;
   $("genres").innerHTML = GENRES.map((g) => '<button type="button" data-g="' + esc(g) + '"' + (g === "All" ? ' class="on"' : "") + ">" + esc(g) + "</button>").join("");
   document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("on", b.dataset.t === tab));
@@ -74,13 +83,14 @@
   async function load(reset) {
     if (reset) { page = 0; $("list").innerHTML = '<p class="muted mono small">Loading<span class="cursor"></span></p>'; }
     const q = $("q").value.trim().replace(/[%,()]/g, " ").trim();
-    let query = sb.from("tracks").select(App.TRACK_COLS, { count: "exact" }).eq("is_published", true);
+    let query = sb.from("tracks").select(App.TRACK_COLS, { count: "exact" }).eq("is_published", true).eq("is_private", false);
     if (tab === "following") {
       const ids = await following();
       if (!ids) { $("list").innerHTML = '<div class="empty" style="grid-column:1/-1"><a href="' + App.signInUrl("explore.html?tab=following") + '">Sign in</a> to see new music from artists you follow.</div>'; $("more").hidden = true; $("count").textContent = ""; return; }
       if (!ids.length) { $("list").innerHTML = '<div class="empty" style="grid-column:1/-1">You\'re not following anyone yet. Tap + Follow on an artist\'s page.</div>'; $("more").hidden = true; $("count").textContent = ""; return; }
       query = query.in("owner", ids);
     }
+    if (tab === "secret") query = query.eq("has_location", true);
     if (genre !== "All") query = query.eq("genre", genre);
     if (q) query = query.or("title.ilike.%" + q + "%,genre.ilike.%" + q + "%");
     const sort = $("sort").value;
@@ -89,12 +99,49 @@
     const { data, count, error } = await query.range(page * PAGE, page * PAGE + PAGE - 1);
     if (error) { $("list").innerHTML = '<div class="empty" style="grid-column:1/-1">' + esc(error.message) + "</div>"; return; }
     App.registerTracks(data);
-    const html = data.map((t) => App.trackCard(t)).join("");
+    let rows = data;
+    if (tab === "secret") {
+      drawMap(data, reset);
+      if (here) rows = data.slice().sort((a, b) => App.milesBetween(here, { lat: a.area_lat, lng: a.area_lng }) - App.milesBetween(here, { lat: b.area_lat, lng: b.area_lng }));
+    }
+    const html = rows.map((t) => App.trackCard(t, here && t.area_lat != null ? { actions: '<div class="meta">' + App.distLabel(App.milesBetween(here, { lat: t.area_lat, lng: t.area_lng })).toUpperCase() + "</div>" } : {})).join("");
     if (reset) $("list").innerHTML = html || '<div class="empty" style="grid-column:1/-1">Nothing matches yet.</div>';
     else $("list").insertAdjacentHTML("beforeend", html);
-    $("count").textContent = (count || 0) + (count === 1 ? " track" : " tracks");
+    $("count").textContent = (count || 0) + (tab === "secret" ? (count === 1 ? " secret song" : " secret songs") : count === 1 ? " track" : " tracks");
     $("more").hidden = (page + 1) * PAGE >= (count || 0);
   }
+
+  // map of secret songs: a circle for an approximate area, a dot for an exact spot
+  async function drawMap(list, reset) {
+    try {
+      if (!mapObj) {
+        const m = await App.makeMap($("map"), 40.75, -73.98, 3, { scrollWheelZoom: false });
+        mapObj = m; layer = m.L.layerGroup().addTo(m.map);
+      }
+      const { L, map } = mapObj;
+      if (reset) layer.clearLayers();
+      const pts = [];
+      list.forEach((t) => {
+        if (t.area_lat == null) return;
+        const mk = t.loc_approx ? App.areaCircle(L, t.area_lat, t.area_lng) : L.marker([t.area_lat, t.area_lng], { icon: App.pinIcon(L) });
+        mk.bindPopup('<b>' + esc(t.title) + "</b><br>" + esc(App.artistName(t.profiles)) + '<br><a href="' + esc(App.trackLink(t.slug)) + '">Open →</a>');
+        mk.addTo(layer); pts.push([t.area_lat, t.area_lng]);
+      });
+      if (here) pts.push([here.lat, here.lng]);
+      if (reset && pts.length) map.fitBounds(pts, { padding: [30, 30], maxZoom: 14 });
+      setTimeout(() => map.invalidateSize(), 50);
+    } catch (e) { $("map").innerHTML = '<p class="muted small" style="padding:20px">Map couldn\'t load.</p>'; }
+  }
+  $("near").onclick = async () => {
+    $("near").disabled = true; $("near").textContent = "Finding you…";
+    try {
+      here = await App.hereNow();
+      $("near-msg").textContent = "Sorted by distance from you.";
+      if (mapObj) { mapObj.L.circleMarker([here.lat, here.lng], { radius: 6, color: "#000", weight: 2, fillColor: "#fff", fillOpacity: 1 }).addTo(mapObj.map); }
+      load(true);
+    } catch (e) { App.toast(e.message, true); }
+    $("near").disabled = false; $("near").textContent = "Near me";
+  };
 
   async function loadArtists() {
     const q = $("q").value.trim().replace(/[%,()]/g, " ").trim();
@@ -120,9 +167,11 @@
     const b = e.target.closest("button"); if (!b) return;
     tab = b.dataset.t;
     $("tabs").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
-    history.replaceState(null, "", tab === "following" ? "explore.html?tab=following" : "explore.html");
+    history.replaceState(null, "", tab === "all" ? "explore.html" : "explore.html?tab=" + tab);
+    $("map-wrap").hidden = tab !== "secret";
     load(true);
   };
+  $("map-wrap").hidden = tab !== "secret";
   load(true);
 })();
 </script>

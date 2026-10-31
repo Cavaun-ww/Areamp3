@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=3">
+<link rel="stylesheet" href="styles.css?v=6">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=3"></script>
-<script src="app.js?v=3"></script>
+<script src="config.js?v=6"></script>
+<script src="app.js?v=6"></script>
 <style>
   .rel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
   @media (max-width: 760px) { .rel { grid-template-columns: 1fr; gap: 20px; } }
@@ -31,6 +31,17 @@
   .facts b { display: block; font-family: var(--mono); font-weight: 400; margin-top: 2px; }
   .desc { white-space: pre-wrap; color: var(--text-2); margin-top: 20px; overflow-wrap: anywhere; }
   .banner { border: 1px solid var(--text); padding: 12px 14px; margin-bottom: 22px; font-family: var(--mono); font-size: .88rem; }
+  .rel .art { overflow: hidden; }
+  .rel .art img.blurred { pointer-events: none; }
+  .secret { border: 1px solid var(--text); padding: 14px 16px; margin-top: 18px; }
+  .secret p { margin-top: 4px; color: var(--text-2); }
+  .secret .hint { margin-top: 10px; padding-left: 10px; border-left: 2px solid var(--muted); color: var(--text-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .secret .state { margin-top: 10px; font-family: var(--mono); font-size: .86rem; }
+  .where { border: 1px solid var(--line); margin-top: 16px; }
+  .where-map { height: 200px; }
+  .where-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; }
+  .where-row > div { flex: 1; min-width: 0; }
+  .where-row b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #like.on { background: var(--text); color: #000; border-color: var(--text); }
   #like.pop { animation: pop .3s ease; }
   @keyframes pop { 50% { transform: scale(1.08); } }
@@ -94,12 +105,18 @@
   const me = session && session.user.id, mine = me === t.owner;
   const owned = await App.owns(t);
   const paid = +t.price > 0;
+  const locked = App.isLocked(t);
+  const found = locked ? await App.hasUnlocked(t) : false;
+  const finds = locked ? ((await sb.rpc("unlock_count", { tid: t.id })).data || 0) : 0;
+  const blur = t.photo_hidden && !mine;
 
   box.innerHTML =
-    (qs.get("new") ? '<div class="banner">RELEASE IS LIVE ✓ — share the link, or print the QR code with your cover art.</div>' : "") +
+    (qs.get("new") ? '<div class="banner">IT\'S LIVE ✓ — print your image, put it out in the world, and share the link or QR code.</div>' : "") +
+    (t.is_private && mine ? '<div class="banner">PRIVATE — hidden from Explore and your page. Anyone with the link or QR code can still open it.</div>' : "") +
     (!t.is_published ? '<div class="banner">HIDDEN — only you can see this track. Publish it from My page.</div>' : "") +
     '<div class="rel">' +
-      '<div class="art"><img alt="" src="' + esc(App.publicUrl(t.cover_path)) + '">' + (t.preview_path ? App.playButton(t) : "") + "</div>" +
+      '<div class="art"><img alt=""' + (blur ? ' class="blurred"' : "") + ' src="' + esc(App.publicUrl(t.cover_path)) + '">' +
+        (blur ? '<span class="hide-badge">FIND THE REAL ONE IN PERSON</span>' : "") + (t.preview_path ? App.playButton(t) : "") + "</div>" +
       "<div>" +
         '<div class="label">' + esc(t.genre || "Single") + (t.preview_path ? " · " + App.C.PREVIEW_SECONDS + "s preview" : "") + "</div>" +
         '<h1 style="margin-top:6px">' + esc(t.title) + "</h1>" +
@@ -107,12 +124,19 @@
           (p.handle ? '<a class="name" href="' + esc(App.profileLink(p.handle)) + '">' + App.avatarHTML(p, 36) + "<b>" + esc(name) + "</b></a>" : "") +
           '<button class="btn btn-sm" id="follow" hidden></button>' +
         "</div>" +
-        '<div class="price-big">' + (owned && !mine && paid ? "OWNED ✓" : esc(App.priceLabel(t))) + "</div>" +
-        '<div class="small muted">' + (paid ? App.fileType(t) + " download · pay with PayPal or card · straight to your phone" : "Free " + App.fileType(t) + " download · sign in to save it") + "</div>" +
+        '<div class="price-big">' + (owned && !mine && paid ? "OWNED ✓" : locked ? (found && !mine ? "FOUND ✓" : "LOCKED") : esc(App.priceLabel(t))) + "</div>" +
+        '<div class="small muted">' + (locked ? "Secret song · find the real image and scan it to unlock " + esc(App.lockReward(t))
+          : paid ? App.fileType(t) + " download · pay with PayPal or card · straight to your phone" : "Free " + App.fileType(t) + " download · sign in to save it") + "</div>" +
+        (locked ? '<div class="secret"><div class="label">Secret song</div>' +
+          '<p>Go to the spot, open the AR camera and point it at the real image. When it\'s you, the song unlocks: ' + esc(App.lockReward(t)) + ".</p>" +
+          (t.hint ? '<div class="hint">HINT: ' + esc(t.hint) + "</div>" : "") +
+          '<div class="state">' + (mine ? "YOUR SONG · " : found ? "YOU FOUND IT ✓ · " : "") + finds + (finds === 1 ? " FAN HAS" : " FANS HAVE") + " FOUND IT</div></div>" : "") +
+        (t.has_location && t.area_lat != null ? '<div class="where"><div class="where-map" id="where-map"></div><div class="where-row"><div><b>' + esc(t.place_name || "On the map") + '</b><span class="small muted">' +
+          (t.loc_approx ? "Approximate area. Look around for the real image." : "Go here to scan the real image.") + '</span></div><a class="btn btn-sm" target="_blank" rel="noopener" href="' + esc(App.directionsUrl(t.area_lat, t.area_lng)) + '">Directions</a></div></div>' : "") +
         '<div class="stack" style="margin-top:20px">' +
           '<button class="btn btn-primary btn-lg btn-block" id="buy"></button>' +
           '<div class="row">' +
-            (t.mind_path ? '<a class="btn" style="flex:1" href="' + esc(App.arLink(t.slug)) + '">Scan cover in AR</a>' : "") +
+            (t.mind_path && !(locked && !found && !mine) ? '<a class="btn" style="flex:1" href="' + esc(App.arLink(t.slug)) + '">Open AR camera</a>' : "") +
             '<button class="btn" style="flex:1" id="share">Share</button>' +
             '<button class="btn" style="flex:1" id="qr">QR code</button>' +
           "</div>" +
@@ -140,9 +164,21 @@
     "</section>";
 
   const buyBtn = $("buy");
-  const label = () => (mine || owned || !paid ? "↓ Download " + App.fileType(t) : "Buy " + App.money(t.price, t.currency));
+  const label = () => {
+    if (mine || owned) return "↓ Download " + App.fileType(t);
+    if (locked && !found) return "Go find it · open AR camera";
+    if (locked) return t.song_lock === "free" ? "↓ Download " + App.fileType(t) : t.song_lock === "listen" ? "▶ Play full song" : "Buy " + App.money(t.price, t.currency);
+    return !paid ? "↓ Download " + App.fileType(t) : "Buy " + App.money(t.price, t.currency);
+  };
   buyBtn.textContent = label();
-  buyBtn.onclick = () => App.buy(t, () => { $("content").querySelector(".price-big").textContent = "OWNED ✓"; buyBtn.textContent = "↓ Download " + App.fileType(t); });
+  buyBtn.onclick = () => {
+    if (locked && !found && !mine) { location.href = App.arLink(t.slug); return; }
+    App.buy(t, () => { $("content").querySelector(".price-big").textContent = "OWNED ✓"; buyBtn.textContent = "↓ Download " + App.fileType(t); });
+  };
+  if (t.has_location && t.area_lat != null) App.makeMap($("where-map"), t.area_lat, t.area_lng, t.loc_approx ? 14 : 16, { scrollWheelZoom: false }).then(({ L, map }) => {
+    if (t.loc_approx) App.areaCircle(L, t.area_lat, t.area_lng).addTo(map); else L.marker([t.area_lat, t.area_lng], { icon: App.pinIcon(L) }).addTo(map);
+  }).catch(() => ($("where-map").hidden = true));
+  if (blur) App.nearReveal(t, box.querySelector(".rel .art"));
   $("share").onclick = () => App.share(t.title + (name ? " — " + name : ""), App.trackLink(t.slug));
   $("qr").onclick = async () => {
     $("qr-title").textContent = t.title;
@@ -246,7 +282,7 @@
   if (qs.get("buy") && session && !mine) { history.replaceState(null, "", "t.html?s=" + encodeURIComponent(slug)); buyBtn.click(); }
 
   // more from this artist
-  const { data: more } = await sb.from("tracks").select(App.TRACK_COLS).eq("owner", t.owner).eq("is_published", true).neq("id", t.id).order("created_at", { ascending: false }).limit(4);
+  const { data: more } = await sb.from("tracks").select(App.TRACK_COLS).eq("owner", t.owner).eq("is_published", true).eq("is_private", false).neq("id", t.id).order("created_at", { ascending: false }).limit(4);
   if (more && more.length && p.handle) {
     App.registerTracks(more);
     $("more-h").textContent = "More from " + name;

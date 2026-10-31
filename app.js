@@ -23,6 +23,21 @@
     catch { return "$" + (+n || 0).toFixed(2); }
   }
   function priceLabel(t) { return +t.price > 0 ? money(t.price, t.currency) : "FREE"; }
+  // ── secret songs (locked until a fan finds the spot and scans it) ──
+  function isLocked(t) { return !!t && !!t.song_lock && t.song_lock !== "none"; }
+  function lockTag(t) {
+    return { free: "FIND IT · FREE", listen: "FIND IT · LISTEN", buy: "FIND IT · " + money(t.price, t.currency) }[t.song_lock] || priceLabel(t);
+  }
+  function lockReward(t) {
+    return { free: "a free download of the full song", listen: "the full song (stream it any time)", buy: "the right to buy the full song for " + money(t.price, t.currency) }[t.song_lock] || "";
+  }
+  async function hasUnlocked(t) {
+    const s = await getSession();
+    if (!s || !isLocked(t)) return false;
+    if (s.user.id === t.owner) return true;
+    const { data } = await sb.from("unlocks").select("track_id").eq("user_id", s.user.id).eq("track_id", t.id).limit(1);
+    return !!(data && data.length);
+  }
   function artistName(p) { return p ? (p.display_name || (p.handle ? "@" + p.handle : "")) : ""; }
   function fileType(t) { return (t && t.audio_format === "wav") ? "WAV" : "MP3"; }
   function fmtTime(s) { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
@@ -99,7 +114,7 @@
     const on = (k) => (active === k ? " on" : "");
     nav.innerHTML =
       '<a class="link' + on("explore") + '" href="explore.html">Explore</a>' +
-      '<a class="link hide-sm' + on("upload") + '" href="upload.html">Upload</a>' +
+      '<a class="link hide-sm' + on("upload") + '" href="upload.html">Create</a>' +
       (s ? '<a class="btn btn-sm my-btn' + (active === "me" ? " on" : "") + '" href="dashboard.html">My page<span class="dot" id="inbox-dot" hidden></span></a>'
          : '<a class="btn btn-sm" href="' + signInUrl() + '">Sign in</a>');
     if (s) sb.rpc("unread_count").then(({ data }) => {
@@ -199,21 +214,21 @@
       audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
     };
   }
-  function play(t) {
-    if (current && current.id === t.id) { audio.paused ? audio.play().catch(() => {}) : audio.pause(); return; }
-    if (!t.preview_path) return toast("No preview for this track yet.", true);
+  function play(t, fullUrl) {
+    if (current && current.id === t.id && !fullUrl) { audio.paused ? audio.play().catch(() => {}) : audio.pause(); return; }
+    if (!fullUrl && !t.preview_path) return toast("No preview for this track yet.", true);
     current = t;
-    audio.src = publicUrl(t.preview_path);
+    audio.src = fullUrl || publicUrl(t.preview_path);
     audio.play().catch(() => toast("Tap play again to start the preview."));
     mountBar();
     const p = t.profiles || {};
     bar.querySelector("img").src = publicUrl(t.cover_path);
     bar.querySelector(".pi b").textContent = t.title;
-    bar.querySelector(".pi span").textContent = (artistName(p) ? artistName(p) + " · " : "") + "PREVIEW · " + priceLabel(t);
+    bar.querySelector(".pi span").textContent = (artistName(p) ? artistName(p) + " · " : "") + (fullUrl ? "FULL SONG" : "PREVIEW · " + (isLocked(t) ? lockTag(t) : priceLabel(t)));
     const buy = bar.querySelector("[data-buy]");
-    buy.textContent = +t.price > 0 ? "Buy " + money(t.price, t.currency) : "Download";
+    buy.textContent = isLocked(t) ? "Details" : +t.price > 0 ? "Buy " + money(t.price, t.currency) : "Download";
     buy.href = trackLink(t.slug);
-    buy.onclick = (e) => { e.preventDefault(); App.buy(t); };
+    buy.onclick = (e) => { if (isLocked(t)) return; e.preventDefault(); App.buy(t); };
   }
   audio.addEventListener("play", syncButtons);
   audio.addEventListener("pause", syncButtons);
@@ -236,21 +251,23 @@
   function trackCard(t, opts) {
     opts = opts || {};
     const p = t.profiles || {};
-    return '<div class="tk">' +
-      '<div class="cov"><a href="' + esc(trackLink(t.slug)) + '"><img loading="lazy" alt="" src="' + esc(publicUrl(t.cover_path)) + '"></a>' +
-        '<span class="tag pill solid">' + esc(priceLabel(t)) + "</span>" +
+    return '<div class="tk' + (isLocked(t) ? " locked" : "") + '">' +
+      '<div class="cov"><a href="' + esc(trackLink(t.slug)) + '"><img loading="lazy" alt=""' + (t.photo_hidden ? ' class="blurred"' : "") + ' src="' + esc(publicUrl(t.cover_path)) + '"></a>' +
+        (t.photo_hidden ? '<span class="hide-badge">FIND IT IN PERSON</span>' : "") +
+        '<span class="tag pill solid">' + esc(isLocked(t) ? lockTag(t) : priceLabel(t)) + "</span>" +
         (t.audio_format === "wav" ? '<span class="pill solid" style="position:absolute;right:10px;top:10px">WAV</span>' : "") +
-        playButton(t) + "</div>" +
+        (t.preview_path ? playButton(t) : "") + "</div>" +
       '<div class="body">' +
         '<a class="t" href="' + esc(trackLink(t.slug)) + '">' + esc(t.title) + "</a>" +
         (!opts.hideArtist && p.handle ? '<a class="a" href="' + esc(profileLink(p.handle)) + '">' + esc(artistName(p)) + "</a>" : "") +
+        (t.has_location ? '<div class="meta loc">[ ' + esc(t.place_name || "SECRET LOCATION") + (t.loc_approx ? " · AREA" : "") + " ]</div>" : "") +
         '<div class="meta">' + esc([t.genre, t.duration ? fmtTime(t.duration) : ""].filter(Boolean).join(" · ") || " ") +
 "</div>" +
         (t.likes ? '<div class="meta">' + nLikes(t) + (nLikes(t) === 1 ? " LIKE" : " LIKES") + " · " + nComments(t) + (nComments(t) === 1 ? " COMMENT" : " COMMENTS") + "</div>" : "") +
         (opts.actions || "") +
       "</div></div>";
   }
-  const TRACK_COLS = "id, slug, owner, title, genre, description, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, duration, price, currency, created_at, audio_format, profiles!owner(handle, display_name, avatar_path), likes(count), comments(count)";
+  const TRACK_COLS = "id, slug, owner, title, genre, description, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, duration, price, currency, created_at, audio_format, pop_scale, lift, key_mode, is_private, photo_hidden, has_location, place_name, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, profiles!owner(handle, display_name, avatar_path), likes(count), comments(count)";
   const nLikes = (t) => (t.likes && t.likes[0] && t.likes[0].count) || 0;
   const nComments = (t) => (t.comments && t.comments[0] && t.comments[0].count) || 0;
   // artist's share of each sale, as shown on the site (the real split is set on the server)
@@ -293,6 +310,15 @@
     a.href = url; a.rel = "noopener"; a.setAttribute("download", "");
     document.body.appendChild(a); a.click(); a.remove();
   }
+  // play the full song in the bottom player (fans who found it, buyers, the artist)
+  async function playFull(t, btn) {
+    try {
+      if (btn) btn.disabled = true;
+      const out = await callFunction("stream", { track_id: t.id });
+      play(t, out.url);
+    } catch (e) { toast(e.message, true); }
+    finally { if (btn) btn.disabled = false; }
+  }
   async function download(t, btn) {
     try {
       if (btn) btn.disabled = true;
@@ -328,7 +354,13 @@
   async function buy(t, onDone) {
     const s = await getSession();
     if (!s) { location.href = signInUrl("t.html?s=" + encodeURIComponent(t.slug) + "&buy=1"); return; }
-    if (!(+t.price > 0) || (await owns(t))) return download(t);
+    if (await owns(t)) return download(t);
+    if (isLocked(t)) {
+      const found = await hasUnlocked(t);
+      if (!found) return toast("Find this song's secret spot and scan it to unlock it.", true);
+      if (t.song_lock === "listen") return playFull(t);
+      if (t.song_lock === "free") return download(t);
+    } else if (!(+t.price > 0)) return download(t);
 
     const bg = document.createElement("div");
     bg.className = "modal-bg show";
@@ -382,6 +414,204 @@
     }
   }
 
+  // ── locations: map (Leaflet + OpenStreetMap), search, "use my location" (from Pixi Wizard) ──
+  let leafletP = null;
+  function loadLeaflet() {
+    if (window.L) return Promise.resolve(window.L);
+    if (leafletP) return leafletP;
+    leafletP = new Promise((res, rej) => {
+      const css = document.createElement("link");
+      css.rel = "stylesheet"; css.href = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css";
+      document.head.appendChild(css);
+      const js = document.createElement("script");
+      js.src = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js";
+      js.onload = () => res(window.L); js.onerror = () => { leafletP = null; rej(new Error("Map didn't load")); };
+      document.head.appendChild(js);
+    });
+    return leafletP;
+  }
+  function makeMap(el, lat, lng, zoom, opts) {
+    return loadLeaflet().then((L) => {
+      const map = L.map(el, Object.assign({ zoomControl: true, attributionControl: true }, opts || {})).setView([lat, lng], zoom || 15);
+      // OpenStreetMap tiles, turned black & gray with CSS (.am-map) to match the site
+      el.classList.add("am-map");
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(map);
+      return { L, map };
+    });
+  }
+  const pinIcon = (L) => L.divIcon({ className: "am-pin", html: "<i></i>", iconSize: [22, 22], iconAnchor: [11, 11] });
+  function areaCircle(L, lat, lng) { return L.circle([lat, lng], { radius: 450, color: "#f4f4f4", weight: 1.5, dashArray: "4 4", fillColor: "#f4f4f4", fillOpacity: 0.08 }); }
+  function geoSearch(q) {
+    return fetch("https://nominatim.openstreetmap.org/search?format=json&limit=5&q=" + encodeURIComponent(q), { headers: { "Accept-Language": navigator.language || "en" } }).then((r) => r.json());
+  }
+  function geoName(lat, lng) {
+    return fetch("https://nominatim.openstreetmap.org/reverse?format=json&zoom=18&lat=" + lat + "&lon=" + lng, { headers: { "Accept-Language": navigator.language || "en" } })
+      .then((r) => r.json()).then((d) => {
+        const a = d.address || {};
+        const first = d.name || a.amenity || a.shop || a.tourism || a.building || (a.house_number && a.road ? a.house_number + " " + a.road : a.road);
+        const city = a.city || a.town || a.village || a.suburb || a.county || "";
+        return [first, city].filter(Boolean).join(", ") || (d.display_name || "").split(",").slice(0, 2).join(",");
+      }).catch(() => "");
+  }
+  // the area around a pin (neighborhood, city, state…) so searches like "Bronx" find it
+  function geoArea(lat, lng) {
+    return fetch("https://nominatim.openstreetmap.org/reverse?format=json&zoom=14&lat=" + lat + "&lon=" + lng, { headers: { "Accept-Language": "en" } })
+      .then((r) => r.json()).then((d) => {
+        const a = d.address || {};
+        return [a.neighbourhood, a.suburb, a.borough, a.city_district, a.city, a.town, a.village, a.county, a.state, a.postcode, a.country]
+          .filter(Boolean).filter((v, i, arr) => arr.indexOf(v) === i).join(", ").slice(0, 300);
+      }).catch(() => null);
+  }
+  function hereNow(fresh) {
+    return new Promise((res, rej) => {
+      if (!navigator.geolocation) return rej(new Error("Location isn't available on this device."));
+      navigator.geolocation.getCurrentPosition((p) => res({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }),
+        (e) => rej(new Error(e.code === 1 ? "Location is blocked. Allow it for this site in your browser settings." : "Couldn't get your location. Try again outside or near a window.")),
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: fresh ? 0 : 60000 });
+    });
+  }
+  function milesBetween(a, b) {
+    const R = 3958.8, r = (d) => d * Math.PI / 180;
+    const dLat = r(b.lat - a.lat), dLng = r(b.lng - a.lng);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+  function distLabel(mi) { return mi < 0.1 ? "right here" : mi < 10 ? mi.toFixed(1) + " mi away" : Math.round(mi) + " mi away"; }
+  function directionsUrl(lat, lng) {
+    return /iPhone|iPad|Macintosh/.test(navigator.userAgent) && "ontouchend" in document
+      ? "https://maps.apple.com/?daddr=" + lat + "," + lng
+      : "https://www.google.com/maps/dir/?api=1&destination=" + lat + "," + lng;
+  }
+  // "approximate area": move the public map point up to ~300 m in a random direction
+  function fuzz(lat, lng) {
+    const d = 120 + Math.random() * 180, a = Math.random() * 2 * Math.PI;
+    return { lat: lat + (d * Math.cos(a)) / 111320, lng: lng + (d * Math.sin(a)) / (111320 * Math.cos(lat * Math.PI / 180)) };
+  }
+
+  // Location picker. Resolves { lat, lng, place_name, place_area, loc_approx }, null (remove), or undefined (cancel).
+  function pickLocation(current) {
+    return new Promise((resolve) => {
+      const cur = current && current.lat != null ? current : null;
+      const bg = document.createElement("div");
+      bg.className = "modal-bg show loc-modal";
+      bg.innerHTML =
+        '<div class="modal">' +
+          '<div class="label">Location</div><h3 style="margin:4px 0 6px">Where is the real image?</h3>' +
+          '<p class="muted small" style="margin-bottom:12px">Pin the spot where your image lives (a mural, poster, sticker, shop window, show) so fans can go find it and scan it.</p>' +
+          '<div class="loc-search"><input class="input" id="loc-q" placeholder="Search a place or address" enterkeyhint="search"><button class="btn btn-sm" id="loc-go" type="button">Search</button></div>' +
+          '<div id="loc-results" class="loc-results"></div>' +
+          '<button class="btn btn-sm btn-ghost btn-block" id="loc-here" type="button" style="margin:8px 0">Use my current location</button>' +
+          '<div class="note small" id="loc-warn" hidden>Don\'t pin your home. Use public places like a shop, mural or venue.</div>' +
+          '<div class="loc-map" id="loc-map"><div class="muted small mono" style="padding:70px 0;text-align:center">SEARCH OR USE YOUR LOCATION TO DROP A PIN</div></div>' +
+          '<p class="small muted" style="margin-top:6px">Drag the pin or tap the map to fine-tune it.</p>' +
+          '<label class="field" style="margin-top:12px"><span>Place name (what fans see)</span><input class="input" id="loc-name" maxlength="120" placeholder="e.g. Fordham Plaza mural"></label>' +
+          '<label class="check" style="margin-top:12px"><input type="checkbox" id="loc-approx"> <span>Show approximate area only (about a 1/4 mile circle). The exact spot stays secret.</span></label>' +
+          '<div class="row" style="gap:8px;margin-top:16px">' +
+            '<button class="btn btn-primary" id="loc-save" type="button" disabled>Save location</button>' +
+            (cur ? '<button class="btn btn-ghost" id="loc-remove" type="button">Remove</button>' : "") +
+            '<button class="btn btn-ghost" id="loc-cancel" type="button">Cancel</button>' +
+          "</div>" +
+        "</div>";
+      document.body.appendChild(bg);
+      const $ = (id) => bg.querySelector("#" + id);
+      let point = cur ? { lat: cur.lat, lng: cur.lng } : null, map = null, marker = null;
+      if (cur) { $("loc-name").value = cur.place_name || ""; $("loc-approx").checked = !!cur.loc_approx; }
+      const done = (v) => { bg.remove(); resolve(v); };
+      async function setPoint(lat, lng, name, fromHere) {
+        point = { lat, lng };
+        $("loc-save").disabled = false;
+        if (fromHere) $("loc-warn").hidden = false;
+        if (!map) {
+          $("loc-map").innerHTML = "";
+          try {
+            const m = await makeMap($("loc-map"), lat, lng, 16); map = m.map;
+            marker = m.L.marker([lat, lng], { draggable: true, icon: pinIcon(m.L) }).addTo(map);
+            marker.on("dragend", () => { const p = marker.getLatLng(); point = { lat: p.lat, lng: p.lng }; });
+            map.on("click", (e) => { marker.setLatLng(e.latlng); point = { lat: e.latlng.lat, lng: e.latlng.lng }; });
+          } catch (e) { $("loc-map").innerHTML = '<div class="muted small" style="padding:20px;text-align:center">Map couldn\'t load, but your pin is set.</div>'; }
+        } else { marker.setLatLng([lat, lng]); map.setView([lat, lng], 16); }
+        if (name && !$("loc-name").value.trim()) $("loc-name").value = name.slice(0, 120);
+        else if (!$("loc-name").value.trim()) geoName(lat, lng).then((n) => { if (n && !$("loc-name").value.trim()) $("loc-name").value = n.slice(0, 120); });
+      }
+      if (cur) setPoint(cur.lat, cur.lng, cur.place_name);
+      async function search() {
+        const q = $("loc-q").value.trim(); if (!q) return;
+        $("loc-results").innerHTML = '<div class="muted small mono">SEARCHING…</div>';
+        try {
+          const rows = await geoSearch(q);
+          $("loc-results").innerHTML = rows.length ? rows.map((r, i) => '<button type="button" data-i="' + i + '">' + esc(r.display_name) + "</button>").join("") : '<div class="muted small">No places found. Try adding the city.</div>';
+          $("loc-results").querySelectorAll("button").forEach((b) => (b.onclick = () => {
+            const r = rows[+b.dataset.i]; $("loc-results").innerHTML = "";
+            setPoint(+r.lat, +r.lon, (r.name || r.display_name.split(",")[0]));
+          }));
+        } catch (e) { $("loc-results").innerHTML = '<div class="muted small">Search isn\'t working right now. Try "Use my current location".</div>'; }
+      }
+      $("loc-go").onclick = search;
+      $("loc-q").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); search(); } });
+      $("loc-here").onclick = async () => {
+        $("loc-here").disabled = true; $("loc-here").textContent = "Finding you…";
+        try { const p = await hereNow(true); await setPoint(p.lat, p.lng, null, true); }
+        catch (e) { toast(e.message, true); }
+        $("loc-here").disabled = false; $("loc-here").textContent = "Use my current location";
+      };
+      $("loc-save").onclick = async () => {
+        if (!point) return;
+        $("loc-save").disabled = true; $("loc-save").textContent = "Saving…";
+        const area = await geoArea(point.lat, point.lng);
+        done({ lat: point.lat, lng: point.lng, place_name: $("loc-name").value.trim().slice(0, 120) || null, place_area: area, loc_approx: $("loc-approx").checked });
+      };
+      if ($("loc-remove")) $("loc-remove").onclick = () => done(null);
+      $("loc-cancel").onclick = () => done(undefined);
+    });
+  }
+  // columns to save on the track for a picked location (exact spot goes in track_spots)
+  function locationColumns(loc) {
+    if (!loc) return { has_location: false, area_lat: null, area_lng: null, place_name: null, place_area: null, loc_approx: false };
+    const shown = loc.loc_approx ? fuzz(loc.lat, loc.lng) : { lat: loc.lat, lng: loc.lng };
+    return { has_location: true, area_lat: shown.lat, area_lng: shown.lng, place_name: loc.place_name, place_area: loc.place_area, loc_approx: !!loc.loc_approx };
+  }
+
+  // ── pop-out effects editor (size, lift, background removal), same as Pixi Wizard ──
+  const LIFTS = [["Flat", 0], ["Low", 0.1], ["Medium", 0.25], ["High", 0.45]];
+  function mountEffects(el, init) {
+    init = init || {};
+    const pop = Math.round((+init.pop_scale || 1) * 100);
+    const liftIdx = Math.max(0, LIFTS.findIndex((l) => Math.abs(l[1] - (+init.lift || 0)) < 0.02));
+    el.innerHTML =
+      '<div class="fx">' +
+        '<div class="fx-row"><span>Size <b class="fx-val" id="fx-pop-v">' + pop + "%</b></span>" +
+          '<input type="range" id="fx-pop" min="100" max="200" step="5" value="' + pop + '"></div>' +
+        '<div class="fx-hint">Over 100% spills past the image\'s edges.</div>' +
+        '<div class="fx-row"><span>Lift off the image</span><div class="seg" id="fx-lift">' +
+          LIFTS.map((l, i) => '<button type="button" data-i="' + i + '"' + (i === liftIdx ? ' class="on"' : "") + ">" + l[0] + "</button>").join("") + "</div></div>" +
+        '<div class="fx-hint">Floats it toward the viewer so it looks 3D as they move.</div>' +
+        '<div class="fx-row"><span>Remove background</span><div class="seg" id="fx-key">' +
+          [["none", "Off"], ["green", "Green"], ["black", "Black"], ["white", "White"]].map((k) => '<button type="button" data-k="' + k[0] + '"' + ((init.key_mode || "none") === k[0] ? ' class="on"' : "") + ">" + k[1] + "</button>").join("") + "</div></div>" +
+        '<div class="fx-hint">Film or export your visual on a solid green, black or white background and it disappears in AR, so only you float. With White, white parts of your art turn see-through too.</div>' +
+      "</div>";
+    const q = (s) => el.querySelector(s);
+    q("#fx-pop").oninput = () => (q("#fx-pop-v").textContent = q("#fx-pop").value + "%");
+    el.querySelectorAll(".seg").forEach((seg) => seg.addEventListener("click", (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      seg.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+    }));
+    return {
+      get() {
+        const li = +(q("#fx-lift .on") || {}).dataset.i || 0;
+        return { pop_scale: (+q("#fx-pop").value) / 100, lift: LIFTS[li][1], key_mode: (q("#fx-key .on") || {}).dataset.k || "none" };
+      },
+    };
+  }
+  function effectsSummary(x) {
+    const bits = [];
+    if ((+x.pop_scale || 1) > 1) bits.push(Math.round(x.pop_scale * 100) + "%");
+    const l = LIFTS.find((l) => Math.abs(l[1] - (+x.lift || 0)) < 0.02);
+    if (l && l[1]) bits.push("lift " + l[0].toLowerCase());
+    if (["green", "black", "white"].includes(x.key_mode)) bits.push(x.key_mode + " removed");
+    return bits.join(" · ");
+  }
+
   // ── QR + share ───────────────────────────────────────────────
   function loadQR() {
     if (window.QRCode) return Promise.resolve();
@@ -406,10 +636,49 @@
     copy(url);
   }
 
+  // ── blurred + pinned: the image clears up only when you're there (same as Pixi Wizard) ──
+  function nearReveal(t, art) {
+    if (!art) return;
+    const img = art.querySelector("img"), badge = art.querySelector(".hide-badge");
+    if (!t.has_location || t.area_lat == null) return; // no spot: keep the "find it in person" badge
+    const radiusMi = Math.max(t.loc_approx ? 1.0 : 0.15, (t.unlock_radius_m || 100) / 1609);
+    if (badge) badge.remove();
+    const card = document.createElement("div");
+    card.className = "lock-card";
+    card.innerHTML = "<b>Locked until you're there</b><span>" + (t.place_name ? "Go to " + esc(t.place_name) + " to reveal it" : "Go to the spot to reveal it") + '</span><button type="button" class="btn btn-sm btn-primary">I\'m here, unlock</button>';
+    art.appendChild(card);
+    const btn = card.querySelector("button"), sub = card.querySelector("span");
+    function check(quiet) {
+      if (!navigator.geolocation) { if (!quiet) sub.textContent = "This phone can't share its location."; return; }
+      if (!quiet) { btn.disabled = true; btn.textContent = "Checking…"; }
+      navigator.geolocation.getCurrentPosition((p) => {
+        const d = milesBetween({ lat: p.coords.latitude, lng: p.coords.longitude }, { lat: t.area_lat, lng: t.area_lng });
+        if (d <= radiusMi) {
+          img.classList.remove("blurred");
+          card.classList.add("done"); card.innerHTML = "<b>You found it</b>";
+          setTimeout(() => { card.style.opacity = 0; setTimeout(() => card.remove(), 600); }, 2500);
+        } else if (!quiet) {
+          sub.textContent = "You're " + (d < 10 ? d.toFixed(1) : Math.round(d)) + " mi away. Get a little closer.";
+          btn.disabled = false; btn.textContent = "Check again";
+        }
+      }, (e) => {
+        if (quiet) return;
+        sub.textContent = e.code === 1 ? "Turn on location for this site to unlock it." : "Couldn't find your location.";
+        btn.disabled = false; btn.textContent = "Try again";
+      }, { enableHighAccuracy: true, timeout: 12000, maximumAge: quiet ? 60000 : 0 });
+    }
+    btn.onclick = (e) => { e.preventDefault(); e.stopPropagation(); check(false); };
+    if (navigator.permissions && navigator.permissions.query) navigator.permissions.query({ name: "geolocation" }).then((st) => { if (st.state === "granted") check(true); }).catch(() => {});
+  }
+
   window.App = {
+    nearReveal,
     C, sb, configured, BUCKET, SONGS, siteRoot, esc, publicUrl, trackLink, arLink, profileLink, money, priceLabel, artistName, fmtTime, fileType,
     toast, timeAgo, getSession, signInUrl, requireAuth, callFunction, mountHeader, ensureHandle, avatarHTML, squareJpeg,
     play, playButton, registerTracks, trackCard, TRACK_COLS, nLikes, nComments, artistCut, followerCount, mountFollow, buy, download, owns, startDownload,
     renderQR, copy, share,
+    isLocked, lockTag, lockReward, hasUnlocked, playFull,
+    loadLeaflet, makeMap, pinIcon, areaCircle, pickLocation, locationColumns, hereNow, milesBetween, distLabel, directionsUrl,
+    mountEffects, effectsSummary,
   };
 })();

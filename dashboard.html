@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=3">
+<link rel="stylesheet" href="styles.css?v=6">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=3"></script>
-<script src="app.js?v=3"></script>
+<script src="config.js?v=6"></script>
+<script src="app.js?v=6"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -36,11 +36,11 @@
     <a class="btn btn-sm" href="messages.html">Messages <span class="count-badge" id="msgs-count" hidden></span></a>
     <a class="btn btn-sm" id="admin-link" href="admin.html" hidden>Admin</a>
     <a class="btn btn-sm" id="view-public" hidden>View public page →</a>
-    <a class="btn btn-sm btn-primary" href="upload.html">+ Upload</a>
+    <a class="btn btn-sm btn-primary" href="upload.html">+ Create</a>
   </div>
 
   <div class="tabs" id="tabs">
-    <button type="button" data-p="tracks">My tracks<span class="n" id="n-tracks"></span></button>
+    <button type="button" data-p="tracks">My drops<span class="n" id="n-tracks"></span></button>
     <button type="button" data-p="selling">Selling</button>
     <button type="button" data-p="purchases">Purchases<span class="n" id="n-purchases"></span></button>
     <button type="button" data-p="following">Following<span class="n" id="n-following"></span></button>
@@ -220,22 +220,40 @@
   };
 
   // ── my tracks ──────────────────────────────────────────────
-  let mine = [];
+  let mine = [], finds = {};
+  const openMore = new Set(); // keep a card's settings open after it refreshes
+  $("tracks").addEventListener("toggle", (e) => {
+    const d = e.target; if (!d.dataset || !d.dataset.more) return;
+    if (d.open) openMore.add(d.dataset.more); else openMore.delete(d.dataset.more);
+  }, true);
   async function loadTracks() {
     const { data, error } = await sb.from("tracks").select(App.TRACK_COLS + ", is_published").eq("owner", uid).order("created_at", { ascending: false });
     if (error) { $("tracks").innerHTML = '<p class="muted">' + esc(error.message) + "</p>"; return; }
     mine = data; App.registerTracks(data);
+    finds = {};
+    const lockedIds = data.filter((t) => App.isLocked(t)).map((t) => t.id);
+    if (lockedIds.length) {
+      const { data: u } = await sb.from("unlocks").select("track_id").in("track_id", lockedIds);
+      (u || []).forEach((r) => (finds[r.track_id] = (finds[r.track_id] || 0) + 1));
+    }
     $("n-tracks").textContent = data.length || "";
-    if (!data.length) { $("tracks").innerHTML = '<div class="empty"><p style="margin-bottom:16px">No tracks yet.</p><a class="btn btn-primary" href="upload.html">Upload your first track</a></div>'; return; }
+    if (!data.length) { $("tracks").innerHTML = '<div class="empty"><p style="margin-bottom:16px">Nothing here yet.</p><a class="btn btn-primary" href="upload.html">Create your first experience</a></div>'; return; }
     $("tracks").innerHTML = '<div class="grid">' + data.map((t) => App.trackCard(t, {
       hideArtist: true,
-      actions: '<div class="small muted mono">' + (t.is_published ? "PUBLIC" : "HIDDEN") + (t.mind_path ? " · AR" : "") + "</div>" +
+      actions: '<div class="small muted mono">' + [t.is_published ? (t.is_private ? "PRIVATE" : "PUBLIC") : "HIDDEN", t.photo_hidden ? "BLURRED" : "", App.isLocked(t) ? "LOCKED · " + (finds[t.id] || 0) + " FOUND" : ""].filter(Boolean).join(" · ") + "</div>" +
         '<div class="actions">' +
           '<button class="btn btn-sm" data-act="price" data-id="' + t.id + '">Price</button>' +
           '<button class="btn btn-sm" data-act="edit" data-id="' + t.id + '">Edit</button>' +
           '<button class="btn btn-sm" data-act="vis" data-id="' + t.id + '">' + (t.is_published ? "Hide" : "Publish") + "</button>" +
           '<button class="btn btn-sm btn-danger" data-act="del" data-id="' + t.id + '" aria-label="Delete">✕</button>' +
-        "</div>",
+        "</div>" +
+        '<details class="box" data-more="' + t.id + '"' + (openMore.has(t.id) ? " open" : "") + '><summary>Settings</summary><div class="stack" style="margin-top:10px">' +
+          '<button class="btn btn-sm btn-block" data-act="priv" data-id="' + t.id + '">' + (t.is_private ? "Make public" : "Make private") + "</button>" +
+          '<button class="btn btn-sm btn-block" data-act="blur" data-id="' + t.id + '">' + (t.photo_hidden ? "Show image clearly" : "Blur image (find it in person)") + "</button>" +
+          '<button class="btn btn-sm btn-block" data-act="fx" data-id="' + t.id + '">' + (App.effectsSummary(t) ? "Effects: " + esc(App.effectsSummary(t)) : "Pop-out effects") + "</button>" +
+          '<button class="btn btn-sm btn-block" data-act="loc" data-id="' + t.id + '">' + (t.has_location ? "Location: " + esc(t.place_name || "set") : "Add location") + "</button>" +
+          '<button class="btn btn-sm btn-block" data-act="lock" data-id="' + t.id + '">' + (App.isLocked(t) ? "Unlock settings: " + esc(App.lockTag(t)) : "Lock song until found") + "</button>" +
+        "</div></details>",
     })).join("") + "</div>";
   }
   $("tracks").addEventListener("click", async (e) => {
@@ -253,11 +271,21 @@
       const { error } = await sb.from("tracks").delete().eq("id", t.id);
       if (error) return App.toast(error.message, true);
       const f = full.data || {};
-      sb.storage.from("media").remove([f.cover_path, f.preview_path, f.mind_path, f.video_path].filter(Boolean));
+      sb.storage.from("media").remove([f.cover_path, f.preview_path, f.mind_path, f.video_path].filter(Boolean)); // the exact spot is deleted with the song
       if (f.audio_path) sb.storage.from("songs").remove([f.audio_path]);
       App.toast("Deleted"); loadTracks();
     } else if (act === "price") openPrice(t);
     else if (act === "edit") openEdit(t);
+    else if (act === "priv" || act === "blur") {
+      b.disabled = true;
+      const upd = act === "priv" ? { is_private: !t.is_private } : { photo_hidden: !t.photo_hidden };
+      const { error } = await sb.from("tracks").update(upd).eq("id", t.id);
+      if (error) { b.disabled = false; return App.toast(error.message, true); }
+      App.toast(act === "priv" ? (t.is_private ? "Now public: it shows on Explore" : "Now private: hidden from Explore") : (t.photo_hidden ? "Image shows clearly again" : "Image is blurred. Fans have to find the real one"));
+      loadTracks();
+    } else if (act === "fx") openEffects(t);
+    else if (act === "loc") changeLocation(t);
+    else if (act === "lock") openLock(t);
   });
 
   function modal(html) {
@@ -268,7 +296,78 @@
     bg.onclick = (e) => { if (e.target === bg) bg.remove(); };
     return bg;
   }
+  function openEffects(t) {
+    const bg = modal('<div class="label">Pop-out effects</div><h3 style="margin:6px 0 4px;text-transform:none;letter-spacing:.02em">' + esc(t.title) + '</h3><div id="fx-edit"></div>' +
+      '<div class="row" style="margin-top:18px"><button class="btn btn-primary" id="fx-save">Save</button><button class="btn btn-ghost" id="fx-cancel">Cancel</button></div>');
+    const ed = App.mountEffects(bg.querySelector("#fx-edit"), t);
+    bg.querySelector("#fx-cancel").onclick = () => bg.remove();
+    bg.querySelector("#fx-save").onclick = async () => {
+      const { error } = await sb.from("tracks").update(ed.get()).eq("id", t.id);
+      if (error) return App.toast("Couldn't save effects. Try again.", true);
+      bg.remove(); App.toast("Effects saved. Scan it to see"); loadTracks();
+    };
+  }
+  async function changeLocation(t) {
+    let cur = null;
+    if (t.has_location) {
+      const { data: sp } = await sb.from("track_spots").select("lat, lng").eq("track_id", t.id).maybeSingle();
+      cur = sp ? { lat: sp.lat, lng: sp.lng, place_name: t.place_name, loc_approx: t.loc_approx } : null;
+    }
+    const r = await App.pickLocation(cur);
+    if (r === undefined) return;
+    if (r === null && App.isLocked(t) && !confirm("Removing the location also unlocks the song for everyone (it goes back to a normal release). Continue?")) return;
+    const upd = App.locationColumns(r);
+    if (r === null && App.isLocked(t)) Object.assign(upd, { song_lock: "none" });
+    if (r) {
+      const sp = await sb.from("track_spots").upsert({ track_id: t.id, lat: r.lat, lng: r.lng });
+      if (sp.error) return App.toast("Couldn't save the location. Try again.", true);
+    }
+    const { error } = await sb.from("tracks").update(upd).eq("id", t.id);
+    if (error) return App.toast(error.message, true);
+    if (r === null) await sb.from("track_spots").delete().eq("track_id", t.id);
+    App.toast(r ? "Location saved" : "Location removed"); loadTracks();
+  }
+  function openLock(t) {
+    if (!t.has_location) { App.toast("Add a location first, so fans know where to go.", true); return changeLocation(t); }
+    const cur = t.song_lock || "none";
+    const bg = modal(
+      '<div class="label">Unlock settings</div><h3 style="margin:6px 0 14px;text-transform:none;letter-spacing:.02em">' + esc(t.title) + "</h3>" +
+      '<div class="radio-list" id="l-mode">' +
+        [["none", "Not locked", "A normal release: preview for everyone, free or for sale."],
+         ["free", "Free download when found", "Fans who find it keep the full song for free."],
+         ["listen", "Listen only when found", "Fans who find it can play the full song any time, not download it."],
+         ["buy", "Right to buy when found", "Only fans who found it can buy it."]].map((o) =>
+          '<label><input type="radio" name="l-mode" value="' + o[0] + '"' + (o[0] === cur ? " checked" : "") + "> <span><b>" + o[1] + '</b><br><span class="small muted">' + o[2] + "</span></span></label>").join("") +
+      "</div>" +
+      '<div id="l-buy" style="margin-top:12px"><label class="field"><span>Price</span><div class="input-prefix" style="max-width:220px"><span class="pre">' + esc(C.CURRENCY) + '</span><input class="input mono" id="l-price" type="number" step="0.01" inputmode="decimal"></div></label></div>' +
+      '<label class="field" style="margin-top:12px"><span>How close they need to be</span><select class="input" id="l-radius">' +
+        [[50, "Right at it · about 150 ft"], [100, "Close · about 330 ft"], [250, "Nearby · about 800 ft"], [600, "Same area · about 1/3 mile"]].map((o) => '<option value="' + o[0] + '"' + (+t.unlock_radius_m === o[0] ? " selected" : "") + ">" + o[1] + "</option>").join("") +
+      "</select></label>" +
+      '<label class="field" style="margin-top:12px"><span>Hint for fans</span><textarea class="input" id="l-hint" maxlength="300"></textarea></label>' +
+      '<div class="row" style="margin-top:18px"><button class="btn btn-primary" id="l-save">Save</button><button class="btn btn-ghost" id="l-cancel">Cancel</button></div>');
+    const q = (sel) => bg.querySelector(sel);
+    q("#l-price").value = (+t.price > 0 ? +t.price : (seller ? +seller.default_price : 0) || 1.29).toFixed(2);
+    q("#l-hint").value = t.hint || "";
+    const paint = () => { const m = (q('input[name="l-mode"]:checked') || {}).value; q("#l-buy").hidden = m !== "buy"; };
+    q("#l-mode").addEventListener("change", paint); paint();
+    q("#l-cancel").onclick = () => bg.remove();
+    q("#l-save").onclick = async () => {
+      const m = (q('input[name="l-mode"]:checked') || {}).value || "none";
+      const upd = { song_lock: m, unlock_radius_m: +q("#l-radius").value || 100, hint: q("#l-hint").value.trim() || null };
+      if (m === "free" || m === "listen") upd.price = 0;
+      if (m === "buy") {
+        const p = +(+q("#l-price").value).toFixed(2);
+        if (!(p >= C.MIN_PRICE && p <= C.MAX_PRICE)) return App.toast("Price must be " + App.money(C.MIN_PRICE) + " to " + App.money(C.MAX_PRICE), true);
+        if (!seller) { App.toast("Fill out the seller form first.", true); bg.remove(); return show("selling"); }
+        upd.price = p;
+      }
+      const { error } = await sb.from("tracks").update(upd).eq("id", t.id);
+      if (error) return App.toast(error.message, true);
+      bg.remove(); App.toast(m === "none" ? "Song unlocked for everyone" : "Unlock settings saved"); loadTracks();
+    };
+  }
   function openPrice(t) {
+    if (App.isLocked(t)) { App.toast("This song is locked. Change it in Settings › Unlock settings.", true); return openLock(t); }
     if (!seller) { App.toast("Fill out the seller form first.", true); show("selling"); return; }
     const free = !(+t.price > 0);
     const bg = modal(

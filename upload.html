@@ -9,18 +9,20 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=3">
+<link rel="stylesheet" href="styles.css?v=6">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=3"></script>
-<script src="app.js?v=3"></script>
+<script src="config.js?v=6"></script>
+<script src="app.js?v=6"></script>
 <style>
   .wave { width: 100%; height: 64px; display: block; background: #050505; border: 1px solid var(--line); margin-top: 12px; }
   .rng { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: .82rem; color: var(--text-2); }
   .rng input { width: 100%; accent-color: #fff; }
   .sell-box { margin-top: 14px; display: grid; gap: 14px; }
   .seller-form { border: 1px solid var(--line-2); padding: 16px; display: grid; gap: 12px; background: #070707; }
-  .cover-drop .preview { aspect-ratio: 1; object-fit: cover; max-width: 280px; margin: 0 auto; }
-  .ar-row { display: flex; gap: 12px; align-items: flex-start; }
+  .priv-inner { margin-top: 12px; display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+  .priv-inner > * { min-width: 0; }
+  .wave { width: 100%; }
+  .lock-box { border: 1px solid var(--line-2); padding: 14px; display: grid; gap: 12px; }
 </style>
 </head>
 <body>
@@ -28,14 +30,46 @@
   <div id="loading" class="muted mono" style="text-align:center;padding:60px 0">Loading<span class="cursor"></span></div>
 
   <div id="creator" hidden>
-    <div style="margin-bottom:20px">
-      <div class="label">New release</div>
-      <h1 style="font-size:1.8rem;margin-top:4px">Upload a track</h1>
+    <div class="row" style="margin-bottom:18px">
+      <h2>Make a music AR experience</h2>
     </div>
 
-    <!-- 01 MP3 -->
+    <!-- 1 TARGET IMAGE (same as Pixi Wizard) -->
     <div class="card">
-      <div class="step-head"><span class="step-num" id="n1">01</span><div><div class="step-title">The song</div><div class="step-sub">Your finished MP3 or WAV. Buyers get this exact file.</div></div></div>
+      <div class="step-head"><span class="step-num" id="n1">1</span><div><div class="step-title">Target image</div><div class="step-sub">The physical image people will point at</div></div></div>
+      <div class="drop" id="drop-img">
+        <input type="file" id="file-img" accept="image/jpeg,image/png,image/webp">
+        <div class="empty-state"><div class="icon">[ IMG ]</div><div>Drop image here or <span class="browse">browse</span></div><div class="hint">JPG · PNG · WEBP</div></div>
+      </div>
+      <p class="small muted" style="margin-top:12px">Tip: detailed, high-contrast images track best. Plain logos or mostly-empty images are hard for the camera to lock onto. This image is also your cover art.</p>
+    </div>
+
+    <!-- 2 OVERLAY (same as Pixi Wizard) -->
+    <div class="card">
+      <div class="step-head"><span class="step-num" id="n2">2</span><div><div class="step-title">Overlay video, GIF or photo</div><div class="step-sub">What appears on top when scanned</div></div></div>
+      <div class="drop" id="drop-vid">
+        <input type="file" id="file-vid" accept="video/mp4,video/webm,video/quicktime,image/gif,image/jpeg,image/png,image/webp">
+        <div class="empty-state"><div class="icon">[ MP4 / GIF ]</div><div>Drop a video, GIF or photo here or <span class="browse">browse</span></div><div class="hint">Videos up to 3 minutes. Too big? We'll shrink it for you.</div></div>
+      </div>
+      <div class="trim" id="trim" hidden>
+        <h3>Let's make your video fit</h3>
+        <p class="muted small" id="trim-why" style="margin-top:4px"></p>
+        <video id="trim-vid" muted playsinline loop></video>
+        <div class="rng"><span>START</span><input type="range" id="trim-start" min="0" step="0.1" value="0"><span id="trim-start-t">0:00</span></div>
+        <div class="rng"><span>END</span><input type="range" id="trim-end" min="0" step="0.1" value="0"><span id="trim-end-t">0:00</span></div>
+        <div class="small muted mono" id="trim-est" style="margin:10px 0 14px"></div>
+        <div class="note small" id="trim-keep" hidden style="margin-bottom:12px">Keep this screen open while it shrinks. It takes about as long as the clip.</div>
+        <div class="row"><button class="btn btn-primary" id="trim-go" type="button">Make it fit</button><button class="btn btn-ghost" id="trim-cancel" type="button">Cancel</button></div>
+      </div>
+      <details class="box" id="fx-box">
+        <summary>Pop-out effects <span class="small muted" id="fx-sum">(optional)</span></summary>
+        <div id="fx"></div>
+      </details>
+    </div>
+
+    <!-- 3 SONG (Area MP3) -->
+    <div class="card">
+      <div class="step-head"><span class="step-num" id="n3">3</span><div><div class="step-title">Song</div><div class="step-sub">What plays when it's scanned. MP3 or WAV.</div></div></div>
       <div class="drop" id="drop-mp3">
         <input type="file" id="file-mp3" accept="audio/mpeg,.mp3,audio/wav,audio/x-wav,audio/wave,.wav">
         <div class="empty-state"><div class="icon">[ MP3 / WAV ]</div><div>Drop your song here or <span class="browse">browse</span></div><div class="hint">MP3 UP TO <span class="js-mp3mb"></span> MB · WAV UP TO <span class="js-wavmb"></span> MB</div></div>
@@ -44,79 +78,98 @@
         <div class="label" style="margin-top:16px">Free preview · <span class="js-prev"></span> seconds</div>
         <canvas class="wave" id="wave" width="1200" height="128"></canvas>
         <div class="rng"><span>START</span><input type="range" id="prev-start" min="0" step="1" value="0"><span id="prev-start-t">0:00</span></div>
-        <div class="row" style="margin-top:10px"><button class="btn btn-sm" type="button" id="prev-listen">Listen to preview</button><span class="small muted">This is what everyone hears before they buy.</span></div>
+        <div class="row" style="margin-top:10px"><button class="btn btn-sm" type="button" id="prev-listen">Listen to preview</button><span class="small muted">Everyone hears this part. The full song is what fans unlock or buy.</span></div>
       </div>
-      <p class="small muted" id="no-preview" hidden style="margin-top:12px">This device couldn't read the song to make a preview. It will still upload; the track page just won't have a preview player.</p>
+      <p class="small muted" id="no-preview" hidden style="margin-top:12px">This device couldn't read the song to make a preview. It will still upload; there just won't be a preview to play.</p>
     </div>
 
-    <!-- 02 Cover -->
+    <!-- 4 NAME IT & PUBLISH (same as Pixi Wizard, plus price) -->
     <div class="card">
-      <div class="step-head"><span class="step-num" id="n2">02</span><div><div class="step-title">Cover art</div><div class="step-sub">Square works best. It also becomes the AR target fans can scan.</div></div></div>
-      <div class="drop cover-drop" id="drop-img">
-        <input type="file" id="file-img" accept="image/jpeg,image/png,image/webp">
-        <div class="empty-state"><div class="icon">[ IMG ]</div><div>Drop cover art here or <span class="browse">browse</span></div><div class="hint">JPG · PNG · WEBP</div></div>
-      </div>
-    </div>
-
-    <!-- 03 Details -->
-    <div class="card">
-      <div class="step-head"><span class="step-num" id="n3">03</span><div><div class="step-title">Details</div><div class="step-sub">How the track shows up on your page and Explore.</div></div></div>
+      <div class="step-head"><span class="step-num" id="n4">4</span><div><div class="step-title">Name it &amp; publish</div><div class="step-sub">Give it a title and choose who can find it</div></div></div>
       <div class="stack">
-        <label class="field"><span>Title</span><input class="input" id="title" maxlength="100" placeholder="Track name"></label>
-        <div class="grid2">
-          <label class="field"><span>Genre</span>
-            <select class="input" id="genre">
-              <option value="">Choose…</option>
-              <option>Hip-Hop</option><option>R&amp;B</option><option>Pop</option><option>Rock</option><option>Electronic</option>
-              <option>House</option><option>Afrobeats</option><option>Latin</option><option>Reggae</option><option>Jazz</option>
-              <option>Soul</option><option>Gospel</option><option>Country</option><option>Indie</option><option>Lo-fi</option>
-              <option>Instrumental</option><option>Spoken Word</option><option>Other</option>
-            </select>
-          </label>
-          <div class="field"><span>Your page</span><div class="input mono small" id="handle-box" style="color:var(--text-2);overflow-wrap:anywhere">…</div></div>
-        </div>
-        <label class="field"><span>Description (optional)</span><textarea class="input" id="desc" maxlength="1000" placeholder="Credits, story, features…"></textarea></label>
-      </div>
-    </div>
+        <label class="field"><span>Title</span><input class="input" id="title" maxlength="100" placeholder="e.g. Summer single, album poster"></label>
+        <div class="field"><span>Your page</span><div class="input mono small" id="handle-box" style="color:var(--text-2);overflow-wrap:anywhere">…</div></div>
 
-    <!-- 04 Price -->
-    <div class="card">
-      <div class="step-head"><span class="step-num" id="n4">04</span><div><div class="step-title">Price</div><div class="step-sub">Sell the download, or give it away free.</div></div></div>
-      <div class="seg" id="mode-seg"><button type="button" data-m="sell" class="on">Sell</button><button type="button" data-m="free">Free</button></div>
-      <div class="sell-box" id="sell-box">
-        <label class="field"><span>Price per download</span>
-          <div class="input-prefix" style="max-width:220px"><span class="pre js-cur">USD</span><input class="input mono" id="price" type="number" inputmode="decimal" step="0.01"></div>
-          <span class="small muted" style="display:block;margin-top:6px" id="price-hint"></span>
-        </label>
-        <div class="seller-form" id="seller-form" hidden>
-          <div><h3>Seller form</h3><p class="small muted" style="margin-top:4px">One time only. Your earnings are paid out to this PayPal. Only you can see it.</p></div>
-          <label class="field"><span>Legal name</span><input class="input" id="s-name" maxlength="100" autocomplete="name"></label>
-          <label class="field"><span>PayPal email (where you get paid)</span><input class="input" id="s-email" type="email" maxlength="200" autocomplete="email"></label>
-          <label class="field"><span>Country</span><input class="input" id="s-country" maxlength="60" autocomplete="country-name"></label>
-          <p class="small muted">No PayPal yet? Make a free account at paypal.com with this email first, or payments can't reach you.</p>
-        </div>
-        <div class="note small" id="seller-ok" hidden></div>
-      </div>
-      <label class="check" style="margin-top:16px"><input type="checkbox" id="rights"> <span>I wrote, own, or have the rights to sell this music, including any samples.</span></label>
-    </div>
+        <details class="box" id="priv-box">
+          <summary>Privacy &amp; location <span class="small muted" id="priv-sum">Public</span></summary>
+          <div class="priv-inner">
+            <label class="toggle"><input type="checkbox" id="is-private"><span class="switch" aria-hidden="true"></span>
+              <span><b>Private</b><br><span class="small muted">Hidden from Explore and your public page. Your link, QR code and the AR camera still work.</span></span></label>
+            <div>
+              <button type="button" class="loc-chip" id="loc-btn">[+] <span id="loc-label">Add a location (optional)</span></button>
+              <div class="small muted" style="margin-top:6px">Let people find the real image and scan it in person.</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="photo-hidden"><span class="switch" aria-hidden="true"></span>
+              <span><b>Blur the image</b><br><span class="small muted">Your image shows blurred on the site, so people can't scan it off a screen. They have to find the real one.</span></span></label>
+            <label class="toggle disabled" id="lock-toggle"><input type="checkbox" id="lock-on" disabled><span class="switch" aria-hidden="true"></span>
+              <span><b>Lock the song until they find it</b><br><span class="small muted" id="lock-why">Add a location first. Fans have to be at the spot and scan the real image to unlock the full song.</span></span></label>
+            <div class="lock-box" id="lock-box" hidden>
+              <div class="field"><span>What fans unlock when they find it</span>
+                <div class="radio-list" id="reward">
+                  <label><input type="radio" name="reward" value="free" checked> <span><b>Free download</b><br><span class="small muted">They keep the full song for free.</span></span></label>
+                  <label><input type="radio" name="reward" value="listen"> <span><b>Listen only</b><br><span class="small muted">They can play the full song any time on the site, but not download it.</span></span></label>
+                  <label><input type="radio" name="reward" value="buy"> <span><b>The right to buy it</b><br><span class="small muted">Only people who found it can buy it, at your price.</span></span></label>
+                </div>
+              </div>
+              <label class="field"><span>How close they need to be</span>
+                <select class="input" id="radius">
+                  <option value="50">Right at it · about 150 ft</option>
+                  <option value="100" selected>Close · about 330 ft</option>
+                  <option value="250">Nearby · about 800 ft</option>
+                  <option value="600">Same area · about 1/3 mile</option>
+                </select>
+              </label>
+              <label class="field"><span>Hint for fans (optional)</span><textarea class="input" id="hint" maxlength="300" placeholder="e.g. Look up when you cross the bridge. Behind the record shop."></textarea></label>
+            </div>
+          </div>
+        </details>
 
-    <!-- 05 AR -->
-    <div class="card">
-      <div class="step-head"><span class="step-num" id="n5">05</span><div><div class="step-title">AR (optional)</div><div class="step-sub">Fans point their phone at your cover and the song plays.</div></div></div>
-      <label class="check"><input type="checkbox" id="ar-on" checked> <span>Make my cover art scannable. Takes 10–40 seconds when you publish.</span></label>
-      <div id="ar-video-box" style="margin-top:14px">
-        <div class="drop" id="drop-vid" style="min-height:120px;padding:22px">
-          <input type="file" id="file-vid" accept="video/mp4,video/webm,video/quicktime">
-          <div class="empty-state"><div class="icon">[ MP4 ]</div><div>Add a music video to play on the cover (optional)</div><div class="hint">MP4 · UP TO <span class="js-vidmb"></span> MB · SOUND COMES FROM THE SONG</div></div>
-        </div>
-      </div>
-    </div>
+        <details class="box" id="price-box">
+          <summary>Price <span class="small muted" id="price-sum">Free</span></summary>
+          <div style="margin-top:12px">
+            <div class="note small" id="price-locked-note" hidden></div>
+            <div id="price-area">
+              <div class="seg" id="mode-seg"><button type="button" data-m="free" class="on">Free</button><button type="button" data-m="sell">Sell</button></div>
+              <div class="sell-box" id="sell-box" hidden>
+                <label class="field"><span>Price per download</span>
+                  <div class="input-prefix" style="max-width:220px"><span class="pre js-cur">USD</span><input class="input mono" id="price" type="number" inputmode="decimal" step="0.01"></div>
+                  <span class="small muted" style="display:block;margin-top:6px" id="price-hint"></span>
+                </label>
+                <div class="seller-form" id="seller-form" hidden>
+                  <div><h3>Seller form</h3><p class="small muted" style="margin-top:4px">One time only. Your earnings are paid out to this PayPal. Only you can see it.</p></div>
+                  <label class="field"><span>Legal name</span><input class="input" id="s-name" maxlength="100" autocomplete="name"></label>
+                  <label class="field"><span>PayPal email (where you get paid)</span><input class="input" id="s-email" type="email" maxlength="200" autocomplete="email"></label>
+                  <label class="field"><span>Country</span><input class="input" id="s-country" maxlength="60" autocomplete="country-name"></label>
+                  <p class="small muted">No PayPal yet? Make a free account at paypal.com with this email first, or payments can't reach you.</p>
+                </div>
+                <div class="note small" id="seller-ok" hidden></div>
+              </div>
+            </div>
+          </div>
+        </details>
 
-    <div class="card">
-      <button class="btn btn-primary btn-lg btn-block" id="publish">Publish track</button>
-      <div id="progress-wrap" hidden style="margin-top:14px">
-        <div class="progress"><div id="bar"></div></div>
-        <p class="small muted mono" id="progress-msg" style="margin-top:8px"></p>
+        <details class="box" id="more-box">
+          <summary>More details <span class="small muted">(optional)</span></summary>
+          <div class="stack" style="margin-top:12px">
+            <label class="field"><span>Genre</span>
+              <select class="input" id="genre">
+                <option value="">Choose…</option>
+                <option>Hip-Hop</option><option>R&amp;B</option><option>Pop</option><option>Rock</option><option>Electronic</option>
+                <option>House</option><option>Afrobeats</option><option>Latin</option><option>Reggae</option><option>Jazz</option>
+                <option>Soul</option><option>Gospel</option><option>Country</option><option>Indie</option><option>Lo-fi</option>
+                <option>Instrumental</option><option>Spoken Word</option><option>Other</option>
+              </select>
+            </label>
+            <label class="field"><span>Description</span><textarea class="input" id="desc" maxlength="1000" placeholder="Credits, story, features…"></textarea></label>
+          </div>
+        </details>
+
+        <label class="check"><input type="checkbox" id="rights"> <span>I wrote, own, or have the rights to this music, video and image, including any samples.</span></label>
+        <button class="btn btn-primary btn-lg btn-block" id="publish">Create</button>
+        <div id="progress-wrap" hidden>
+          <div class="progress"><div id="bar"></div></div>
+          <p class="small muted mono" id="progress-msg" style="margin-top:8px"></p>
+        </div>
       </div>
     </div>
   </div>
@@ -128,7 +181,6 @@
   const C = App.C, sb = App.sb, $ = (id) => document.getElementById(id);
   document.querySelectorAll(".js-mp3mb").forEach((e) => (e.textContent = C.MAX_MP3_MB));
   document.querySelectorAll(".js-wavmb").forEach((e) => (e.textContent = C.MAX_WAV_MB || 50));
-  document.querySelectorAll(".js-vidmb").forEach((e) => (e.textContent = C.MAX_VIDEO_MB));
   document.querySelectorAll(".js-prev").forEach((e) => (e.textContent = C.PREVIEW_SECONDS));
   document.querySelectorAll(".js-cur").forEach((e) => (e.textContent = C.CURRENCY));
   $("price-hint").textContent = App.money(C.MIN_PRICE) + " to " + App.money(C.MAX_PRICE) + ". You get " + App.artistCut() + "% of every sale, paid out to your PayPal.";
@@ -144,23 +196,19 @@
   $("loading").hidden = true; $("creator").hidden = false;
   $("handle-box").textContent = handle ? App.siteRoot.replace(/^https?:\/\//, "") + "u.html?h=" + handle : "…";
   $("price").value = (seller ? +seller.default_price || 1.29 : 1.29).toFixed(2);
-  if (seller) {
-    $("seller-ok").hidden = false;
-    $("seller-ok").textContent = "PAYOUTS › " + seller.paypal_email + "  (change in My page › Selling)";
-  } else {
-    $("seller-form").hidden = false;
-    $("s-email").value = session.user.email || "";
-  }
+
+  if (seller) { $("seller-ok").hidden = false; $("seller-ok").textContent = "PAYOUTS › " + seller.paypal_email + "  (change in My page › Selling)"; }
+  else { $("seller-form").hidden = false; $("s-email").value = session.user.email || ""; }
 
   // sell / free
-  let mode = "sell";
+  let mode = "free";
   $("mode-seg").onclick = (e) => {
     const b = e.target.closest("button"); if (!b) return;
     mode = b.dataset.m;
     $("mode-seg").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
     $("sell-box").hidden = mode !== "sell";
+    summaries();
   };
-  $("ar-on").onchange = () => ($("ar-video-box").hidden = !$("ar-on").checked);
 
   function wireDrop(dropId, inputId, onFile) {
     const drop = $(dropId), input = $(inputId);
@@ -178,7 +226,15 @@
     const m = document.createElement("div"); m.className = "file-meta"; m.textContent = meta + " · tap to change";
     drop.append(m);
   }
+  function resetDrop(dropId) {
+    const drop = $(dropId);
+    drop.classList.remove("has-file");
+    drop.querySelector(".empty-state").hidden = false;
+    drop.querySelectorAll(".preview,.file-meta").forEach((n) => n.remove());
+    drop.querySelector("input").value = "";
+  }
   const done = (id) => { $(id).classList.add("done"); };
+  const undone = (id) => { $(id).classList.remove("done"); };
 
   // ── 01 MP3 + preview clip ──────────────────────────────────────
   let mp3 = null;      // { file, duration, format: "mp3" | "wav" }
@@ -194,7 +250,7 @@
       : "That MP3 is over " + maxMb + " MB. Export at 320 kbps or lower.", true);
     mp3 = { file, duration: 0, format: isWav ? "wav" : "mp3" }; pcm = null;
     showPreview("drop-mp3", null, file.name + " · " + (file.size / 1048576).toFixed(1) + " MB · reading…");
-    done("n1");
+    done("n3");
     if (!$("title").value) $("title").value = file.name.replace(/\.(mp3|wav)$/i, "").replace(/[_]+/g, " ").slice(0, 100);
     $("preview-box").hidden = true; $("no-preview").hidden = true;
     try {
@@ -278,34 +334,260 @@
     return new Blob(chunks, { type: "audio/mpeg" });
   }
 
-  // ── 02 cover ───────────────────────────────────────────────────
-  let cover = null; // { blob, el }
+  // ── 02 target image (also the cover art) ─────────────────────────
+  let img = null; // { blob, el, w, h }
+  function loadImage(file) {
+    return new Promise((res, rej) => {
+      const url = URL.createObjectURL(file), im = new Image();
+      im.onload = () => res(im); im.onerror = () => rej(new Error("That image couldn't be read."));
+      im.src = url;
+    });
+  }
+  // downscale big photos: faster tracking compile + smaller download for fans
+  async function prepareImage(file) {
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error("Please choose a JPG, PNG or WebP image.");
+    if (file.size > C.MAX_IMAGE_MB * 1048576) throw new Error("That image is too big. Try a smaller one, or a screenshot of it.");
+    const src = await loadImage(file);
+    const MAX = 1200, s = Math.min(1, MAX / Math.max(src.naturalWidth, src.naturalHeight));
+    const w = Math.round(src.naturalWidth * s), h = Math.round(src.naturalHeight * s);
+    const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+    const ctx = cv.getContext("2d");
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(src, 0, 0, w, h);
+    const blob = await new Promise((r) => cv.toBlob(r, "image/jpeg", 0.9));
+    const el = await loadImage(blob);
+    return { blob, el, w, h };
+  }
   wireDrop("drop-img", "file-img", async (file) => {
     try {
-      if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error("Please choose a JPG, PNG or WebP image.");
-      if (file.size > C.MAX_IMAGE_MB * 1048576) throw new Error("That image is too big. Try one under " + C.MAX_IMAGE_MB + " MB.");
-      const blob = await App.squareJpeg(file, 1200);
-      const el = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = URL.createObjectURL(blob); });
-      cover = { blob, el };
-      const p = new Image(); p.src = el.src; p.alt = "";
-      showPreview("drop-img", p, el.naturalWidth + "×" + el.naturalHeight);
-      done("n2");
-    } catch (e) { App.toast(e.message, true); }
+      img = await prepareImage(file);
+      const p = new Image(); p.src = img.el.src; p.alt = "";
+      showPreview("drop-img", p, img.w + "×" + img.h);
+      done("n1");
+      if (!$("title").value && file.name) $("title").value = file.name.replace(/\.[^.]+$/, "").slice(0, 100);
+    } catch (e) { App.toast(e.message, true); img = null; }
   });
 
-  // ── 05 optional AR video ───────────────────────────────────────
-  let vid = null; // { file, w, h }
+  // ── 03 overlay: video, GIF or photo (same as Pixi Wizard) ─────────
+  let vid = null; // { file, w, h, kind: "video" | "image", gif }
+  const fmt = (t) => Math.floor(t / 60) + ":" + String(Math.floor(t % 60)).padStart(2, "0");
+  function overlayDone() { done("n2"); }
   wireDrop("drop-vid", "file-vid", (file) => {
-    if (!/^video\//.test(file.type)) return App.toast("Please choose a video (MP4 works on every phone).", true);
-    if (file.size > C.MAX_VIDEO_MB * 1048576) return App.toast("That video is over " + C.MAX_VIDEO_MB + " MB. Export a shorter or smaller clip.", true);
+    $("trim").hidden = true; $("trim-vid").pause();
+    const isGif = file.type === "image/gif" || /\.gif$/i.test(file.name);
+    if (isGif || /^image\/(jpeg|png|webp)$/.test(file.type)) {
+      if (isGif && file.size > C.MAX_VIDEO_MB * 1048576) return App.toast("That GIF is too big. Try a shorter one.", true);
+      if (!isGif && file.size > C.MAX_IMAGE_MB * 1048576) return App.toast("That photo is too big. Try a smaller one.", true);
+      const im = new Image();
+      im.onload = () => {
+        vid = { file, w: im.naturalWidth || 1, h: im.naturalHeight || 1, kind: "image", gif: isGif };
+        const p = new Image(); p.src = im.src; p.alt = "";
+        showPreview("drop-vid", p, isGif ? "GIF" : "Photo");
+        overlayDone();
+      };
+      im.onerror = () => App.toast(isGif ? "That GIF couldn't be read." : "That photo couldn't be read.", true);
+      im.src = URL.createObjectURL(file);
+      return;
+    }
+    if (!/^video\//.test(file.type)) return App.toast("Please choose a video, a GIF, or a JPG/PNG photo.", true);
+    if (file.size > C.MAX_VIDEO_MB * 1048576) return openTrimmer(file);
+    useVideo(file);
+  });
+  function useVideo(file) {
     const v = document.createElement("video");
     v.muted = true; v.playsInline = true; v.loop = true; v.autoplay = true; v.setAttribute("playsinline", "");
-    v.onloadedmetadata = () => { vid = { file, w: v.videoWidth || 16, h: v.videoHeight || 9 }; showPreview("drop-vid", v, "Video · " + App.fmtTime(v.duration)); done("n5"); };
+    v.onloadedmetadata = () => {
+      vid = { file, w: v.videoWidth || 16, h: v.videoHeight || 9, kind: "video" };
+      showPreview("drop-vid", v, "Video · " + fmt(v.duration || 0));
+      overlayDone();
+    };
     v.onerror = () => App.toast("This browser can't play that video. MP4 (H.264) works everywhere.", true);
     v.src = URL.createObjectURL(file);
-  });
+  }
 
-  // ── publish ────────────────────────────────────────────────────
+  // trimmer: cut a too-big video down and re-save it smaller, right on the phone
+  const MAX_LEN = 180;
+  const TARGET_BYTES = (C.MAX_VIDEO_MB - 1.5) * 1048576;
+  let trimFile = null, trimDur = 0;
+  const canShrink = () => !!(window.MediaRecorder && HTMLCanvasElement.prototype.captureStream);
+  function openTrimmer(file) {
+    if (!canShrink()) return App.toast("This video is too big. Trim it shorter in your Photos app, then try again.", true);
+    trimFile = file;
+    const tv = $("trim-vid");
+    tv.src = URL.createObjectURL(file);
+    tv.onloadedmetadata = () => {
+      trimDur = isFinite(tv.duration) ? tv.duration : 0;
+      if (!trimDur) { $("trim").hidden = true; return App.toast("That video couldn't be read. Try an MP4.", true); }
+      $("trim-why").textContent = "This video is a little too big to upload. Pick the part you want (up to " + Math.round(MAX_LEN / 60) + " minutes) and we'll make it fit.";
+      ["trim-start", "trim-end"].forEach((id) => ($(id).max = trimDur.toFixed(1)));
+      $("trim-start").value = 0;
+      $("trim-end").value = Math.min(trimDur, MAX_LEN).toFixed(1);
+      trimUpdate("end");
+      tv.play().catch(() => {});
+    };
+    $("trim").hidden = false;
+    $("trim-go").disabled = false; $("trim-go").textContent = "Make it fit"; $("trim-keep").hidden = true;
+    setTimeout(() => $("trim").scrollIntoView({ behavior: "smooth", block: "center" }), 150);
+  }
+  function trimUpdate(moved) {
+    let a = +$("trim-start").value, b = +$("trim-end").value;
+    if (b - a < 1) { if (moved === "start") a = Math.max(0, b - 1); else b = Math.min(trimDur, a + 1); }
+    if (b - a > MAX_LEN) { if (moved === "start") b = a + MAX_LEN; else a = b - MAX_LEN; }
+    $("trim-start").value = a; $("trim-end").value = b;
+    $("trim-start-t").textContent = fmt(a); $("trim-end-t").textContent = fmt(b);
+    $("trim-est").textContent = "CLIP LENGTH " + fmt(b - a);
+    const tv = $("trim-vid");
+    if (tv.readyState) tv.currentTime = moved === "start" ? a : Math.max(a, b - 1.5);
+  }
+  $("trim-start").addEventListener("input", () => trimUpdate("start"));
+  $("trim-end").addEventListener("input", () => trimUpdate("end"));
+  $("trim-vid").addEventListener("timeupdate", function () {
+    const a = +$("trim-start").value, b = +$("trim-end").value;
+    if (this.currentTime >= b || this.currentTime < a - 0.3) this.currentTime = a;
+  });
+  $("trim-cancel").onclick = () => { $("trim").hidden = true; $("trim-vid").pause(); trimFile = null; $("file-vid").value = ""; };
+  $("trim-go").onclick = async () => {
+    if (!trimFile) return;
+    const a = +$("trim-start").value, b = +$("trim-end").value;
+    const go = $("trim-go"); go.disabled = true; $("trim-cancel").disabled = true;
+    $("trim-vid").pause(); $("trim-keep").hidden = false;
+    let lock = null;
+    try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then((l) => (lock = l)).catch(() => {}); } catch (_) {}
+    const v = document.createElement("video");
+    v.playsInline = true; v.setAttribute("playsinline", ""); v.preload = "auto"; v.muted = true;
+    v.style.cssText = "position:fixed;left:-9999px;top:0;width:2px;height:2px;opacity:0";
+    document.body.appendChild(v);
+    const url = URL.createObjectURL(trimFile);
+    v.src = url;
+    v._unlock = v.play().then(() => v.pause()).catch(() => {});
+    try {
+      const len = b - a, LIMIT = C.MAX_VIDEO_MB * 1048576;
+      const pct = (label) => (p) => {
+        const left = Math.max(0, Math.round(len * (1 - p)));
+        go.textContent = label + " " + Math.floor(p * 100) + "%" + (left > 5 ? " · about " + fmt(left) + " left" : "");
+      };
+      let bps = Math.min(4000000, Math.floor((TARGET_BYTES * 8) / len));
+      let out = null;
+      for (let tries = 0; tries < 3 && !out; tries++) {
+        try { out = await shrinkVideo(v, a, b, bps, pct(tries ? "Shrinking more…" : "Shrinking…"), LIMIT); }
+        catch (e) { if (!e.projected) throw e; bps = Math.max(150000, Math.floor(bps * 0.85 * LIMIT / e.projected)); }
+      }
+      if (!out || out.size > LIMIT) throw new Error("Still a little too big. Pick a shorter part and try again.");
+      $("trim").hidden = true; trimFile = null;
+      useVideo(out);
+      App.toast("Your " + fmt(len) + " clip is ready");
+    } catch (e) {
+      App.toast(e.message || "Couldn't shrink that video. Try trimming it in your Photos app.", true);
+    } finally {
+      go.textContent = "Make it fit"; go.disabled = false; $("trim-cancel").disabled = false; $("trim-keep").hidden = true;
+      if (lock) lock.release().catch(() => {});
+      try { v.pause(); } catch (_) {}
+      v.remove(); URL.revokeObjectURL(url);
+    }
+  };
+  // plays the chosen part once, redrawing it smaller onto a canvas and recording it (video only: the song is the sound)
+  function shrinkVideo(v, start, end, bps, onPct, limit) {
+    return new Promise((resolve, reject) => {
+      const begin = () => {
+        if (!v.videoWidth) return reject(new Error("This phone couldn't read that video."));
+        const box = bps >= 1500000 ? 1280 : bps >= 700000 ? 960 : 854;
+        const s = Math.min(1, box / Math.max(v.videoWidth, v.videoHeight));
+        const w = Math.max(2, Math.round(v.videoWidth * s / 2) * 2), h = Math.max(2, Math.round(v.videoHeight * s / 2) * 2);
+        const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+        const ctx = cv.getContext("2d");
+        const stream = cv.captureStream(30);
+        const types = ["video/mp4;codecs=avc1.42E01E", "video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp8", "video/webm"];
+        const mime = types.find((t) => MediaRecorder.isTypeSupported(t)) || "";
+        let rec, stopped = false;
+        try { rec = new MediaRecorder(stream, { mimeType: mime || undefined, videoBitsPerSecond: Math.max(150000, bps) }); }
+        catch (e) { return reject(new Error("This browser can't shrink videos. Trim it in your Photos app instead.")); }
+        const chunks = []; let bytes = 0, tooBig = 0;
+        rec.ondataavailable = (e) => { if (e.data && e.data.size) { chunks.push(e.data); bytes += e.data.size; } };
+        rec.onstop = () => {
+          v.pause();
+          if (tooBig) { const err = new Error("too big"); err.projected = tooBig; return reject(err); }
+          const type = (rec.mimeType || mime || "video/webm").split(";")[0];
+          resolve(new File(chunks, "trimmed." + (type === "video/mp4" ? "mp4" : "webm"), { type }));
+        };
+        const finish = () => { if (stopped) return; stopped = true; v.onended = null; onPct(1); try { rec.stop(); } catch (_) {} };
+        const draw = () => {
+          if (stopped) return;
+          ctx.drawImage(v, 0, 0, w, h);
+          const p = Math.min(0.99, Math.max(0, (v.currentTime - start) / (end - start)));
+          onPct(p);
+          if (limit && p > 0.12 && (end - start) > 20 && bytes / p > limit * 1.03) { tooBig = bytes / p; return finish(); }
+          if (v.currentTime >= end || v.ended) return finish();
+          if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(draw); else requestAnimationFrame(draw);
+        };
+        v.onended = finish;
+        v.onseeked = () => {
+          v.onseeked = null;
+          ctx.drawImage(v, 0, 0, w, h);
+          rec.start(1000);
+          v.play().then(draw).catch(() => finish());
+        };
+        v.currentTime = start;
+      };
+      const ready = () => (v.readyState >= 1 ? Promise.resolve() : new Promise((ok, bad) => {
+        v.addEventListener("loadedmetadata", ok, { once: true });
+        v.addEventListener("error", () => bad(new Error("This phone couldn't read that video.")), { once: true });
+      }));
+      Promise.resolve(v._unlock).then(ready).then(begin).catch(reject);
+    });
+  }
+
+  // pop-out effects
+  const fx = App.mountEffects($("fx"), {});
+  $("fx").addEventListener("click", () => setTimeout(() => ($("fx-sum").textContent = App.effectsSummary(fx.get()) || "optional"), 0));
+  $("fx").addEventListener("input", () => ($("fx-sum").textContent = App.effectsSummary(fx.get()) || "optional"));
+
+  // ── 05 privacy, location & unlock ────────────────────────────────
+  let loc = null;
+  const lockValue = () => ($("lock-on").checked ? (document.querySelector('input[name="reward"]:checked') || {}).value || "free" : "none");
+  function lockState() {
+    const has = !!loc;
+    $("lock-on").disabled = !has;
+    $("lock-toggle").classList.toggle("disabled", !has);
+    if (!has) $("lock-on").checked = false;
+    $("lock-why").textContent = has
+      ? "Fans have to be at the spot and scan the image to unlock the full song."
+      : "Add a location first. Fans have to be at the spot and scan the image to unlock the full song.";
+    $("lock-box").hidden = !$("lock-on").checked;
+    const reward = (document.querySelector('input[name="reward"]:checked') || {}).value;
+    const locked = $("lock-on").checked;
+    const noPrice = locked && (reward === "free" || reward === "listen");
+    $("price-area").hidden = noPrice;
+    $("price-locked-note").hidden = !locked;
+    $("price-locked-note").textContent = !locked ? "" : noPrice
+      ? (reward === "free" ? "Fans who find it get the song free, so there's no price." : "Fans who find it can listen to the full song, but it's not for sale, so there's no price.")
+      : "Only fans who find it can buy it, at the price below.";
+    if (locked && reward === "buy" && mode !== "sell") { $("mode-seg").querySelector('[data-m="sell"]').click(); $("price-box").open = true; }
+    summaries();
+  }
+  $("loc-btn").onclick = async () => {
+    const r = await App.pickLocation(loc);
+    if (r === undefined) return;
+    loc = r;
+    $("loc-label").textContent = loc ? (loc.place_name || "Location added") + (loc.loc_approx ? " (approx.)" : "") + " · change" : "Add a location (optional)";
+    lockState();
+  };
+  function summaries() {
+    const lock = lockValue();
+    const bits = [$("is-private").checked ? "Private" : "Public"];
+    if (loc) bits.push("@ " + (loc.place_name || "location set"));
+    if ($("photo-hidden").checked) bits.push("blurred");
+    if (lock !== "none") bits.push("song locked");
+    $("priv-sum").textContent = bits.join(" · ");
+    const sell = lock === "buy" || (lock === "none" && mode === "sell");
+    $("price-sum").textContent = lock === "free" ? "Free when found" : lock === "listen" ? "Not for sale" : sell ? App.money(+$("price").value || 0) : "Free";
+  }
+  ["is-private", "photo-hidden"].forEach((id) => $(id).addEventListener("change", summaries));
+  $("price").addEventListener("input", summaries);
+  $("lock-on").addEventListener("change", lockState);
+  $("reward").addEventListener("change", lockState);
+  lockState();
+
+  // ── publish ──────────────────────────────────────────────────────
   function progress(pct, msg) {
     $("progress-wrap").hidden = false;
     $("bar").style.width = Math.max(0, Math.min(100, pct)) + "%";
@@ -335,33 +617,39 @@
       x.send(body);
     });
   }
+  let Compiler = null;
   async function compileTarget(onPct) {
     const gl = document.createElement("canvas");
-    if (!(gl.getContext("webgl2") || gl.getContext("webgl"))) throw new Error("no webgl");
-    const mod = await import("https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js");
-    const Compiler = mod.Compiler || (window.MINDAR && window.MINDAR.IMAGE.Compiler);
+    if (!(gl.getContext("webgl2") || gl.getContext("webgl"))) {
+      throw new Error("This browser has graphics acceleration (WebGL) turned off, which AR needs. Try Chrome or Safari on a phone or computer.");
+    }
+    if (!Compiler) {
+      const mod = await import("https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js");
+      Compiler = mod.Compiler || (window.MINDAR && window.MINDAR.IMAGE.Compiler);
+    }
     const c = new Compiler();
-    // compile from a 1024px copy: plenty for tracking, and faster on phones
-    const cv = document.createElement("canvas"); cv.width = cv.height = 1024;
-    cv.getContext("2d").drawImage(cover.el, 0, 0, 1024, 1024);
-    await c.compileImageTargets([cv], onPct);
+    await c.compileImageTargets([img.el], onPct);
     return new Blob([await c.exportData()], { type: "application/octet-stream" });
   }
 
   function problem() {
-    if (!mp3) return ["Add your song (step 01).", "drop-mp3"];
-    if (!cover) return ["Add cover art (step 02).", "drop-img"];
-    if (!$("title").value.trim()) return ["Give the track a title.", "title"];
-    if (mode === "sell") {
+    if (!img) return ["Add your image first (step 1).", "drop-img"];
+    if (!vid) return ["Add your video, GIF or photo (step 2).", "drop-vid"];
+    if (!mp3) return ["Add your song (step 3).", "drop-mp3"];
+    if (!$("title").value.trim()) return ["Give it a title.", "title"];
+    const lock = lockValue();
+    const selling = lock === "buy" || (lock === "none" && mode === "sell");
+    if (selling) {
       const p = +$("price").value;
-      if (!(p >= C.MIN_PRICE && p <= C.MAX_PRICE)) return ["Set a price between " + App.money(C.MIN_PRICE) + " and " + App.money(C.MAX_PRICE) + ".", "price"];
+      if (!(p >= C.MIN_PRICE && p <= C.MAX_PRICE)) { $("price-box").open = true; return ["Set a price between " + App.money(C.MIN_PRICE) + " and " + App.money(C.MAX_PRICE) + ".", "price"]; }
       if (!seller) {
+        $("price-box").open = true;
         if ($("s-name").value.trim().length < 2) return ["Fill in your legal name on the seller form.", "s-name"];
         if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test($("s-email").value.trim())) return ["Enter the PayPal email where you get paid.", "s-email"];
         if ($("s-country").value.trim().length < 2) return ["Enter your country on the seller form.", "s-country"];
       }
     }
-    if (!$("rights").checked) return ["Confirm you have the rights to this music.", "rights"];
+    if (!$("rights").checked) return ["Confirm you have the rights to this music and art.", "rights"];
     return null;
   }
 
@@ -376,78 +664,100 @@
     const btn = $("publish");
     btn.disabled = true; btn.textContent = "Publishing…";
     const uploaded = { media: [], songs: [] };
+    let newTrackId = null;
     try {
-      // seller form first, so a priced track is allowed
-      if (mode === "sell" && !seller) {
+      const lock = lockValue();
+      const selling = lock === "buy" || (lock === "none" && mode === "sell");
+      const price = selling ? +(+$("price").value).toFixed(2) : 0;
+      if (selling && !seller) {
         progress(1, "Saving seller form…");
-        const s = { user_id: uid, legal_name: $("s-name").value.trim(), paypal_email: $("s-email").value.trim().toLowerCase(), country: $("s-country").value.trim(), default_price: +(+$("price").value).toFixed(2), owns_rights: true };
+        const s = { user_id: uid, legal_name: $("s-name").value.trim(), paypal_email: $("s-email").value.trim().toLowerCase(), country: $("s-country").value.trim(), default_price: price, owns_rights: true };
         const { error } = await sb.from("seller_settings").upsert(s);
         if (error) throw error;
         seller = s;
       }
 
+      // 1. teach the camera to recognize the image (runs in the browser)
+      progress(3, "Teaching the camera to recognize your image… (10–40 seconds)");
+      const mindBlob = await compileTarget((p) => progress(3 + p * 0.37, null));
+
+      // 2. the free preview clip
       let previewBlob = null;
       if (pcm) {
-        progress(3, "Making the preview…");
-        try { previewBlob = await makePreview((p) => progress(3 + p * 8, null)); } catch (e) { console.warn(e); }
+        progress(41, "Making the preview…");
+        try { previewBlob = await makePreview((p) => progress(41 + p * 5, null)); } catch (e) { console.warn(e); }
       }
 
-      let mindBlob = null;
-      if ($("ar-on").checked) {
-        progress(12, "Making your cover scannable…");
-        try { mindBlob = await compileTarget((p) => progress(12 + p * 0.28, null)); }
-        catch (e) { console.warn("AR compile failed", e); App.toast("AR couldn't be set up on this device. Publishing without it."); }
-      }
-
+      // 3. upload everything
       const folder = uid + "/" + crypto.randomUUID();
       const files = [
-        { bucket: "media", path: folder + "/cover.jpg", body: cover.blob, type: "image/jpeg", msg: "Uploading cover…", from: 40, to: 44 },
+        { bucket: "media", path: folder + "/target.jpg", body: img.blob, type: "image/jpeg", msg: "Uploading image…", from: 46, to: 49 },
+        { bucket: "media", path: folder + "/target.mind", body: mindBlob, type: "application/octet-stream", msg: "Uploading AR target…", from: 49, to: 51 },
       ];
-      if (previewBlob) files.push({ bucket: "media", path: folder + "/preview.mp3", body: previewBlob, type: "audio/mpeg", msg: "Uploading preview…", from: 44, to: 48 });
-      if (mindBlob) files.push({ bucket: "media", path: folder + "/target.mind", body: mindBlob, type: "application/octet-stream", msg: "Uploading AR target…", from: 48, to: 50 });
-      if (mindBlob && vid) {
-        const ext = (vid.file.name.split(".").pop() || "mp4").toLowerCase().replace(/[^a-z0-9]/g, "") || "mp4";
-        files.push({ bucket: "media", path: folder + "/video." + ext, body: vid.file, type: vid.file.type || "video/mp4", msg: "Uploading video…", from: 50, to: 64 });
+      if (previewBlob) files.push({ bucket: "media", path: folder + "/preview.mp3", body: previewBlob, type: "audio/mpeg", msg: "Uploading preview…", from: 51, to: 54 });
+      if (vid) {
+        const isPic = vid.kind === "image";
+        const ext = isPic
+          ? (vid.gif ? "gif" : ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" })[vid.file.type])
+          : (vid.file.name.split(".").pop() || "mp4").toLowerCase().replace(/[^a-z0-9]/g, "") || "mp4";
+        files.push({ bucket: "media", path: folder + (isPic ? "/overlay." : "/video.") + ext, body: vid.file,
+          type: vid.gif ? "image/gif" : (vid.file.type || "video/mp4"), msg: vid.gif ? "Uploading GIF…" : isPic ? "Uploading overlay photo…" : "Uploading video…", from: 54, to: 70 });
       }
       files.push(mp3.format === "wav"
-        ? { bucket: "songs", path: folder + "/song.wav", body: mp3.file, type: "audio/wav", msg: "Uploading WAV…", from: 64, to: 97 }
-        : { bucket: "songs", path: folder + "/song.mp3", body: mp3.file, type: "audio/mpeg", msg: "Uploading song…", from: 64, to: 97 });
+        ? { bucket: "songs", path: folder + "/song.wav", body: mp3.file, type: "audio/wav", msg: "Uploading WAV…", from: 70, to: 96 }
+        : { bucket: "songs", path: folder + "/song.mp3", body: mp3.file, type: "audio/mpeg", msg: "Uploading song…", from: 70, to: 96 });
       for (const f of files) {
         progress(f.from, f.msg);
         await uploadWithProgress(f.bucket, f.path, f.body, f.type, (r) => progress(f.from + (f.to - f.from) * r, null));
         uploaded[f.bucket].push(f.path);
       }
 
-      progress(98, "Saving…");
-      const pathOf = (name) => (files.find((f) => f.path.endsWith(name)) || {}).path || null;
+      // 4. save it
+      progress(97, "Saving…");
+      const pathOf = (re) => (files.find((f) => re.test(f.path)) || {}).path || null;
       const row = {
         owner: uid,
         title: $("title").value.trim().slice(0, 100),
         genre: $("genre").value || null,
         description: $("desc").value.trim() || null,
-        cover_path: pathOf("/cover.jpg"),
-        preview_path: pathOf("/preview.mp3"),
-        audio_path: pathOf("/song." + mp3.format),
+        cover_path: pathOf(/\/target\.jpg$/),
+        mind_path: pathOf(/\/target\.mind$/),
+        preview_path: pathOf(/\/preview\.mp3$/),
+        video_path: pathOf(/\/(video|overlay)\.[a-z0-9]+$/),
+        audio_path: pathOf(/\/song\.(mp3|wav)$/),
         audio_format: mp3.format,
-        mind_path: pathOf("/target.mind"),
-        video_path: files.find((f) => /\/video\./.test(f.path)) ? files.find((f) => /\/video\./.test(f.path)).path : null,
-        cover_aspect: 1,
+        cover_aspect: img.w / img.h,
         video_aspect: vid ? vid.w / vid.h : null,
         duration: Math.round(mp3.duration || 0) || null,
         file_size: mp3.file.size,
-        price: mode === "sell" ? +(+$("price").value).toFixed(2) : 0,
+        price,
         currency: C.CURRENCY || "USD",
+        is_private: $("is-private").checked,
+        photo_hidden: $("photo-hidden").checked,
+        song_lock: lock,
+        unlock_radius_m: +$("radius").value || 100,
+        hint: lock !== "none" ? ($("hint").value.trim() || null) : null,
+        ...fx.get(),
+        ...App.locationColumns(loc),
       };
-      const { data, error } = await sb.from("tracks").insert(row).select("slug").single();
+      const { data, error } = await sb.from("tracks").insert(row).select("id, slug").single();
       if (error) throw error;
-      progress(100, "Live ✓");
-      location.replace("t.html?s=" + encodeURIComponent(data.slug) + "&new=1");
+      newTrackId = data.id;
+      if (loc) {
+        const sp = await sb.from("track_spots").insert({ track_id: data.id, lat: loc.lat, lng: loc.lng });
+        if (sp.error) throw sp.error;
+      }
+      progress(100, "Live");
+      App.toast("It's live");
+      btn.textContent = "Opening your camera…";
+      setTimeout(() => location.replace("ar.html?s=" + encodeURIComponent(data.slug) + "&new=1"), 900);
     } catch (e) {
       console.error(e);
+      if (newTrackId) await sb.from("tracks").delete().eq("id", newTrackId);
       if (uploaded.media.length) sb.storage.from("media").remove(uploaded.media);
       if (uploaded.songs.length) sb.storage.from("songs").remove(uploaded.songs);
       App.toast(e.message || "Something went wrong", true);
-      btn.disabled = false; btn.textContent = "Publish track";
+      btn.disabled = false; btn.textContent = "Create";
     }
   };
 })();
