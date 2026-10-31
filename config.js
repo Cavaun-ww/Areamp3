@@ -19,9 +19,12 @@ window.APP_CONFIG = {
   PAYPAL_CLIENT_ID: "BAA-MloBkGKqslKi3-_KafWjk2ABgrWloxoR8XZtyrJNQO-VfhkB7DRFF6qNdh-ojizFwNRNPkW2N0Una0",
   CURRENCY: "USD",
 
-  // The site's cut of every sale, in percent (shown on the site). The real split is set on the
-  // server with:  supabase secrets set PLATFORM_FEE_PERCENT=22.22   (keep the two the same)
-  PLATFORM_FEE_PERCENT: 22.22,
+  // Plans (shown on the site). PayPal's fee comes off each sale first, then the site keeps:
+  //   Free artists: FREE_FEE_PERCENT · Pro artists: PRO_FEE_PERCENT · Pro costs PRO_PRICE a year.
+  // The real numbers live on the server (defaults 15 / 7 / 29.99); keep these the same.
+  FREE_FEE_PERCENT: 15,
+  PRO_FEE_PERCENT: 7,
+  PRO_PRICE: 29.99,
 
   // Song prices artists can choose (0 = free download)
   MIN_PRICE: 0.01,       // no real limit: any price above free

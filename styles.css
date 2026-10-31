@@ -335,3 +335,6 @@ details.box > summary .small { text-transform: none; letter-spacing: 0; font-wei
 .lock-card span { display: block; font-size: .8rem; color: var(--text-2); margin: 4px 0 10px; overflow-wrap: anywhere; }
 .lock-card.done { padding: 10px 16px; }
 img.blurred { transition: filter .8s, transform .8s; }
+
+/* PRO artists */
+.pro-badge { font-size: .62em; padding: 2px 7px; vertical-align: middle; letter-spacing: .12em; position: relative; top: -.12em; }

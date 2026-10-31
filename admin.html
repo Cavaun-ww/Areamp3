@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=14">
+<link rel="stylesheet" href="styles.css?v=15">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=14"></script>
-<script src="app.js?v=14"></script>
+<script src="config.js?v=15"></script>
+<script src="app.js?v=15"></script>
 <style>
   .stats { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); margin-bottom: 18px; }
   .stats > div { padding: 14px; border-bottom: 1px solid var(--line); }
@@ -55,14 +55,16 @@
       '<div class="stats">' +
         '<div><span class="label">Sales</span><b>' + T.sales + "</b></div>" +
         '<div><span class="label">Gross sales</span><b>' + m(T.gross) + "</b></div>" +
-        '<div><span class="label">Your cut · ' + d.fee_percent + '%</span><b>' + m(T.fees) + "</b></div>" +
+        '<div><span class="label">Your cut · ' + d.fee_percent + "% / " + (d.pro_fee_percent != null ? d.pro_fee_percent : 7) + '% Pro</span><b>' + m(T.fees) + "</b></div>" +
         '<div><span class="label">Your cut this month</span><b>' + m(T.month_fees) + "</b></div>" +
+        '<div><span class="label">Pro artists now</span><b>' + (d.pro_members || 0) + "</b></div>" +
+        '<div><span class="label">Pro plans · all time</span><b>' + m(T.pro_revenue || 0) + '<span class="small muted"> · ' + m(T.pro_month || 0) + " this month</span></b></div>" +
         '<div><span class="label">Owed to artists</span><b>' + m(T.owed) + "</b></div>" +
         '<div><span class="label">Paid to artists</span><b>' + m(T.paid) + (T.processing ? '<span class="small muted"> +' + m(T.processing) + " sending</span>" : "") + "</b></div>" +
       "</div>" +
-      '<div class="note" style="margin-bottom:16px">Buyers pay your PayPal. Each sale keeps ' + d.fee_percent + "% for you and owes the rest to the artist. " +
+      '<div class="note" style="margin-bottom:16px">Buyers pay your PayPal. PayPal\'s fee comes off each sale first; then you keep ' + d.fee_percent + "% (" + (d.pro_fee_percent != null ? d.pro_fee_percent : 7) + "% for Pro artists) and the rest is owed to the artist. Pro plans (" + m(d.pro_price || 29.99) + "/year) are all yours, after PayPal's fee. " +
         "<b>Pay all artists</b> sends every balance of $1 or more through PayPal Payouts from your PayPal balance (PayPal must turn Payouts on for your account first). " +
-        "If you'd rather pay someone yourself, send it in PayPal, then tap <b>Mark paid</b> on their row. PayPal's own fees come out of your cut.</div>" +
+        "If you'd rather pay someone yourself, send it in PayPal, then tap <b>Mark paid</b> on their row. PayPal's payout fees come out of your cut.</div>" +
       '<div class="row" style="margin-bottom:18px"><button class="btn btn-primary" id="pay"' + (T.owed >= 1 ? "" : " disabled") + ">Pay all artists · " + m(T.owed) + "</button>" +
         '<button class="btn" id="refresh"' + (T.processing ? "" : " disabled") + ">Check payout status</button><span class=\"small muted mono\" id=\"msg\"></span></div>" +
       (d.artists.length

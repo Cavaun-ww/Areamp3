@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=14">
+<link rel="stylesheet" href="styles.css?v=15">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=14"></script>
-<script src="app.js?v=14"></script>
+<script src="config.js?v=15"></script>
+<script src="app.js?v=15"></script>
 <style>
   .wave { width: 100%; height: 64px; display: block; background: #050505; border: 1px solid var(--line); margin-top: 12px; }
   .rng { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: .82rem; color: var(--text-2); }
@@ -181,7 +181,7 @@
   document.querySelectorAll(".js-wavmb").forEach((e) => (e.textContent = C.MAX_WAV_MB || 50));
   document.querySelectorAll(".js-prev").forEach((e) => (e.textContent = C.PREVIEW_SECONDS));
   document.querySelectorAll(".js-cur").forEach((e) => (e.textContent = C.CURRENCY));
-  $("price-hint").textContent = "Any price you want. You get " + App.artistCut() + "% of every sale, paid out to your PayPal.";
+  $("price-hint").textContent = "Any price you want. PayPal takes about 3.49% + $0.49 per sale, then you get " + App.artistCut() + "% of the rest (" + App.artistCut(true) + "% with Pro), paid out to your PayPal.";
 
   const session = await App.requireAuth();
   const uid = session.user.id;

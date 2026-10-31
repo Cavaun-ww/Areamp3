@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=14">
+<link rel="stylesheet" href="styles.css?v=15">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=14"></script>
-<script src="app.js?v=14"></script>
+<script src="config.js?v=15"></script>
+<script src="app.js?v=15"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -61,6 +61,7 @@
       <div><span class="label">Waiting payout</span><b id="s-owed">$0</b></div>
     </div>
     <p class="small muted" style="margin:-6px 0 18px" id="split-note"></p>
+    <div class="card plan" id="plan" style="margin:0 0 18px"></div>
     <div class="grid2" style="align-items:start;gap:18px">
       <form class="card stack" id="seller-form" style="margin:0">
         <div><h3>Seller form</h3><p class="small muted" style="margin-top:4px">Needed before you can set prices. Your earnings are paid out to this PayPal email. Only you can see this.</p></div>
@@ -149,10 +150,12 @@
   let profile = {};
   async function loadProfile() {
     try { await App.ensureHandle(session); } catch (e) {}
-    const { data } = await sb.from("profiles").select("handle, display_name, bio, avatar_path").eq("id", uid).maybeSingle();
+    const { data } = await sb.from("profiles").select("handle, display_name, bio, avatar_path, pro_until").eq("id", uid).maybeSingle();
     profile = data || {};
     $("head-av").innerHTML = App.avatarHTML(profile);
     $("head-name").textContent = profile.display_name || profile.handle || "Me";
+    $("head-name").insertAdjacentHTML("beforeend", App.proBadge(profile) ? " " + App.proBadge(profile) : "");
+    paintPlan();
     $("head-handle").textContent = profile.handle ? "@" + profile.handle : "";
     $("avatar-slot").innerHTML = App.avatarHTML(profile);
     $("avatar-slot").firstChild.onclick = () => $("avatar-file").click();
@@ -427,6 +430,50 @@
     };
   }
 
+  // ── plan: Free or Pro ──────────────────────────────────────
+  const fmtDay = (d) => new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  function paintPlan() {
+    const box = $("plan"); if (!box) return;
+    const pro = App.isPro(profile), even = Math.round(C.PRO_PRICE / ((C.FREE_FEE_PERCENT - C.PRO_FEE_PERCENT) / 100));
+    box.innerHTML =
+      '<div class="row" style="justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap">' +
+        '<div style="flex:1;min-width:220px"><div class="label">Your plan</div>' +
+          '<h3 style="margin:4px 0 6px">' + (pro ? 'Pro <span class="pill solid">PRO</span>' : "Free") + "</h3>" +
+          '<p class="small muted">' + (pro
+            ? "You keep " + App.artistCut(true) + "% of every sale after PayPal's fee. Pro until " + esc(fmtDay(profile.pro_until)) + "."
+            : "The site keeps " + C.FREE_FEE_PERCENT + "% of each sale after PayPal's fee. Go Pro for " + App.money(C.PRO_PRICE) + "/year and the site keeps just " + C.PRO_FEE_PERCENT + "%. Pro pays for itself once you sell about $" + even + " a year.") + "</p>" +
+        "</div>" +
+        '<button class="btn ' + (pro ? "" : "btn-primary") + '" id="go-pro" type="button">' + (pro ? "Renew · adds a year" : "Go Pro · " + App.money(C.PRO_PRICE) + "/year") + "</button>" +
+      "</div>" +
+      '<div id="pro-pay" hidden style="margin-top:14px"><div id="pro-pp"></div><p class="small muted" id="pro-msg" style="margin-top:8px"></p></div>';
+    $("go-pro").onclick = openPro;
+  }
+  async function openPro() {
+    const wrap = $("pro-pay"); wrap.hidden = false; $("go-pro").disabled = true;
+    $("pro-pp").innerHTML = '<p class="muted mono small">Loading PayPal<span class="cursor"></span></p>';
+    try {
+      const pp = await App.loadPayPal();
+      $("pro-pp").innerHTML = "";
+      await pp.Buttons({
+        style: { shape: "rect", color: "white", layout: "vertical", label: "pay", height: 46 },
+        createOrder: async () => (await App.callFunction("pro_create")).id,
+        onApprove: async (d) => {
+          $("pro-msg").textContent = "Confirming payment…";
+          try {
+            const out = await App.callFunction("pro_capture", { order_id: d.orderID });
+            profile.pro_until = out.pro_until;
+            App.toast("You're Pro until " + fmtDay(out.pro_until));
+            $("head-name").textContent = profile.display_name || profile.handle || "Me";
+            $("head-name").insertAdjacentHTML("beforeend", " " + App.proBadge(profile));
+            paintPlan(); loadSelling();
+          } catch (e) { $("pro-msg").textContent = "Payment went through but we couldn't confirm it yet (" + e.message + "). Refresh in a minute, or contact us."; }
+        },
+        onCancel: () => { $("pro-msg").textContent = "Cancelled. You weren't charged."; $("go-pro").disabled = false; },
+        onError: (err) => { console.error(err); $("pro-msg").textContent = "PayPal hit an error. Please try again."; $("go-pro").disabled = false; },
+      }).render("#pro-pp");
+    } catch (e) { $("pro-pp").innerHTML = '<p class="small">' + esc(e.message) + "</p>"; $("go-pro").disabled = false; }
+  }
+
   // ── selling ────────────────────────────────────────────────
   let seller = null;
   async function loadSelling() {
@@ -438,7 +485,7 @@
     $("f-price").value = (seller ? +seller.default_price : 1.29).toFixed(2);
     $("f-rights").checked = !!seller;
     $("f-status").textContent = seller ? "✓ On file. Payouts go to " + seller.paypal_email + "." : "Not filled out yet. You can upload free tracks until you do.";
-    $("split-note").textContent = "You get " + App.artistCut() + "% of every sale (the site keeps " + (+C.PLATFORM_FEE_PERCENT) + "%). Your share is sent to your PayPal in regular payouts.";
+    $("split-note").textContent = "PayPal's fee comes off each sale first. Then you get " + App.artistCut(App.isPro(profile)) + "% of the rest. Your share is sent to your PayPal in regular payouts.";
     const s = await sb.rpc("my_sales");
     if (!s.error && s.data) {
       const d = s.data;

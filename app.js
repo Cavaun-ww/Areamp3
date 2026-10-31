@@ -310,7 +310,10 @@
   const nLikes = (t) => (t.likes && t.likes[0] && t.likes[0].count) || 0;
   const nComments = (t) => (t.comments && t.comments[0] && t.comments[0].count) || 0;
   // artist's share of each sale, as shown on the site (the real split is set on the server)
-  function artistCut() { return +(100 - (+C.PLATFORM_FEE_PERCENT || 0)).toFixed(2); }
+  // plans: what the artist keeps of each sale after PayPal's fee (Free or Pro)
+  function artistCut(pro) { return +(100 - (+(pro ? C.PRO_FEE_PERCENT : C.FREE_FEE_PERCENT) || 0)).toFixed(2); }
+  const isPro = (p) => !!(p && p.pro_until && new Date(p.pro_until) > new Date());
+  const proBadge = (p) => (isPro(p) ? '<span class="pill solid pro-badge" title="Pro artist">PRO</span>' : "");
 
   // ── follow ───────────────────────────────────────────────────
   async function followerCount(uid) {
@@ -414,7 +417,7 @@
           '<span class="spacer"></span><b class="mono" style="font-size:1.3rem">' + esc(money(t.price, t.currency)) + "</b>" +
         "</div>" +
         '<div id="pp-box" style="min-height:120px"><p class="small muted mono" style="padding:30px 0;text-align:center">Loading PayPal<span class="cursor"></span></p></div>' +
-        '<p class="small muted" style="margin-top:6px">Secure checkout with PayPal or any card. The artist gets ' + esc(artistCut()) + '% of every sale. The ' + fileType(t) + ' file downloads to this device right after, and stays in My page › Purchases.</p>' +
+        '<p class="small muted" style="margin-top:6px">Secure checkout with PayPal or any card. Most of what you pay goes to the artist. The ' + fileType(t) + ' file downloads to this device right after, and stays in My page › Purchases.</p>' +
         '<p class="small" id="pp-msg" style="margin-top:10px"></p>' +
         '<button class="btn btn-ghost btn-block" id="pp-close" style="margin-top:8px">Cancel</button>' +
       "</div>";
@@ -717,7 +720,7 @@
     nearReveal,
     C, sb, configured, BUCKET, SONGS, siteRoot, esc, publicUrl, trackLink, arLink, profileLink, money, priceLabel, artistName, fmtTime, fileType, songType, hasSong, hasVid,
     toast, timeAgo, getSession, signInUrl, requireAuth, callFunction, mountHeader, ensureHandle, avatarHTML, squareJpeg,
-    play, playButton, registerTracks, trackCard, TRACK_COLS, nLikes, nComments, artistCut, followerCount, mountFollow, buy, download, owns, startDownload,
+    play, playButton, registerTracks, trackCard, TRACK_COLS, nLikes, nComments, artistCut, isPro, proBadge, loadPayPal, followerCount, mountFollow, buy, download, owns, startDownload,
     renderQR, copy, share,
     isLocked, lockTag, lockReward, hasUnlocked, playFull,
     loadLeaflet, makeMap, pinIcon, areaCircle, pickLocation, locationColumns, hereNow, milesBetween, distLabel, directionsUrl,
