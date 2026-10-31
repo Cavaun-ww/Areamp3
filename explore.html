@@ -63,7 +63,8 @@
   .views button + button { border-left: 1px solid var(--line-2); }
   .views button.on { background: var(--text); color: #000; }
   .views svg { width: 15px; height: 15px; }
-  #filters-btn { display: none; }
+  #filters-btn, #sort-sel { display: none; }
+  #sort-sel { width: auto; padding: 7px 30px 7px 10px; font-size: .86rem; }
 
   /* archive-style tiles */
   .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(170px, 44vw), 1fr)); gap: 12px; }
@@ -78,6 +79,7 @@
   .tile .a { display: block; color: var(--text-2); text-decoration: none; font-size: .82rem; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tile .a:hover, .tile .t:hover { text-decoration: underline; }
   .stats { display: grid; grid-template-columns: auto 1fr 1fr 1fr; align-items: center; border-top: 1px solid var(--line); padding: 7px 10px; gap: 6px; }
+  .stats .ty { justify-self: start; }
   .stats .ty { font-family: var(--mono); font-size: .66rem; letter-spacing: .06em; padding: 3px 5px; background: var(--text); color: #000; border-radius: 2px; }
   .stats .n { display: flex; flex-direction: column; align-items: center; gap: 1px; font-family: var(--mono); font-size: .72rem; color: var(--text-2); }
   .stats .n svg { width: 13px; height: 13px; color: var(--muted); }
@@ -98,6 +100,10 @@
     .side { position: static; max-height: none; display: none; border: 1px solid var(--line); padding: 14px; margin-bottom: 16px; }
     .side.open { display: block; }
     #filters-btn { display: inline-flex; }
+    #sort-sel { display: block; }
+    .sortbar .s, .sortbar .lbl { display: none; }
+    .sortbar { gap: 10px; flex-wrap: nowrap; }
+    .sortbar .count { display: none; }
     .tiles.list .stats { grid-template-columns: 44px 44px; }
     .tiles.list .stats .n.c, .tiles.list .stats .n.p { display: none; }
   }
@@ -114,13 +120,16 @@
     <section>
       <div class="sortbar">
         <button class="btn btn-sm" type="button" id="filters-btn">Filters</button>
+        <select class="input" id="sort-sel" aria-label="Sort by">
+          <option value="date:-1">Newest</option><option value="date:1">Oldest</option><option value="likes:-1">Most liked</option><option value="comments:-1">Most comments</option>
+          <option value="title:1">Title A–Z</option><option value="artist:1">Artist A–Z</option>
+        </select>
         <span class="lbl">Sort by</span>
         <button class="s" data-s="date">Date published</button>
         <button class="s" data-s="likes">Most liked</button>
         <button class="s" data-s="comments">Most comments</button>
         <button class="s" data-s="title">Title</button>
         <button class="s" data-s="artist">Artist</button>
-        <button class="s" data-s="price">Price</button>
         <div class="right">
           <span class="count" id="count"></span>
           <div class="views" role="group" aria-label="View">
@@ -214,7 +223,7 @@
     for (let y = minY; y <= maxY; y++) span.push(y);
     const top = Math.max(1, ...span.map((y) => yc.get(y) || 0));
     h += '<div class="facet"><h4>Year published' + (anyOn ? '<button type="button" id="clear">Clear all</button>' : "") + "</h4>" +
-      '<div class="hist">' + span.map((y) => '<i title="' + y + ": " + (yc.get(y) || 0) + '" class="' + ((!yFrom || y >= yFrom) && (!yTo || y <= yTo) ? "on" : "") + '" style="height:' + Math.round(((yc.get(y) || 0) / top) * 100) + '%"></i>').join("") + "</div>" +
+      (span.length > 1 ? '<div class="hist">' + span.map((y) => '<i title="' + y + ": " + (yc.get(y) || 0) + '" class="' + ((!yFrom || y >= yFrom) && (!yTo || y <= yTo) ? "on" : "") + '" style="height:' + Math.round(((yc.get(y) || 0) / top) * 100) + '%"></i>').join("") + "</div>" : "") +
       '<div class="yr"><input class="input" type="number" id="y1" inputmode="numeric" min="' + minY + '" max="' + maxY + '" value="' + (yFrom || minY) + '" aria-label="From year"><span>–</span><input class="input" type="number" id="y2" inputmode="numeric" min="' + minY + '" max="' + maxY + '" value="' + (yTo || maxY) + '" aria-label="To year"></div></div>';
     // type
     const tc = counts("type", typeOf, q, fol);
@@ -238,7 +247,7 @@
     $("side").innerHTML = h;
     // chips for what's turned on
     const chips = [];
-    if (yFrom || yTo) chips.push(['<button type="button" data-clear="year">' + (yFrom || minY) + "–" + (yTo || maxY) + "</button>"]);
+    if (yFrom || yTo) chips.push('<button type="button" data-clear="year">' + (yFrom || minY) + "–" + (yTo || maxY) + "</button>");
     ["type", "format", "genre", "artist"].forEach((g) => sel[g].forEach((v) => chips.push('<button type="button" data-clear="' + g + '" data-v="' + esc(v) + '">' + esc(g === "type" ? TYPE_NAMES[v] : g === "format" ? v.toUpperCase() : g === "artist" ? names[v] || v : v) + "</button>")));
     $("on").innerHTML = chips.join("");
     $("filters-btn").textContent = "Filters" + (chips.length ? " (" + chips.length + ")" : "");
@@ -285,6 +294,7 @@
       b.innerHTML = b.textContent.replace(/[↑↓]/g, "").trim() + (b.dataset.s === sort ? '<span class="dir">' + (dir < 0 ? "↓" : "↑") + "</span>" : "");
     });
     document.querySelectorAll(".views button").forEach((b) => b.classList.toggle("on", b.dataset.v === view));
+    const sv = sort + ":" + dir; if ([...$("sort-sel").options].some((o) => o.value === sv)) $("sort-sel").value = sv;
     $("list").classList.toggle("list", view === "list");
     $("count").textContent = rows.length.toLocaleString() + (rows.length === 1 ? " result" : " results");
     shown = 0; $("list").innerHTML = "";
@@ -326,6 +336,7 @@
     view = b.dataset.v; try { localStorage.setItem("am-view", view); } catch (e) {}
     render();
   }));
+  $("sort-sel").onchange = () => { const [s2, d2] = $("sort-sel").value.split(":"); sort = s2; dir = +d2; render(); };
   $("filters-btn").onclick = () => $("side").classList.toggle("open");
   let tm;
   $("q").addEventListener("input", () => { clearTimeout(tm); tm = setTimeout(render, 200); });
