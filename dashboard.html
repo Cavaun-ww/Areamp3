@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=42">
+<link rel="stylesheet" href="styles.css?v=43">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=42"></script>
-<script src="app.js?v=42"></script>
+<script src="config.js?v=43"></script>
+<script src="app.js?v=43"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -156,9 +156,14 @@
     document.querySelectorAll("[data-panel]").forEach((s) => (s.hidden = s.dataset.panel !== p));
     document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("on", b.dataset.p === p));
     history.replaceState(null, "", "#" + p);
+    const on = document.querySelector('#tabs button[data-p="' + p + '"]');
+    if (on && on.scrollIntoView) on.scrollIntoView({ block: "nearest", inline: "center" });
   }
   $("tabs").onclick = (e) => { const b = e.target.closest("button"); if (b) show(b.dataset.p); };
   show(location.hash.slice(1) || "tracks");
+  // came here to edit the profile: jump straight to it
+  if (location.hash === "#profile") setTimeout(() => $("tabs").scrollIntoView({ block: "start" }), 50);
+  window.addEventListener("hashchange", () => show(location.hash.slice(1) || "tracks"));
 
   // ── profile ────────────────────────────────────────────────
   let profile = {};
