@@ -275,7 +275,7 @@ body.desktop .steps, body.desktop #start { display: none; }
     // collage of what you can scan (blurred where the artist hid the image)
     $("collage").innerHTML = list.slice(0, 9).map(function (x) { return '<div><img alt="" loading="lazy"' + (x.photo_hidden && x.owner !== me ? ' class="blurred"' : "") + ' src="' + pub(x.cover_path) + '"></div>'; }).join("");
     $("collage").hidden = false;
-    $("by").innerHTML = "";
+    $("by").innerHTML = '<a href="explore.html">see all</a>';
     if (!isMobile) { $("start").textContent = "Open AR camera"; return; }
     $("start").textContent = "Getting ready…";
     var merged = await mergeMinds(list);
