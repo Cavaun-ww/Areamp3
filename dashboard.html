@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=27">
+<link rel="stylesheet" href="styles.css?v=28">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=27"></script>
-<script src="app.js?v=27"></script>
+<script src="config.js?v=28"></script>
+<script src="app.js?v=28"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -323,7 +323,7 @@
         "</div>" +
         '<details class="box" data-more="' + t.id + '"' + (openMore.has(t.id) ? " open" : "") + '><summary>Settings</summary><div class="stack" style="margin-top:10px">' +
           '<button class="btn btn-sm btn-block" data-act="priv" data-id="' + t.id + '">' + (t.is_private ? "Make public" : "Make private") + "</button>" +
-          '<button class="btn btn-sm btn-block" data-act="lock" data-id="' + t.id + '">' + (t.photo_hidden || App.isLocked(t) ? "Blur settings: " + esc(App.lockTag(t)) : "Blur (find it in person)") + "</button>" +
+          '<button class="btn btn-sm btn-block" data-act="lock" data-id="' + t.id + '">' + (t.photo_hidden || App.isLocked(t) ? "Blur: on" : "Blur") + "</button>" +
           '<button class="btn btn-sm btn-block" data-act="fx" data-id="' + t.id + '">' + (App.effectsSummary(t) ? "Effects: " + esc(App.effectsSummary(t)) : "Pop-out effects") + "</button>" +
           '<button class="btn btn-sm btn-block" data-act="loc" data-id="' + t.id + '">' + (t.has_location ? "Location: " + esc(t.place_name || "set") : "Add location") + "</button>" +
         "</div></details>",
