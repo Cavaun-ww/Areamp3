@@ -437,3 +437,6 @@ html:has(body.modal-open) { overflow: hidden; }
 .lock-modal #l-off { margin-left: auto; }
 /* delete X on My page cards: only the X is red */
 .tk .actions .btn-danger { color: #ff3b30; }
+/* ✕ to remove an upload and pick another */
+.drop .rm-file { position: absolute; top: 8px; right: 8px; z-index: 3; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; border: 1px solid rgba(255,255,255,.3); background: rgba(0,0,0,.72); color: #ff3b30; font-size: .95rem; line-height: 1; cursor: pointer; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.drop .rm-file:hover { border-color: #ff3b30; }

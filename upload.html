@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=44">
+<link rel="stylesheet" href="styles.css?v=45">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=44"></script>
-<script src="app.js?v=44"></script>
+<script src="config.js?v=45"></script>
+<script src="app.js?v=45"></script>
 <style>
   .wave { width: 100%; height: 64px; display: block; background: #050505; border: 1px solid var(--line); margin-top: 12px; }
   .rng { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: .82rem; color: var(--text-2); }
@@ -46,9 +46,9 @@
       <p class="small muted" style="margin-top:12px">Tip: detailed, high-contrast images track best. Plain logos or mostly-empty images are hard for the camera to lock onto. This image is also your cover art.</p>
     </div>
 
-    <!-- 2 WHAT PLAYS WHEN SCANNED: overlay (same as Pixi Wizard) + song. A video OR a song, not both. -->
+    <!-- 2 WHAT PLAYS WHEN SCANNED: overlay (photo, GIF or video) + song. A video with a song plays silent; the song is the sound. -->
     <div class="card">
-      <div class="step-head"><span class="step-num" id="n2">2</span><div><div class="step-title">Video &amp; song</div><div class="step-sub">What people see, hear and download. A song or a video, not both.</div></div></div>
+      <div class="step-head"><span class="step-num" id="n2">2</span><div><div class="step-title">Video &amp; song</div><div class="step-sub">What people see, hear and download. A photo, GIF or video, plus your song.</div></div></div>
       <div class="part-label">Video, GIF or photo <span>appears on top of the image. Listeners can download videos too.</span></div>
       <div class="drop" id="drop-vid">
         <input type="file" id="file-vid" accept="video/mp4,video/webm,video/quicktime,image/gif,image/jpeg,image/png,image/webp">
@@ -69,7 +69,7 @@
         <div id="fx"></div>
       </details>
 
-      <div class="part-label" style="margin-top:22px">Song <span id="song-sub">MP3 or WAV. Plays in the AR camera when people scan your art. Skip this if you added a video.</span></div>
+      <div class="part-label" style="margin-top:22px">Song <span id="song-sub">MP3 or WAV. Plays in the AR camera when people scan your art.</span></div>
       <div class="drop" id="drop-mp3">
         <input type="file" id="file-mp3" accept="audio/mpeg,.mp3,audio/wav,audio/x-wav,audio/wave,.wav">
         <div class="empty-state"><div class="icon">[ MP3 / WAV ]</div><div>Drop your song here or <span class="browse">browse</span></div><div class="hint">MP3 UP TO <span class="js-mp3mb"></span> MB · WAV UP TO <span class="js-wavmb"></span> MB</div></div>
@@ -223,14 +223,26 @@
     if (node) { node.classList.add("preview"); drop.append(node); }
     const m = document.createElement("div"); m.className = "file-meta"; m.textContent = meta + " · tap to change";
     drop.append(m);
+    if (!drop.querySelector(".rm-file")) {
+      const x = document.createElement("button");
+      x.type = "button"; x.className = "rm-file"; x.setAttribute("aria-label", "Remove this file"); x.textContent = "✕";
+      x.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); (REMOVE[dropId] || (() => resetDrop(dropId)))(); });
+      drop.append(x);
+    }
   }
   function resetDrop(dropId) {
     const drop = $(dropId);
     drop.classList.remove("has-file");
     drop.querySelector(".empty-state").hidden = false;
-    drop.querySelectorAll(".preview,.file-meta").forEach((n) => n.remove());
+    drop.querySelectorAll(".preview,.file-meta,.rm-file").forEach((n) => n.remove());
     drop.querySelector("input").value = "";
   }
+  // what the ✕ on each upload clears
+  const REMOVE = {
+    "drop-img": () => { img = null; resetDrop("drop-img"); undone("n1"); },
+    "drop-vid": () => { $("trim").hidden = true; $("trim-vid").pause(); vid = null; vidIn = false; resetDrop("drop-vid"); undone("n2"); paintSongBox(); },
+    "drop-mp3": () => { mp3 = null; pcm = null; songIn = false; resetDrop("drop-mp3"); undone("n2"); paintSongBox(); try { lockState(); } catch (e) {} },
+  };
   const done = (id) => { $(id).classList.add("done"); };
   const undone = (id) => { $(id).classList.remove("done"); };
   let vidIn = false, songIn = false; // step 2 is done once both are in
@@ -246,14 +258,13 @@
     const isWav = /^audio\/(wav|x-wav|wave|vnd\.wave)$/.test(file.type) || /\.wav$/i.test(file.name);
     const isMp3 = !isWav && (/^audio\/(mpeg|mp3)$/.test(file.type) || /\.mp3$/i.test(file.name));
     if (!isWav && !isMp3) return App.toast("Please choose an MP3 or WAV file.", true);
-    if (vid && vid.kind === "video") return App.toast("You added a video, which plays with its own sound. A drop can have a song or a video, not both.", true);
     const maxMb = isWav ? (C.MAX_WAV_MB || 50) : C.MAX_MP3_MB;
     if (file.size > maxMb * 1048576) return App.toast(isWav
       ? "That WAV is over " + maxMb + " MB (about " + Math.floor(maxMb / 10.1) + " minutes at CD quality). Export it as 16-bit / 44.1 kHz, or upload an MP3."
       : "That MP3 is over " + maxMb + " MB. Export at 320 kbps or lower.", true);
     mp3 = { file, duration: 0, format: isWav ? "wav" : "mp3" }; pcm = null;
     showPreview("drop-mp3", null, file.name + " · " + (file.size / 1048576).toFixed(1) + " MB · reading…");
-    songIn = true; if (vidIn) done("n2");
+    songIn = true; if (vidIn) done("n2"); paintSongBox();
     lockState();
     if (!$("title").value) $("title").value = file.name.replace(/\.(mp3|wav)$/i, "").replace(/[_]+/g, " ").slice(0, 100);
     previewReady = false; $("preview-box").hidden = true; $("no-preview").hidden = true;
@@ -376,18 +387,17 @@
   let vid = null; // { file, w, h, kind: "video" | "image", gif }
   const fmt = (t) => Math.floor(t / 60) + ":" + String(Math.floor(t % 60)).padStart(2, "0");
   function overlayDone() { vidIn = true; if (songIn || (vid && vid.kind === "video")) done("n2"); paintSongBox(); }
-  // a drop has a song OR a video, not both (a GIF or photo can go with a song)
+  // a song can go with a photo, GIF or video. With a video + song, the video plays silent and the song is the sound.
   function paintSongBox() {
-    const blocked = !!(vid && vid.kind === "video");
-    $("drop-mp3").style.opacity = blocked ? ".4" : "";
-    $("drop-mp3").style.pointerEvents = blocked ? "none" : "";
-    $("song-sub").textContent = blocked ? "Not needed: you added a video, and it plays with its own sound." : "MP3 or WAV. Plays in the AR camera when people scan your art. Skip this if you added a video.";
+    const v = !!(vid && vid.kind === "video");
+    $("song-sub").textContent = v && mp3 ? "Your song plays as the sound. The video plays silent over your art."
+      : v ? "Optional with a video. Add one and it replaces the video's own sound."
+      : "MP3 or WAV. Plays in the AR camera when people scan your art.";
   }
   wireDrop("drop-vid", "file-vid", (file) => {
     $("trim").hidden = true; $("trim-vid").pause();
     const isGif = file.type === "image/gif" || /\.gif$/i.test(file.name);
     const isPic = isGif || /^image\//.test(file.type);
-    if (!isPic && mp3) return App.toast("You added a song, so use a GIF or photo here. A drop can have a song or a video, not both.", true);
     if (isGif || /^image\/(jpeg|png|webp)$/.test(file.type)) {
       if (isGif && file.size > C.MAX_VIDEO_MB * 1048576) return App.toast("That GIF is too big. Try a shorter one.", true);
       if (!isGif && file.size > C.MAX_IMAGE_MB * 1048576) return App.toast("That photo is too big. Try a smaller one.", true);
@@ -648,7 +658,6 @@
     if (!img) return ["Add your image first (step 1).", "drop-img"];
     if (!vid) return ["Add your video, GIF or photo (step 2).", "drop-vid"];
     if (!mp3 && vid.kind !== "video") return ["Add your song (step 2), or use a video instead.", "drop-mp3"];
-    if (mp3 && vid.kind === "video") return ["A drop can have a song or a video, not both.", "drop-mp3"];
     if (!$("title").value.trim()) return ["Give it a title.", "title"];
     const lock = lockValue();
     const selling = lock === "buy" || (lock === "none" && mode === "sell");
