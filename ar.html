@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=31"></script>
+<script src="config.js?v=32"></script>
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; font-family: "Chakra Petch", ui-monospace, monospace; color: #f4f4f4; }
@@ -111,7 +111,7 @@ body.desktop .steps, body.desktop #start { display: none; }
     <div class="by" id="by"></div>
     <a class="where-chip" id="where-chip" href="#where" hidden></a>
     <div class="secret" id="secret" hidden>
-      <div class="label">Secret song</div>
+      <div class="label" id="secret-label">Secret song</div>
       <p id="secret-what"></p>
       <div class="hint" id="secret-hint" hidden></div>
       <p class="mono" id="secret-state" style="margin-top:8px"></p>
@@ -163,7 +163,7 @@ body.desktop .steps, body.desktop #start { display: none; }
   function money(n) { try { return new Intl.NumberFormat(undefined, { style: "currency", currency: (t && t.currency) || C.CURRENCY || "USD" }).format(n); } catch (e) { return "$" + (+n).toFixed(2); } }
   function trackUrl(extra) { return "t.html?s=" + encodeURIComponent(slug) + (extra || ""); }
   var locked = function () { return t && t.song_lock && t.song_lock !== "none"; };
-  var REWARD = { free: "a free download of the full song", listen: "the full song to play in the AR camera any time", buy: "the right to buy the full song" };
+  var word = function () { return t && t.has_song === false ? "video" : "song"; };
   $("site").textContent = C.SITE_NAME;
 
   async function callFunction(action, body) {
@@ -200,7 +200,7 @@ body.desktop .steps, body.desktop #start { display: none; }
     var p = t.profiles || {}, name = p.display_name || (p.handle ? "@" + p.handle : "");
     document.title = t.title + " · AR · " + C.SITE_NAME;
     $("title").textContent = t.title;
-    $("lbl").textContent = locked() ? "AR · SECRET SONG" : "AR · " + (+t.price > 0 ? money(t.price) : "FREE");
+    $("lbl").textContent = locked() ? "AR · SECRET " + word().toUpperCase() : "AR · " + (+t.price > 0 ? money(t.price) : "FREE");
     if (p.handle) { var a = document.createElement("a"); a.href = "u.html?h=" + encodeURIComponent(p.handle); a.textContent = name; $("by").appendChild(a);
       if (p.verified) $("by").insertAdjacentHTML("beforeend", '<span class="vcheck" title="Verified: more than 5 sales"><svg viewBox="0 0 24 24" shape-rendering="crispEdges" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="3" fill="#1d9bf0"/><g fill="#fff"><rect x="5" y="11" width="3" height="3"/><rect x="8" y="14" width="3" height="3"/><rect x="11" y="11" width="3" height="3"/><rect x="14" y="8" width="3" height="3"/><rect x="17" y="5" width="3" height="3"/></g></svg></span>'); }
     $("song-btn").href = trackUrl(); $("song-link").href = trackUrl();
@@ -218,6 +218,8 @@ body.desktop .steps, body.desktop #start { display: none; }
     // secret song: what you get, and whether you already have it
     if (locked()) {
       $("secret").hidden = false;
+      $("secret-label").textContent = "Secret " + word();
+      var REWARD = { free: "a free download of the full " + word(), listen: word() === "video" ? "the video to watch in the AR camera any time" : "the full song to play in the AR camera any time", buy: "the right to buy the full " + word() };
       $("secret-what").textContent = (t.has_location ? "Find the real image at its spot and scan it to unlock " : "Find the real image and scan it to unlock ") + (t.song_lock === "buy" ? REWARD.buy + " for " + money(t.price) : REWARD[t.song_lock]) + ".";
       if (t.hint) { $("secret-hint").hidden = false; $("secret-hint").textContent = "HINT: " + t.hint; }
       if (me) {

@@ -28,8 +28,10 @@
   function lockTag(t) {
     return { free: "FIND IT · FREE", listen: "FIND IT · LISTEN", buy: "FIND IT · " + money(t.price, t.currency) }[t.song_lock] || priceLabel(t);
   }
+  function secretWord(t) { return t && t.has_song === false ? "video" : "song"; }
   function lockReward(t) {
-    return { free: "a free download of the full song", listen: "the full song to play in the AR camera any time", buy: "the right to buy the full song for " + money(t.price, t.currency) }[t.song_lock] || "";
+    const w = secretWord(t);
+    return { free: "a free download of the full " + w, listen: w === "video" ? "the video to watch in the AR camera any time" : "the full song to play in the AR camera any time", buy: "the right to buy the full " + w + " for " + money(t.price, t.currency) }[t.song_lock] || "";
   }
   async function hasUnlocked(t) {
     const s = await getSession();
@@ -742,7 +744,7 @@
     toast, timeAgo, getSession, signInUrl, requireAuth, callFunction, mountHeader, ensureHandle, avatarHTML, squareJpeg,
     play, playButton, registerTracks, trackCard, TRACK_COLS, nLikes, nComments, artistCut, isPro, proBadge, vBadge, THEMES, applyTheme, BG_COLORS, applyBackground, loadPayPal, followerCount, mountFollow, buy, download, owns, startDownload,
     renderQR, copy, share,
-    isLocked, lockTag, lockReward, hasUnlocked, playFull,
+    isLocked, lockTag, lockReward, secretWord, hasUnlocked, playFull,
     loadLeaflet, makeMap, pinIcon, areaCircle, pickLocation, locationColumns, hereNow, milesBetween, distLabel, directionsUrl,
     mountEffects, effectsSummary,
   };
