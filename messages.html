@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=32">
+<link rel="stylesheet" href="styles.css?v=33">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=32"></script>
-<script src="app.js?v=32"></script>
+<script src="config.js?v=33"></script>
+<script src="app.js?v=33"></script>
 <style>
   .wrap.chat-wrap { max-width: 640px; padding-bottom: 0; }
   .convo { display: flex; gap: 12px; align-items: center; padding: 12px 10px; text-decoration: none; color: var(--text); border-bottom: 1px solid var(--line); }
@@ -25,6 +25,10 @@
   .new-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text); }
   .act-line { font-size: .92rem; line-height: 1.35; color: var(--text-2); }
   .act-line b { color: var(--text); font-weight: 600; }
+  .act-row { cursor: pointer; }
+  .act-line a.who { color: var(--text); text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; }
+  .act-line a.who:hover { text-decoration-color: var(--text); }
+  .who-av { flex-shrink: 0; display: block; border-radius: 50%; }
   .kind { font-family: var(--mono); font-size: .7rem; letter-spacing: .1em; color: var(--muted); }
   /* chat */
   .chat-head { display: flex; align-items: center; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
@@ -88,7 +92,9 @@
       }
       groups.push({ kind: a.kind, people: [a], first: a, isNew: a.is_new });
     });
-    const nameOf = (a) => esc(a.actor_name || "@" + a.actor_handle);
+    const nameOf = (a) => a.actor_handle
+      ? '<a class="who" href="' + esc(App.profileLink ? App.profileLink(a.actor_handle) : "u.html?h=" + encodeURIComponent(a.actor_handle)) + '">' + esc(a.actor_name || "@" + a.actor_handle) + "</a>"
+      : esc(a.actor_name || "someone");
     const who = (g) => {
       const ps = g.people, n = ps.length;
       if (n === 1) return "<b>" + nameOf(ps[0]) + "</b>";
@@ -100,10 +106,12 @@
     const rowHTML = (g) => {
       const a = g.first, p = { handle: a.actor_handle, display_name: a.actor_name, avatar_path: a.actor_avatar };
       const href = a.slug ? "t.html?s=" + encodeURIComponent(a.slug) + (a.kind.indexOf("comment") === 0 ? "#comments" : "") : "u.html?h=" + encodeURIComponent(a.actor_handle);
-      return '<a class="convo' + (g.isNew ? " unread" : "") + '" href="' + esc(href) + '">' + App.avatarHTML(p, 46) +
+      const prof = a.actor_handle ? esc(App.profileLink ? App.profileLink(a.actor_handle) : "u.html?h=" + encodeURIComponent(a.actor_handle)) : "";
+      return '<div class="convo act-row' + (g.isNew ? " unread" : "") + '" data-href="' + esc(href) + '" role="link" tabindex="0">' +
+        (prof ? '<a class="who-av" href="' + prof + '" aria-label="Open profile">' + App.avatarHTML(p, 46) + "</a>" : App.avatarHTML(p, 46)) +
         '<div class="mid"><div class="kind">' + LABEL[a.kind] + '</div><div class="act-line">' + who(g) + " " + WHAT[a.kind] + (a.title ? " <b>" + esc(a.title) + "</b>" : "") + "</div>" +
           (a.snippet ? '<div class="last">"' + esc(a.snippet) + '"</div>' : "") + "</div>" +
-        '<div class="side"><span>' + esc(App.timeAgo(a.created_at)) + "</span>" + (g.isNew ? '<span class="new-dot"></span>' : "") + "</div></a>";
+        '<div class="side"><span>' + esc(App.timeAgo(a.created_at)) + "</span>" + (g.isNew ? '<span class="new-dot"></span>' : "") + "</div></div>";
     };
     let shown = 30;
     const actHTML = () => !groups.length
@@ -114,6 +122,15 @@
       '<div class="tabs"><button data-t="chats">Chats' + (chatUnread ? ' <span class="count-badge">' + chatUnread + "</span>" : "") + "</button>" +
       '<button data-t="activity">Activity' + (actUnread ? ' <span class="count-badge">' + actUnread + "</span>" : "") + "</button></div>" +
       '<div id="pane"></div>';
+    // activity rows: tap the name or picture → their page, anywhere else → the song
+    $("pane").addEventListener("click", (e) => {
+      if (e.target.closest("a")) return;
+      const r = e.target.closest(".act-row[data-href]"); if (r) location.href = r.dataset.href;
+    });
+    $("pane").addEventListener("keydown", (e) => {
+      const r = e.target.closest && e.target.closest(".act-row[data-href]");
+      if (r && e.key === "Enter" && e.target === r) location.href = r.dataset.href;
+    });
     const show = (t) => {
       main.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("on", b.dataset.t === t));
       $("pane").innerHTML = t === "activity" ? actHTML() : chatsHTML;
