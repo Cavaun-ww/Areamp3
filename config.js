@@ -35,6 +35,7 @@ window.APP_CONFIG = {
   MAX_WAV_MB: 50,   // Supabase free plan's per-file maximum; raise it on a paid plan (see README)
   MAX_IMAGE_MB: 10,
   MAX_VIDEO_MB: 20,
+  MAX_MODEL_MB: 25,   // 3D models (.glb). Under 10 MB loads fastest on phones.
 
   // Length of the free preview everyone can hear before buying (seconds)
   PREVIEW_SECONDS: 30,

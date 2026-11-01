@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=48">
+<link rel="stylesheet" href="styles.css?v=50">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=48"></script>
-<script src="app.js?v=48"></script>
+<script src="config.js?v=50"></script>
+<script src="app.js?v=50"></script>
 <style>
   .wave { width: 100%; height: 64px; display: block; background: #050505; border: 1px solid var(--line); margin-top: 12px; }
   .rng { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: .82rem; color: var(--text-2); }
@@ -54,10 +54,10 @@
     <!-- 2 WHAT PLAYS WHEN SCANNED: overlay (photo, GIF or video) + song. A video with a song plays silent; the song is the sound. -->
     <div class="card">
       <div class="step-head"><span class="step-num" id="n2">2</span><div><div class="step-title">Video &amp; song</div><div class="step-sub">What people see, hear and download. A photo, GIF or video, plus your song.</div></div></div>
-      <div class="part-label">Video, GIF or photo <span>appears on top of the image. Listeners can download videos too.</span></div>
+      <div class="part-label">Video, GIF, photo or 3D model <span>appears on top of the image. Listeners can download videos too.</span></div>
       <div class="drop" id="drop-vid">
-        <input type="file" id="file-vid" accept="video/mp4,video/webm,video/quicktime,image/gif,image/jpeg,image/png,image/webp">
-        <div class="empty-state"><div class="icon">[ MP4 / GIF ]</div><div>Drop a video, GIF or photo here or <span class="browse">browse</span></div><div class="hint">Videos up to 4 minutes. Too big? We'll get it ready for you.</div></div>
+        <input type="file" id="file-vid" accept="video/mp4,video/webm,video/quicktime,image/gif,image/jpeg,image/png,image/webp,.glb,model/gltf-binary">
+        <div class="empty-state"><div class="icon">[ MP4 / GIF / 3D ]</div><div>Drop a video, GIF, photo or 3D model here or <span class="browse">browse</span></div><div class="hint">Videos up to 4 minutes. Too big? We'll get it ready for you.<br>3D models: .GLB up to <span class="js-glbmb"></span> MB (under 10 MB loads fastest)</div></div>
       </div>
       <div class="trim" id="trim" hidden>
         <h3>Let's get your video ready</h3>
@@ -183,6 +183,7 @@
   App.mountHeader("upload");
   const C = App.C, sb = App.sb, $ = (id) => document.getElementById(id);
   document.querySelectorAll(".js-mp3mb").forEach((e) => (e.textContent = C.MAX_MP3_MB));
+  document.querySelectorAll(".js-glbmb").forEach((e) => (e.textContent = C.MAX_MODEL_MB || 25));
   document.querySelectorAll(".js-wavmb").forEach((e) => (e.textContent = C.MAX_WAV_MB || 50));
   document.querySelectorAll(".js-prev").forEach((e) => (e.textContent = C.PREVIEW_SECONDS));
   document.querySelectorAll(".js-cur").forEach((e) => (e.textContent = C.CURRENCY));
@@ -403,6 +404,8 @@
     $("trim").hidden = true; $("trim-vid").pause();
     const isGif = file.type === "image/gif" || /\.gif$/i.test(file.name);
     const isPic = isGif || /^image\//.test(file.type);
+    if (/\.glb$/i.test(file.name) || file.type === "model/gltf-binary") return useModel(file);
+    if (/\.(gltf|fbx|obj|usdz|blend|stl|3ds|dae)$/i.test(file.name)) return App.toast("Export your model as a .GLB file (File › Export › glTF Binary in Blender) and upload that.", true);
     if (isGif || /^image\/(jpeg|png|webp)$/.test(file.type)) {
       if (isGif && file.size > C.MAX_VIDEO_MB * 1048576) return App.toast("That GIF is too big. Try a shorter one.", true);
       if (!isGif && file.size > C.MAX_IMAGE_MB * 1048576) return App.toast("That photo is too big. Try a smaller one.", true);
@@ -421,6 +424,22 @@
     if (file.size > C.MAX_VIDEO_MB * 1048576) return openTrimmer(file);
     useVideo(file);
   });
+  // 3D model (.glb): stands up on the art in the AR camera, plays its own animation if it has one
+  async function useModel(file) {
+    const max = C.MAX_MODEL_MB || 25;
+    if (file.size > max * 1048576) return App.toast("That model is over " + max + " MB. Shrink the textures or simplify it, then export again (under 10 MB loads fastest).", true);
+    try {
+      const head = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+      if (String.fromCharCode(...head) !== "glTF") return App.toast("That file isn't a working .GLB model. Export it again as glTF Binary (.glb).", true);
+    } catch (e) { return App.toast("That model couldn't be read.", true); }
+    vid = { file, w: 1, h: 1, kind: "model" };
+    const box = document.createElement("div");
+    box.className = "model-ph";
+    box.innerHTML = '<svg viewBox="0 0 48 48" width="56" height="56" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M24 4 42 14v20L24 44 6 34V14z"/><path d="M6 14l18 10 18-10M24 24v20"/></svg><span>3D MODEL</span>';
+    showPreview("drop-vid", box, "3D · " + file.name + " · " + (file.size / 1048576).toFixed(1) + " MB");
+    if (file.size > 10 * 1048576) App.toast("Heads up: models over 10 MB can take a while to load on phones.");
+    overlayDone();
+  }
   function useVideo(file) {
     const v = document.createElement("video");
     v.muted = true; v.playsInline = true; v.loop = true; v.autoplay = true; v.setAttribute("playsinline", "");
@@ -661,7 +680,7 @@
 
   function problem() {
     if (!img) return ["Add your image first (step 1).", "drop-img"];
-    if (!vid) return ["Add your video, GIF or photo (step 2).", "drop-vid"];
+    if (!vid) return ["Add your video, GIF, photo or 3D model (step 2).", "drop-vid"];
     if (!mp3 && vid.kind !== "video") return ["Add your song (step 2), or use a video instead.", "drop-mp3"];
     if (!$("title").value.trim()) return ["Give it a title.", "title"];
     const lock = lockValue();
@@ -723,7 +742,9 @@
       ];
       // blurred songs stay silent until found, so no public sample of them
       if (previewBlob && !isLocked()) files.push({ bucket: "media", path: folder + "/preview.mp3", body: previewBlob, type: "audio/mpeg", msg: "Uploading preview…", from: 51, to: 54 });
-      if (vid) {
+      if (vid && vid.kind === "model") {
+        files.push({ bucket: "media", path: folder + "/model.glb", body: vid.file, type: "application/octet-stream", msg: "Uploading 3D model…", from: 54, to: 70 });
+      } else if (vid) {
         const isPic = vid.kind === "image";
         const ext = isPic
           ? (vid.gif ? "gif" : ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" })[vid.file.type])
@@ -756,7 +777,7 @@
         cover_path: pathOf(/\/target\.jpg$/),
         mind_path: pathOf(/\/target\.mind$/),
         preview_path: pathOf(/\/preview\.mp3$/),
-        video_path: pathOf(/\/(video|overlay)\.[a-z0-9]+$/),
+        video_path: pathOf(/\/(video|overlay|model)\.[a-z0-9]+$/),
         audio_path: pathOf(/\/song\.(mp3|wav)$/),
         video_dl_path: pathOf(/\/download\.[a-z0-9]+$/),
         audio_format: mp3 ? mp3.format : "mp3",

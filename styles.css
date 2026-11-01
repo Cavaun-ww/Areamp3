@@ -452,3 +452,8 @@ html:has(body.modal-open) { overflow: hidden; }
 @keyframes arCamScan { 0%, 100% { transform: translateY(-5px); opacity: .2; } 50% { transform: translateY(5px); opacity: 1; } }
 @media (max-width: 560px) { .nav .ar-cam { padding: 0 8px; margin-right: 2px; } .nav .ar-cam-t { display: none; } }
 @media (prefers-reduced-motion: reduce) { .nav .ar-cam-scan { animation: none; } }
+/* 3D model placeholder in the upload box */
+.drop .model-ph { width: 100%; min-height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: #000; color: var(--text); font-family: var(--mono); font-size: .74rem; letter-spacing: .18em; }
+.drop .model-ph svg { animation: mphSpin 6s linear infinite; }
+@keyframes mphSpin { from { transform: rotateY(0); } to { transform: rotateY(360deg); } }
+@media (prefers-reduced-motion: reduce) { .drop .model-ph svg { animation: none; } }

@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=48"></script>
+<script src="config.js?v=50"></script>
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; font-family: "Chakra Petch", ui-monospace, monospace; color: #f4f4f4; }
@@ -385,6 +385,7 @@ body.desktop .steps, body.desktop #start { display: none; }
 
   function isPhoto(p) { return /\.(jpe?g|png|webp)$/i.test(p || ""); }
   function isGif(p) { return /\.gif$/i.test(p || ""); }
+  function isModel(p) { return /\.glb$/i.test(p || ""); }
 
   // ── background removal ("green screen" / black / white), done live on the phone ──
   function applyKey(mat, mode) {
@@ -572,6 +573,7 @@ body.desktop .steps, body.desktop #start { display: none; }
         if (!tr) return;
         var video = vids[idx] || null;
         var path = tr.video_path, texture, aspect = tr.video_aspect || 1, imgA = tr.cover_aspect || 1;
+        if (path && isModel(path)) return this.initModel(tr, target, idx);
         if (path && isGif(path)) {
           var cv = document.createElement("canvas"); cv.width = cv.height = 2;
           this.gif = new GifPlayer(pub(path), cv); texture = new THREE.CanvasTexture(cv); this.gifTex = texture;
@@ -613,7 +615,72 @@ body.desktop .steps, body.desktop #start { display: none; }
           if (video) video.pause();
         });
       },
+      // 3D model: stands up out of the art, sized to the image, plays its own animation (or turns slowly)
+      initModel: function (tr, target, idx) {
+        var self = this, el = this.el;
+        var pop = Math.min(2, Math.max(1, +tr.pop_scale || 1)), lift = Math.min(0.6, Math.max(0, +tr.lift || 0));
+        this.lift = lift; this.isModel = true; this.visible = false; this.fade = 0;
+        var holder = new THREE.Group(); holder.rotation.x = Math.PI / 2; // model "up" points out of the image
+        holder.visible = false;
+        el.setObject3D("mesh", holder);
+        if (lift) el.object3D.position.z = 0.01 + lift;
+        var Loader = THREE.GLTFLoader || (AFRAME.THREE && AFRAME.THREE.GLTFLoader);
+        if (!Loader) return;
+        var loadModel = function () { // only download the model once its image is found
+        if (self.loading) return; self.loading = true;
+        var ld = new Loader(); if (ld.setCrossOrigin) ld.setCrossOrigin("anonymous");
+        ld.load(pub(tr.video_path), function (g) {
+          var m = g.scene || (g.scenes && g.scenes[0]); if (!m) return;
+          // fit inside the image: widest side = image width (times the Size setting), sitting on the image
+          var box = new THREE.Box3().setFromObject(m), size = new THREE.Vector3(), c = new THREE.Vector3();
+          box.getSize(size); box.getCenter(c);
+          var widest = Math.max(size.x, size.z, size.y * 0.75) || 1, s = (0.9 * pop) / widest;
+          m.scale.setScalar(s);
+          m.position.set(-c.x * s, -box.min.y * s, -c.z * s);
+          var mats = [];
+          m.traverse(function (o) { if (o.material) [].concat(o.material).forEach(function (mt) { mt.transparent = true; mats.push(mt); mt.userData.op = mt.opacity == null ? 1 : mt.opacity; mt.opacity = 0; }); });
+          self.mats = mats;
+          holder.add(m);
+          if (g.animations && g.animations.length) {
+            self.mixer = new THREE.AnimationMixer(m);
+            g.animations.forEach(function (a) { self.mixer.clipAction(a).play(); });
+          } else self.spin = true;
+          self.holder = holder;
+          if (!holder.children.length) return;
+          if (!self.lightsAdded) { // soft studio light so models aren't flat black
+            var sc = el.sceneEl.object3D;
+            sc.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.1));
+            var d = new THREE.DirectionalLight(0xffffff, 1.2); d.position.set(0.5, 1, 1); sc.add(d);
+            self.lightsAdded = true;
+          }
+        }, undefined, function (e) { console.warn("model", e); self.loading = false; pill("<b>Couldn't load the 3D model</b><span>Check your connection and point at the image again.</span><button class=\"alt\" data-close>OK</button>"); });
+        };
+        if (xps.length === 1) loadModel();
+        target.addEventListener("targetFound", function () {
+          loadModel();
+          self.visible = true; holder.visible = true;
+          $("hint").classList.remove("show");
+          if (cur !== idx) select(idx);
+          nowPlaying(); playSong(); tryUnlock();
+        });
+        target.addEventListener("targetLost", function () {
+          self.visible = false;
+          if (cur !== idx) return;
+          $("hint").classList.add("show");
+          if (song) song.pause();
+        });
+      },
       tick: function (time, dt) {
+        if (this.isModel) {
+          if (!this.holder) return;
+          var sec = (dt || 16) / 1000;
+          if (this.visible) { if (this.mixer) this.mixer.update(sec); if (this.spin) this.holder.rotation.y += sec * 0.5; }
+          if (this.lift && this.visible) this.el.object3D.position.z = 0.01 + this.lift + Math.sin(time / 900) * this.lift * 0.08;
+          var f = this.fade += ((this.visible ? 1 : 0) - this.fade) * 0.2;
+          if (this.mats) this.mats.forEach(function (mt) { mt.opacity = mt.userData.op * f; });
+          if (!this.visible && f < 0.02) this.holder.visible = false;
+          return;
+        }
         if (!this.mat) return;
         if (this.lift && this.visible) this.el.object3D.position.z = 0.01 + this.lift + Math.sin(time / 900) * this.lift * 0.08;
         if (this.gif && this.visible) { this.gif.step(dt || 16); if (this.gif.changed) { this.gif.changed = false; this.gifTex.needsUpdate = true; } }
@@ -625,7 +692,7 @@ body.desktop .steps, body.desktop #start { display: none; }
 
   function makeVideo(i) {
     var x = xps[i];
-    if (!x || !x.video_path || isPhoto(x.video_path) || isGif(x.video_path)) return null;
+    if (!x || !x.video_path || isPhoto(x.video_path) || isGif(x.video_path) || isModel(x.video_path)) return null;
     var v = document.createElement("video");
     v.src = pub(x.video_path); v.crossOrigin = "anonymous"; v.muted = x.has_song !== false; v.loop = true; // no song: the video's own sound plays
     v.preload = xps.length > 1 ? "none" : "auto"; // Explore: only download a video once its image is found
