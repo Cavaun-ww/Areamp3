@@ -425,3 +425,13 @@ html:has(body.modal-open) { overflow: hidden; }
 .tk .meta.loc { display: flex; align-items: center; gap: 5px; min-width: 0; }
 .tk .meta.loc svg { flex-shrink: 0; }
 .tk .meta.loc span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* blur window fits on one phone screen: tight options, buttons always in view */
+.lock-modal .modal { padding: 18px; max-height: calc(100dvh - 24px); }
+.lock-modal .radio-list { gap: 6px; }
+.lock-modal .radio-list label { padding: 9px 11px; font-size: .88rem; }
+.lock-modal .radio-list label b { display: block; }
+.lock-modal .opt-desc { display: none; margin-top: 2px; line-height: 1.35; }
+.lock-modal .radio-list label:has(input:checked) .opt-desc { display: block; }
+.lock-modal textarea { min-height: 0; height: auto; resize: none; }
+.lock-modal .lock-actions { position: sticky; bottom: -18px; margin: 14px -18px -18px; padding: 12px 18px 18px; background: var(--card); border-top: 1px solid var(--line); display: flex; gap: 8px; flex-wrap: wrap; z-index: 5; }
+.lock-modal #l-off { margin-left: auto; }
