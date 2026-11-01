@@ -36,7 +36,7 @@
       <h2>Make a music AR experience</h2>
       <ol class="easy3">
         <li><b>01</b><span>Upload your art. This is the image people scan.</span></li>
-        <li><b>02</b><span>Add a photo, GIF, video or audio that will appear on your phone.</span></li>
+        <li><b>02</b><span>Add a photo, GIF, video, 3D model or audio that will appear on your phone.</span></li>
         <li><b>03</b><span>Publish it, then hide your art out in the real world.</span></li>
       </ol>
     </div>
@@ -53,7 +53,7 @@
 
     <!-- 2 WHAT PLAYS WHEN SCANNED: overlay (photo, GIF or video) + song. A video with a song plays silent; the song is the sound. -->
     <div class="card">
-      <div class="step-head"><span class="step-num" id="n2">2</span><div><div class="step-title">Video &amp; song</div><div class="step-sub">What people see, hear and download. A photo, GIF or video, plus your song.</div></div></div>
+      <div class="step-head"><span class="step-num" id="n2">2</span><div><div class="step-title">Video, 3D &amp; song</div><div class="step-sub">What people see, hear and download. A photo, GIF, video or 3D model, plus your song.</div></div></div>
       <div class="part-label">Video, GIF, photo or 3D model <span>appears on top of the image. Listeners can download videos too.</span></div>
       <div class="drop" id="drop-vid">
         <input type="file" id="file-vid" accept="video/mp4,video/webm,video/quicktime,image/gif,image/jpeg,image/png,image/webp,.glb,model/gltf-binary">
@@ -420,7 +420,7 @@
       im.src = URL.createObjectURL(file);
       return;
     }
-    if (!/^video\//.test(file.type)) return App.toast("Please choose a video, a GIF, or a JPG/PNG photo.", true);
+    if (!/^video\//.test(file.type)) return App.toast("Please choose a video, a GIF, a JPG/PNG photo, or a 3D model (.GLB).", true);
     if (file.size > C.MAX_VIDEO_MB * 1048576) return openTrimmer(file);
     useVideo(file);
   });
