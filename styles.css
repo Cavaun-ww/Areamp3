@@ -413,3 +413,6 @@ body[data-theme]:not([data-theme="mono"]) .tk .cov .tags .pill:first-child { bac
 .drop-search #drop-count:empty { display: none; }
 .tile a.stats { text-decoration: none; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .tile a.stats:hover { text-decoration: none; }
+/* only the file-type chip stays, top right */
+.tk .cov .tags { justify-content: flex-end; }
+.tk .cov .tags .pill.ty, body[data-theme]:not([data-theme="mono"]) .tk .cov .tags .pill.ty { background: rgba(0,0,0,.62); color: #f4f4f4; border-color: rgba(255,255,255,.22); box-shadow: none; }

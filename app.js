@@ -294,8 +294,8 @@
     return '<div class="tk' + (isLocked(t) ? " locked" : "") + '">' +
       '<div class="cov"><a href="' + esc(trackLink(t.slug)) + '"><img loading="lazy" alt=""' + (t.photo_hidden ? ' class="blurred"' : "") + ' src="' + esc(publicUrl(t.cover_path)) + '"></a>' +
         (t.photo_hidden ? '<span class="hide-badge"><i></i>FIND IT IN PERSON</span>' : "") +
-        '<div class="tags"><span class="pill solid">' + esc(isLocked(t) ? ((t.song_lock === "listen" ? "LISTEN" : t.song_lock === "buy" && +t.price > 0 ? money(t.price, t.currency) : "FREE")) : priceLabel(t)) + "</span>" +
-        (!hasSong(t) || hasVid(t) || t.audio_format === "wav" ? '<span class="pill solid">' + esc(!hasSong(t) ? "VIDEO" : hasVid(t) ? songType(t) + "+VID" : "WAV") + "</span>" : "") + "</div>" +
+        '<div class="tags">' +
+        (!hasSong(t) || hasVid(t) || t.audio_format === "wav" ? '<span class="pill solid ty">' + esc(!hasSong(t) ? "VIDEO" : hasVid(t) ? songType(t) + "+VID" : "WAV") + "</span>" : "") + "</div>" +
         "</div>" + // music only plays in the AR camera
       '<div class="body">' +
         '<a class="t" href="' + esc(trackLink(t.slug)) + '">' + esc(t.title) + "</a>" +
