@@ -307,7 +307,7 @@
         (opts.actions || "") +
       "</div></div>";
   }
-  const TRACK_COLS = "id, slug, owner, title, genre, description, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, duration, price, currency, created_at, audio_format, has_song, has_video, pop_scale, lift, key_mode, is_private, photo_hidden, has_location, place_name, place_area, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, profiles!owner(handle, display_name, avatar_path, verified), likes(count), comments(count)";
+  const TRACK_COLS = "id, slug, owner, title, genre, description, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, duration, price, currency, created_at, audio_format, has_song, has_video, pop_scale, lift, key_mode, is_private, photo_hidden, has_location, place_name, place_area, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, profiles!owner(handle, display_name, avatar_path, verified, theme), likes(count), comments(count)";
   const nLikes = (t) => (t.likes && t.likes[0] && t.likes[0].count) || 0;
   const nComments = (t) => (t.comments && t.comments[0] && t.comments[0].count) || 0;
   // artist's share of each sale, as shown on the site (the real split is set on the server)
@@ -317,6 +317,13 @@
   // blue check: artists with more than 5 sales (set by the database)
   const CHECK_SVG = '<svg viewBox="0 0 24 24" shape-rendering="crispEdges" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="3" fill="#1d9bf0"/><g fill="#fff"><rect x="5" y="11" width="3" height="3"/><rect x="8" y="14" width="3" height="3"/><rect x="11" y="11" width="3" height="3"/><rect x="14" y="8" width="3" height="3"/><rect x="17" y="5" width="3" height="3"/></g></svg>';
   const vBadge = (p) => (p && p.verified ? '<span class="vcheck" title="Verified: more than 5 sales" aria-label="Verified">' + CHECK_SVG + "</span>" : "");
+  // artist page colors
+  const THEMES = [["mono", "Mono", "#f4f4f4"], ["blue", "Blue", "#3aa0ff"], ["red", "Red", "#ff4d4d"], ["green", "Green", "#39d98a"],
+    ["purple", "Purple", "#a77bff"], ["gold", "Gold", "#ffc94d"], ["pink", "Pink", "#ff5fb7"], ["cyan", "Cyan", "#3ee6e6"]];
+  function applyTheme(theme) {
+    if (theme && theme !== "mono" && THEMES.some((x) => x[0] === theme)) document.body.dataset.theme = theme;
+    else delete document.body.dataset.theme;
+  }
   const proBadge = (p) => (isPro(p) ? '<span class="pill solid pro-badge" title="Pro artist">PRO</span>' : "");
 
   // ── follow ───────────────────────────────────────────────────
@@ -724,7 +731,7 @@
     nearReveal,
     C, sb, configured, BUCKET, SONGS, siteRoot, esc, publicUrl, trackLink, arLink, profileLink, money, priceLabel, artistName, fmtTime, fileType, songType, hasSong, hasVid,
     toast, timeAgo, getSession, signInUrl, requireAuth, callFunction, mountHeader, ensureHandle, avatarHTML, squareJpeg,
-    play, playButton, registerTracks, trackCard, TRACK_COLS, nLikes, nComments, artistCut, isPro, proBadge, vBadge, loadPayPal, followerCount, mountFollow, buy, download, owns, startDownload,
+    play, playButton, registerTracks, trackCard, TRACK_COLS, nLikes, nComments, artistCut, isPro, proBadge, vBadge, THEMES, applyTheme, loadPayPal, followerCount, mountFollow, buy, download, owns, startDownload,
     renderQR, copy, share,
     isLocked, lockTag, lockReward, hasUnlocked, playFull,
     loadLeaflet, makeMap, pinIcon, areaCircle, pickLocation, locationColumns, hereNow, milesBetween, distLabel, directionsUrl,

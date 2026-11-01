@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=22">
+<link rel="stylesheet" href="styles.css?v=23">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=22"></script>
-<script src="app.js?v=22"></script>
+<script src="config.js?v=23"></script>
+<script src="app.js?v=23"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -31,8 +31,8 @@
 <body>
 <main class="wrap wrap-wide">
   <div class="head">
-    <div id="head-av"></div>
-    <div style="flex:1;min-width:200px"><div class="label">My page</div><h1 id="head-name">…</h1><div class="small muted mono" id="head-handle"></div></div>
+    <div id="head-av" class="themed-av"></div>
+    <div style="flex:1;min-width:200px"><div class="label">My page</div><h1 id="head-name" class="themed-title">…</h1><div class="small muted mono" id="head-handle"></div></div>
     <a class="btn btn-sm" href="messages.html">Messages <span class="count-badge" id="msgs-count" hidden></span></a>
     <a class="btn btn-sm" id="admin-link" href="admin.html" hidden>Admin</a>
     <a class="btn btn-sm" id="view-public" hidden>View public page →</a>
@@ -111,6 +111,7 @@
       </label>
       <label class="field"><span>Artist / display name</span><input class="input" id="display_name" maxlength="60"></label>
       <label class="field"><span>Bio</span><textarea class="input" id="bio" maxlength="280" placeholder="Where you're from, what you make, links…"></textarea></label>
+      <div class="field"><span>Page color</span><p class="small muted" style="margin:2px 0 10px;text-transform:none;letter-spacing:0">The color of your artist page and song pages.</p><div class="swatches" id="swatches"></div></div>
       <div class="row"><button class="btn btn-primary" type="submit" id="save">Save profile</button><button class="btn btn-ghost" type="button" id="share-page">Share my page</button></div>
       <hr class="rule">
       <div class="row small"><span class="muted mono" id="email"></span><span class="spacer"></span><a href="#" id="signout">Sign out</a></div>
@@ -150,9 +151,10 @@
   let profile = {};
   async function loadProfile() {
     try { await App.ensureHandle(session); } catch (e) {}
-    const { data } = await sb.from("profiles").select("handle, display_name, bio, avatar_path, pro_until, verified").eq("id", uid).maybeSingle();
+    const { data } = await sb.from("profiles").select("handle, display_name, bio, avatar_path, pro_until, verified, theme").eq("id", uid).maybeSingle();
     profile = data || {};
     $("head-av").innerHTML = App.avatarHTML(profile);
+    pickedTheme = profile.theme || "mono"; paintSwatches(); App.applyTheme(pickedTheme);
     $("head-name").textContent = profile.display_name || profile.handle || "Me";
     $("head-name").insertAdjacentHTML("beforeend", App.vBadge(profile) + (App.proBadge(profile) ? " " + App.proBadge(profile) : ""));
     paintPlan();
@@ -209,13 +211,20 @@
     loadProfile();
   };
   $("share-page").onclick = () => profile.handle && App.share(profile.display_name || profile.handle, App.profileLink(profile.handle));
+  // page color: tap a color to preview it right here, Save profile to keep it
+  let pickedTheme = "mono";
+  function paintSwatches() {
+    $("swatches").innerHTML = App.THEMES.map(([id, label, c]) => '<button type="button" data-theme="' + id + '" class="' + (id === pickedTheme ? "on" : "") + '" style="background:' + c + '" aria-label="' + label + '"><span>' + label + "</span></button>").join("");
+  }
+  $("swatches").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; pickedTheme = b.dataset.theme; paintSwatches(); App.applyTheme(pickedTheme); };
+
   $("profile-form").onsubmit = async (e) => {
     e.preventDefault();
     clearTimeout(ht); await checkHandle();
     if (!handleOk) return App.toast($("handle-msg").textContent || "Pick a different page name", true);
     $("save").disabled = true;
     const { error } = await sb.from("profiles").update({
-      handle: $("handle").value, display_name: $("display_name").value.trim() || null, bio: $("bio").value.trim() || null,
+      handle: $("handle").value, display_name: $("display_name").value.trim() || null, bio: $("bio").value.trim() || null, theme: pickedTheme,
     }).eq("id", uid);
     $("save").disabled = false;
     if (error) return App.toast(error.code === "23505" ? "That page name was just taken, try another" : error.message, true);
