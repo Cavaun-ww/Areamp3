@@ -420,3 +420,8 @@ body[data-theme]:not([data-theme="mono"]) .tk .cov .tags .pill:first-child { bac
 .modal-bg { overscroll-behavior: contain; }
 .modal { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; max-height: calc(100dvh - 32px); }
 html:has(body.modal-open) { overflow: hidden; }
+/* location pin on cards */
+.tk .cov .tags .pin-chip { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: rgba(0,0,0,.66); border: 1px solid rgba(255,255,255,.28); color: #f4f4f4; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); flex-shrink: 0; margin-right: auto; }
+.tk .meta.loc { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.tk .meta.loc svg { flex-shrink: 0; }
+.tk .meta.loc span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }

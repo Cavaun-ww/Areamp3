@@ -290,19 +290,20 @@
   });
 
   // track card used on Explore, profiles and the home page
+  const PIN_SVG = '<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M8 15s-4.8-5-4.8-8.4a4.8 4.8 0 0 1 9.6 0C12.8 10 8 15 8 15z"/><circle cx="8" cy="6.6" r="1.7"/></svg>';
   function trackCard(t, opts) {
     opts = opts || {};
     const p = t.profiles || {};
     return '<div class="tk' + (isLocked(t) ? " locked" : "") + '">' +
       '<div class="cov"><a href="' + esc(trackLink(t.slug)) + '"><img loading="lazy" alt=""' + (t.photo_hidden ? ' class="blurred"' : "") + ' src="' + esc(publicUrl(t.cover_path)) + '"></a>' +
         (t.photo_hidden ? '<span class="hide-badge"><i></i>FIND IT IN PERSON</span>' : "") +
-        '<div class="tags">' +
+        '<div class="tags">' + (t.has_location ? '<span class="pin-chip" title="Has a location">' + PIN_SVG + "</span>" : "") +
         (!hasSong(t) || hasVid(t) || t.audio_format === "wav" ? '<span class="pill solid ty">' + esc(!hasSong(t) ? "VIDEO" : hasVid(t) ? songType(t) + "+VID" : "WAV") + "</span>" : "") + "</div>" +
         "</div>" + // music only plays in the AR camera
       '<div class="body">' +
         '<a class="t" href="' + esc(trackLink(t.slug)) + '">' + esc(t.title) + "</a>" +
         (!opts.hideArtist && p.handle ? '<a class="a" href="' + esc(profileLink(p.handle)) + '">' + esc(artistName(p)) + vBadge(p) + "</a>" : "") +
-        (t.has_location ? '<div class="meta loc">[ ' + esc(t.place_name || "SECRET LOCATION") + (t.loc_approx ? " · AREA" : "") + " ]</div>" : "") +
+        (t.has_location ? '<div class="meta loc">' + PIN_SVG + "<span>" + esc(t.place_name || "SECRET LOCATION") + (t.loc_approx ? " · AREA" : "") + "</span></div>" : "") +
         '<div class="meta">' + esc([t.genre, t.duration ? fmtTime(t.duration) : ""].filter(Boolean).join(" · ") || " ") +
 "</div>" +
         (t.likes ? '<div class="meta">' + nLikes(t) + (nLikes(t) === 1 ? " LIKE" : " LIKES") + " · " + nComments(t) + (nComments(t) === 1 ? " COMMENT" : " COMMENTS") + "</div>" : "") +
