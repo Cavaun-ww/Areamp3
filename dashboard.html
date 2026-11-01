@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=19">
+<link rel="stylesheet" href="styles.css?v=20">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=19"></script>
-<script src="app.js?v=19"></script>
+<script src="config.js?v=20"></script>
+<script src="app.js?v=20"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -338,7 +338,7 @@
       '<div class="radio-list" id="l-mode">' +
       '<p class="small muted" style="margin-bottom:12px">Your image shows blurred on the site, so nobody can scan it off a screen. Listeners have to find the real one and scan it' + (t.has_location ? ' at your location' : '') + '. What do they get when they do?</p>' +
         [["free", "Free download when found", "Listeners who find it keep the full song for free."],
-         ["listen", "Listen only when found", "Listeners who find it can play the full song any time, not download it."],
+         ["listen", "Listen only when found", "Listeners who find it can play the full song in the AR camera any time, not download it."],
          ["buy", "Right to buy when found", "Only listeners who found it can buy it."]].map((o) =>
           '<label><input type="radio" name="l-mode" value="' + o[0] + '"' + (o[0] === cur ? " checked" : "") + "> <span><b>" + o[1] + '</b><br><span class="small muted">' + o[2] + "</span></span></label>").join("") +
       "</div>" +
@@ -372,7 +372,7 @@
       bg.remove(); App.toast(on ? "Blur settings saved" : "Blurred. Listeners have to find the real one"); loadTracks();
     };
     if (q("#l-off")) q("#l-off").onclick = async () => {
-      if (!confirm("Turn off the blur? The image shows clearly and the whole song plays for everyone (free or for sale, as you set it).")) return;
+      if (!confirm("Turn off the blur? The image shows clearly and anyone who scans it hears the whole song (free or for sale, as you set it).")) return;
       const { error } = await sb.from("tracks").update({ photo_hidden: false, song_lock: "none" }).eq("id", t.id);
       if (error) return App.toast(error.message, true);
       bg.remove(); App.toast("Image shows clearly again"); loadTracks();

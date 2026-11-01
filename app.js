@@ -29,7 +29,7 @@
     return { free: "FIND IT · FREE", listen: "FIND IT · LISTEN", buy: "FIND IT · " + money(t.price, t.currency) }[t.song_lock] || priceLabel(t);
   }
   function lockReward(t) {
-    return { free: "a free download of the full song", listen: "the full song (stream it any time)", buy: "the right to buy the full song for " + money(t.price, t.currency) }[t.song_lock] || "";
+    return { free: "a free download of the full song", listen: "the full song to play in the AR camera any time", buy: "the right to buy the full song for " + money(t.price, t.currency) }[t.song_lock] || "";
   }
   async function hasUnlocked(t) {
     const s = await getSession();
@@ -295,7 +295,7 @@
         (t.photo_hidden ? '<span class="hide-badge">FIND IT IN PERSON</span>' : "") +
         '<span class="tag pill solid">' + esc(isLocked(t) ? lockTag(t) : priceLabel(t)) + "</span>" +
         (!hasSong(t) || hasVid(t) || t.audio_format === "wav" ? '<span class="pill solid" style="position:absolute;right:10px;top:10px">' + esc(!hasSong(t) ? "VIDEO" : hasVid(t) ? songType(t) + "+VID" : "WAV") + "</span>" : "") +
-        (hasSong(t) && !isLocked(t) ? playButton(t) : "") + "</div>" +
+        "</div>" + // music only plays in the AR camera
       '<div class="body">' +
         '<a class="t" href="' + esc(trackLink(t.slug)) + '">' + esc(t.title) + "</a>" +
         (!opts.hideArtist && p.handle ? '<a class="a" href="' + esc(profileLink(p.handle)) + '">' + esc(artistName(p)) + vBadge(p) + "</a>" : "") +
@@ -404,7 +404,7 @@
     if (isLocked(t)) {
       const found = await hasUnlocked(t);
       if (!found) return toast("Find this song's secret spot and scan it to unlock it.", true);
-      if (t.song_lock === "listen") return playFull(t);
+      if (t.song_lock === "listen") { location.href = arLink(t.slug); return; } // listen in the AR camera
       if (t.song_lock === "free") return download(t);
     } else if (!(+t.price > 0)) return download(t);
 

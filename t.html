@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=19">
+<link rel="stylesheet" href="styles.css?v=20">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=19"></script>
-<script src="app.js?v=19"></script>
+<script src="config.js?v=20"></script>
+<script src="app.js?v=20"></script>
 <style>
   .rel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
   @media (max-width: 760px) { .rel { grid-template-columns: 1fr; gap: 20px; } }
@@ -117,9 +117,9 @@
     (!t.is_published ? '<div class="banner">HIDDEN — only you can see this track. Publish it from My page.</div>' : "") +
     '<div class="rel">' +
       '<div class="art"><img alt=""' + (blur ? ' class="blurred"' : "") + ' src="' + esc(App.publicUrl(t.cover_path)) + '">' +
-        (blur ? '<span class="hide-badge">FIND THE REAL ONE IN PERSON</span>' : "") + (App.hasSong(t) && (!locked || found || mine) ? App.playButton(t) : "") + "</div>" +
+        (blur ? '<span class="hide-badge">FIND THE REAL ONE IN PERSON</span>' : "") + "</div>" + // music only plays in the AR camera
       "<div>" +
-        '<div class="label">' + esc(t.genre || "Single") + (App.hasSong(t) && !locked ? " · full song" : App.hasSong(t) ? " · plays once you find it" : "") + "</div>" +
+        '<div class="label">' + esc(t.genre || "Single") + (App.hasSong(t) && !locked ? " · scan to listen" : App.hasSong(t) ? " · plays once you find it" : "") + "</div>" +
         '<h1 style="margin-top:6px">' + esc(t.title) + "</h1>" +
         '<div class="who">' +
           (p.handle ? '<a class="name" href="' + esc(App.profileLink(p.handle)) + '">' + App.avatarHTML(p, 36) + "<b>" + esc(name) + App.vBadge(p) + "</b></a>" : "") +
@@ -171,7 +171,7 @@
   const label = () => {
     if (mine || owned) return "↓ Download " + main;
     if (locked && !found) return "Go find it · open AR camera";
-    if (locked) return t.song_lock === "free" ? "↓ Download " + main : t.song_lock === "listen" ? "▶ Play full song" : "Buy " + App.money(t.price, t.currency);
+    if (locked) return t.song_lock === "free" ? "↓ Download " + main : t.song_lock === "listen" ? "Listen in the AR camera" : "Buy " + App.money(t.price, t.currency);
     return !paid ? "↓ Download " + main : "Buy " + App.money(t.price, t.currency);
   };
   // song and video: a second button for the video, whenever the song can be downloaded
