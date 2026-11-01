@@ -411,3 +411,5 @@ body[data-theme]:not([data-theme="mono"]) .tk .cov .tags .pill:first-child { bac
 .drop-search { display: flex; align-items: center; gap: 12px; margin: 0 0 16px; }
 .drop-search .input { flex: 1; min-width: 0; }
 .drop-search #drop-count:empty { display: none; }
+.tile a.stats { text-decoration: none; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.tile a.stats:hover { text-decoration: none; }

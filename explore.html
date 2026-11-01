@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=29">
+<link rel="stylesheet" href="styles.css?v=30">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=29"></script>
-<script src="app.js?v=29"></script>
+<script src="config.js?v=30"></script>
+<script src="app.js?v=30"></script>
 <style>
   .head-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
   .head-row .vf { display: inline-block; width: 13px; height: 13px; margin-right: 10px; vertical-align: -1px; border: 2px solid currentColor; border-radius: 2px; box-shadow: inset 0 0 0 2px var(--text), inset 0 0 0 5px currentColor; }
@@ -82,6 +82,9 @@
   .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(170px, 44vw), 1fr)); gap: 12px; }
   .tile { background: var(--card); border: 1px solid var(--line); display: flex; flex-direction: column; transition: border-color .15s; min-width: 0; }
   .tile:hover { border-color: var(--text-2); }
+  .tile { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .tile .cov .hide-badge { pointer-events: none; }
+  .stats { color: inherit; text-decoration: none; }
   .tile .cov { position: relative; aspect-ratio: 1; overflow: hidden; background: #050505; margin: 8px 8px 0; }
   .tile .cov img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .tile .cov .pbtn { position: absolute; right: 8px; bottom: 8px; width: 38px; height: 38px; }
@@ -277,19 +280,26 @@
     const p = t.profiles || {};
     const link = esc(App.trackLink(t.slug));
     const priceTxt = App.isLocked(t) ? "FIND IT" : +t.price > 0 ? App.priceLabel(t) : "FREE";
-    return '<div class="tile">' +
+    return '<div class="tile" data-href="' + link + '">' +
       '<div class="cov"><a href="' + link + '"><img loading="lazy" alt=""' + (t.photo_hidden ? ' class="blurred"' : "") + ' src="' + esc(App.publicUrl(t.cover_path)) + '"></a>' +
         (t.photo_hidden ? '<span class="hide-badge">FIND IT IN PERSON</span>' : "") + "</div>" + // music only plays in the AR camera
       '<div class="info"><a class="t" href="' + link + '">' + esc(t.title) + "</a>" +
         (p.handle ? '<a class="a" href="' + esc(App.profileLink(p.handle)) + '">' + esc(artistLabel(t)) + App.vBadge(p) + "</a>" : "") +
         (t.has_location && (t.place_name || t.place_area || here) ? '<div class="loc">[ ' + esc([t.place_name || t.place_area, here && t.area_lat != null ? App.distLabel(App.milesBetween(here, { lat: t.area_lat, lng: t.area_lng })) : ""].filter(Boolean).join(" · ").toUpperCase()) + " ]</div>" : "") +
         '<div class="extra">' + esc([t.genre, t.duration ? App.fmtTime(t.duration) : "", new Date(t.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })].filter(Boolean).join(" · ")) + "</div></div>" +
-      '<div class="stats"><span class="ty">' + esc(!App.hasSong(t) ? "VIDEO" : App.hasVid(t) ? App.songType(t) + "+VID" : App.songType(t)) + "</span>" +
+      '<a class="stats" href="' + link + '" aria-label="Open ' + esc(t.title) + '"><span class="ty">' + esc(!App.hasSong(t) ? "VIDEO" : App.hasVid(t) ? App.songType(t) + "+VID" : App.songType(t)) + "</span>" +
         '<span class="n" title="Likes">' + ICON.heart + "<b>" + App.nLikes(t) + "</b></span>" +
         '<span class="n c" title="Comments">' + ICON.chat + "<b>" + App.nComments(t) + "</b></span>" +
-        '<span class="n p" title="Price">' + ICON.tag + "<b>" + esc(priceTxt) + "</b></span></div>" +
+        '<span class="n p" title="Price">' + ICON.tag + "<b>" + esc(priceTxt) + "</b></span></a>" +
     "</div>";
   }
+
+  // tap anywhere on a card (bottom bar, badge, empty space) → open the song page
+  $("list").addEventListener("click", (e) => {
+    if (e.target.closest("a, button, input, select, label")) return;
+    const tile = e.target.closest(".tile[data-href]"); if (!tile) return;
+    location.href = tile.dataset.href;
+  });
 
   const cmp = {
     date: (a, b) => new Date(a.created_at) - new Date(b.created_at),
