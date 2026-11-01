@@ -16,7 +16,7 @@
   }
   function publicUrl(path) { return path ? sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl : ""; }
   function trackLink(slug) { return siteRoot + "t.html?s=" + encodeURIComponent(slug); }
-  function arLink(slug) { return siteRoot + "ar.html?s=" + encodeURIComponent(slug); }
+  function arLink(slug, go) { return siteRoot + "ar.html?s=" + encodeURIComponent(slug) + (go ? "&go=1" : ""); }
   function profileLink(handle) { return siteRoot + "u.html?h=" + encodeURIComponent(handle); }
   function money(n, cur) {
     try { return new Intl.NumberFormat(undefined, { style: "currency", currency: cur || C.CURRENCY || "USD" }).format(+n || 0); }
@@ -405,7 +405,7 @@
     if (isLocked(t)) {
       const found = await hasUnlocked(t);
       if (!found) return toast("Find this song's secret spot and scan it to unlock it.", true);
-      if (t.song_lock === "listen") { location.href = arLink(t.slug); return; } // listen in the AR camera
+      if (t.song_lock === "listen") { location.href = arLink(t.slug, true); return; } // listen in the AR camera
       if (t.song_lock === "free") return download(t);
     } else if (!(+t.price > 0)) return download(t);
 
