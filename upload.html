@@ -70,7 +70,7 @@
         <div id="fx"></div>
       </details>
 
-      <div class="part-label" style="margin-top:22px">Song <span id="song-sub">MP3 or WAV. Plays in the AR camera when people scan your art.</span></div>
+      <div class="part-label" style="margin-top:22px">Song <span id="song-sub">MP3 or WAV. Plays in the AR camera when people see your art.</span></div>
       <div class="drop" id="drop-mp3">
         <input type="file" id="file-mp3" accept="audio/mpeg,.mp3,audio/wav,audio/x-wav,audio/wave,.wav">
         <div class="empty-state"><div class="icon">[ MP3 / WAV ]</div><div>Drop your song here or <span class="browse">browse</span></div><div class="hint">MP3 UP TO <span class="js-mp3mb"></span> MB · WAV UP TO <span class="js-wavmb"></span> MB</div></div>
@@ -394,7 +394,7 @@
     const v = !!(vid && vid.kind === "video");
     $("song-sub").textContent = v && mp3 ? "Your song plays as the sound. The video plays silent over your art."
       : v ? "Optional with a video. Add one and it replaces the video's own sound."
-      : "MP3 or WAV. Plays in the AR camera when people scan your art.";
+      : "MP3 or WAV. Plays in the AR camera when people see your art.";
   }
   wireDrop("drop-vid", "file-vid", (file) => {
     $("trim").hidden = true; $("trim-vid").pause();
