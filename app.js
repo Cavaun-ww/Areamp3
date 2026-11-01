@@ -294,8 +294,8 @@
     return '<div class="tk' + (isLocked(t) ? " locked" : "") + '">' +
       '<div class="cov"><a href="' + esc(trackLink(t.slug)) + '"><img loading="lazy" alt=""' + (t.photo_hidden ? ' class="blurred"' : "") + ' src="' + esc(publicUrl(t.cover_path)) + '"></a>' +
         (t.photo_hidden ? '<span class="hide-badge">FIND IT IN PERSON</span>' : "") +
-        '<span class="tag pill solid">' + esc(isLocked(t) ? lockTag(t) : priceLabel(t)) + "</span>" +
-        (!hasSong(t) || hasVid(t) || t.audio_format === "wav" ? '<span class="pill solid" style="position:absolute;right:10px;top:10px">' + esc(!hasSong(t) ? "VIDEO" : hasVid(t) ? songType(t) + "+VID" : "WAV") + "</span>" : "") +
+        '<div class="tags"><span class="pill solid">' + esc(isLocked(t) ? lockTag(t) : priceLabel(t)) + "</span>" +
+        (!hasSong(t) || hasVid(t) || t.audio_format === "wav" ? '<span class="pill solid">' + esc(!hasSong(t) ? "VIDEO" : hasVid(t) ? songType(t) + "+VID" : "WAV") + "</span>" : "") + "</div>" +
         "</div>" + // music only plays in the AR camera
       '<div class="body">' +
         '<a class="t" href="' + esc(trackLink(t.slug)) + '">' + esc(t.title) + "</a>" +
