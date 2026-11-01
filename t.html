@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=20">
+<link rel="stylesheet" href="styles.css?v=21">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=20"></script>
-<script src="app.js?v=20"></script>
+<script src="config.js?v=21"></script>
+<script src="app.js?v=21"></script>
 <style>
   .rel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
   @media (max-width: 760px) { .rel { grid-template-columns: 1fr; gap: 20px; } }
@@ -106,7 +106,8 @@
   const owned = await App.owns(t);
   const paid = +t.price > 0;
   const locked = App.isLocked(t);
-  const found = locked ? await App.hasUnlocked(t) : false;
+  const found = await App.hasUnlocked(t); // scanned it in the AR camera (and found it, if blurred)
+  const heard = mine || owned || found; // you have to hear it in the AR camera before you can download or buy it
   const finds = locked ? ((await sb.rpc("unlock_count", { tid: t.id })).data || 0) : 0;
   const blur = t.photo_hidden && !mine;
   t._found = found || mine; // they found it (or it's theirs): the whole song plays
@@ -128,6 +129,7 @@
         '<div class="price-big">' + (owned && !mine && paid ? "OWNED ✓" : locked ? (found && !mine ? "FOUND ✓" : "LOCKED") : esc(App.priceLabel(t))) + "</div>" +
         '<div class="small muted">' + (locked ? "Secret song · find the real image and scan it to unlock " + esc(App.lockReward(t))
           : paid ? App.fileType(t) + " download · pay with PayPal or card · straight to your phone" : "Free " + App.fileType(t) + " download · sign in to save it") + "</div>" +
+        (!heard && !locked ? '<div class="note small" style="margin-top:12px">Hear it first: scan the art with the AR camera and listen. After that you can ' + (paid ? "buy and download" : "download") + " it here." + (me ? "" : ' <a href="' + esc(App.signInUrl("t.html?s=" + t.slug)) + '">Sign in</a> first so your scan counts.') + "</div>" : "") +
         (locked ? '<div class="secret"><div class="label">Secret song</div>' +
           '<p>' + (t.has_location ? "Go to the spot, open the AR camera and point it at the real image. When you're there, the song unlocks: " : "Find the real image out in the world, open the AR camera and point it at it. The song unlocks: ") + esc(App.lockReward(t)) + ".</p>" +
           (t.hint ? '<div class="hint">HINT: ' + esc(t.hint) + "</div>" : "") +
@@ -171,6 +173,7 @@
   const label = () => {
     if (mine || owned) return "↓ Download " + main;
     if (locked && !found) return "Go find it · open AR camera";
+    if (!heard) return "Hear it in the AR camera first";
     if (locked) return t.song_lock === "free" ? "↓ Download " + main : t.song_lock === "listen" ? "Listen in the AR camera" : "Buy " + App.money(t.price, t.currency);
     return !paid ? "↓ Download " + main : "Buy " + App.money(t.price, t.currency);
   };
@@ -179,7 +182,7 @@
   $("buy-vid").onclick = (e) => App.download(t, e.currentTarget, "video");
   buyBtn.textContent = label(); paintVid();
   buyBtn.onclick = () => {
-    if (locked && !found && !mine) { location.href = App.arLink(t.slug); return; }
+    if ((locked && !found && !mine) || !heard) { location.href = App.arLink(t.slug); return; }
     App.buy(t, () => { $("content").querySelector(".price-big").textContent = "OWNED ✓"; buyBtn.textContent = "↓ Download " + main; paintVid(); });
   };
   if (t.has_location && t.area_lat != null) App.makeMap($("where-map"), t.area_lat, t.area_lng, t.loc_approx ? 14 : 16, { scrollWheelZoom: false }).then(({ L, map }) => {

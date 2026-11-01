@@ -33,7 +33,8 @@
   }
   async function hasUnlocked(t) {
     const s = await getSession();
-    if (!s || !isLocked(t)) return false;
+    // true once they've scanned it in the AR camera (found it, for blurred songs)
+    if (!s) return false;
     if (s.user.id === t.owner) return true;
     const { data } = await sb.from("unlocks").select("track_id").eq("user_id", s.user.id).eq("track_id", t.id).limit(1);
     return !!(data && data.length);
