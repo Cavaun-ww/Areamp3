@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=28">
+<link rel="stylesheet" href="styles.css?v=29">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=28"></script>
-<script src="app.js?v=28"></script>
+<script src="config.js?v=29"></script>
+<script src="app.js?v=29"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -49,6 +49,7 @@
 
   <!-- MY TRACKS -->
   <section data-panel="tracks" hidden>
+    <div class="drop-search" id="drop-search-wrap" hidden><input class="input" id="drop-q" type="search" placeholder="Search my drops — title, genre, place" autocomplete="off" aria-label="Search my drops"><span class="mono small muted" id="drop-count"></span></div>
     <div id="tracks"><p class="muted mono small">Loading<span class="cursor"></span></p></div>
   </section>
 
@@ -311,7 +312,21 @@
       (u || []).forEach((r) => (finds[r.track_id] = (finds[r.track_id] || 0) + 1));
     }
     $("n-tracks").textContent = data.length || "";
+    $("drop-search-wrap").hidden = data.length < 2;
     if (!data.length) { $("tracks").innerHTML = '<div class="empty"><p style="margin-bottom:16px">Nothing here yet.</p><a class="btn btn-primary" href="upload.html">Create your first experience</a></div>'; return; }
+    paintTracks();
+  }
+  const norm = (s) => String(s || "").toLowerCase();
+  function paintTracks() {
+    const q = norm($("drop-q").value).trim();
+    const words = q.split(/\s+/).filter(Boolean);
+    const data = !words.length ? mine : mine.filter((t) => {
+      const hay = norm([t.title, t.genre, t.description, t.place_name, t.place_area, t.hint, App.fileType ? App.fileType(t) : "",
+        t.is_published ? (t.is_private ? "private" : "public") : "hidden", t.photo_hidden || App.isLocked(t) ? "blurred blur locked" : ""].join(" "));
+      return words.every((w) => hay.includes(w));
+    });
+    $("drop-count").textContent = words.length ? data.length + " of " + mine.length : "";
+    if (!data.length) { $("tracks").innerHTML = '<p class="muted mono small" style="padding:20px 0">No drops match “' + esc(q) + '”.</p>'; return; }
     $("tracks").innerHTML = '<div class="grid">' + data.map((t) => App.trackCard(t, {
       hideArtist: true,
       actions: '<div class="small muted mono">' + [t.is_published ? (t.is_private ? "PRIVATE" : "PUBLIC") : "HIDDEN", t.photo_hidden || App.isLocked(t) ? "BLURRED · " + (finds[t.id] || 0) + " FOUND" : ""].filter(Boolean).join(" · ") + "</div>" +
@@ -329,6 +344,7 @@
         "</div></details>",
     })).join("") + "</div>";
   }
+  $("drop-q").addEventListener("input", () => { if (mine.length) paintTracks(); });
   $("tracks").addEventListener("click", async (e) => {
     const b = e.target.closest("[data-act]"); if (!b) return;
     const t = mine.find((x) => x.id === b.dataset.id); if (!t) return;

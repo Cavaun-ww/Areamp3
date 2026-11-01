@@ -407,3 +407,7 @@ body[data-theme]:not([data-theme="mono"]) .tk .cov .tags .pill:first-child { bac
 .tk .cov .tags .pill:first-child { box-shadow: 0 0 0 1px rgba(0,0,0,.35); }
 /* settings buttons on My page cards: keep long labels inside the box */
 .tk details .btn { white-space: normal; height: auto; min-height: 40px; line-height: 1.35; padding: 9px 10px; text-align: center; overflow-wrap: anywhere; letter-spacing: .06em; }
+/* My drops search */
+.drop-search { display: flex; align-items: center; gap: 12px; margin: 0 0 16px; }
+.drop-search .input { flex: 1; min-width: 0; }
+.drop-search #drop-count:empty { display: none; }
