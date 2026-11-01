@@ -435,3 +435,6 @@ html:has(body.modal-open) { overflow: hidden; }
 .lock-modal textarea { min-height: 0; height: auto; resize: none; }
 .lock-modal .lock-actions { position: sticky; bottom: -18px; margin: 14px -18px -18px; padding: 12px 18px 18px; background: var(--card); border-top: 1px solid var(--line); display: flex; gap: 8px; flex-wrap: wrap; z-index: 5; }
 .lock-modal #l-off { margin-left: auto; }
+/* delete X on My page cards: red */
+.tk .actions .btn-danger { color: #ff3b30; border-color: rgba(255,59,48,.55); font-size: 1rem; }
+.tk .actions .btn-danger:hover, .tk .actions .btn-danger:focus-visible { color: #fff; background: #ff3b30; border-color: #ff3b30; border-style: solid; }
