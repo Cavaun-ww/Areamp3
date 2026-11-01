@@ -10,13 +10,41 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=43">
+<link rel="stylesheet" href="styles.css?v=44">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=43"></script>
-<script src="app.js?v=43"></script>
+<script src="config.js?v=44"></script>
+<script src="app.js?v=44"></script>
 <style>
   .hero { min-height: min(78vh, 720px); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 60px 20px 50px; border-bottom: 1px solid var(--line); }
-  .hero .logo { width: min(440px, 78vw); margin-bottom: 44px; }
+  .hero .logo { width: min(440px, 78vw); display: block; }
+  /* AR scan over the logo: brackets lock on, a beam sweeps, the letters light up as it passes */
+  .scan { position: relative; margin-bottom: 44px; padding: 22px 26px; --dur: 4.2s; }
+  .scan-glow { position: absolute; inset: 22px 26px; pointer-events: none;
+    -webkit-mask: url(logo-mask.png) center / 100% 100% no-repeat; mask: url(logo-mask.png) center / 100% 100% no-repeat;
+    background: linear-gradient(180deg, transparent 0%, transparent 40%, rgba(255,255,255,.0) 44%, #fff 50%, rgba(160,230,255,.9) 52%, transparent 60%, transparent 100%);
+    background-size: 100% 300%; animation: scanGlow var(--dur) cubic-bezier(.55,.1,.45,.9) infinite; filter: drop-shadow(0 0 6px rgba(160,230,255,.9)); mix-blend-mode: screen; }
+  .scan-line { position: absolute; left: 8px; right: 8px; top: 0; height: 2px; pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(190,240,255,.95) 15%, #fff 50%, rgba(190,240,255,.95) 85%, transparent);
+    box-shadow: 0 0 10px 2px rgba(160,230,255,.55), 0 0 28px 6px rgba(160,230,255,.18); animation: scanLine var(--dur) cubic-bezier(.55,.1,.45,.9) infinite; }
+  .scan-line::after { content: ""; position: absolute; left: 0; right: 0; bottom: 2px; height: 38px;
+    background: linear-gradient(0deg, rgba(160,230,255,.16), transparent);
+    background-image: linear-gradient(0deg, rgba(160,230,255,.16), transparent), repeating-linear-gradient(90deg, rgba(255,255,255,.08) 0 1px, transparent 1px 14px); }
+  .scan-c { position: absolute; width: 18px; height: 18px; border: 0 solid #f4f4f4; pointer-events: none; animation: scanLock var(--dur) ease-out infinite; }
+  .scan-c.tl { top: 0; left: 0; border-top-width: 2px; border-left-width: 2px; --dx: -10px; --dy: -10px; }
+  .scan-c.tr { top: 0; right: 0; border-top-width: 2px; border-right-width: 2px; --dx: 10px; --dy: -10px; }
+  .scan-c.bl { bottom: 0; left: 0; border-bottom-width: 2px; border-left-width: 2px; --dx: -10px; --dy: 10px; }
+  .scan-c.br { bottom: 0; right: 0; border-bottom-width: 2px; border-right-width: 2px; --dx: 10px; --dy: 10px; }
+  .scan-tag { position: absolute; left: 0; top: -20px; font-family: var(--mono); font-size: .62rem; letter-spacing: .18em; color: var(--text-2); display: grid; }
+  .scan-tag b { grid-area: 1 / 1; font-weight: 400; white-space: nowrap; }
+  .scan-tag .s1 { animation: tagA var(--dur) steps(1) infinite; }
+  .scan-tag .s2 { color: #f4f4f4; animation: tagB var(--dur) steps(1) infinite; }
+  @keyframes scanLine { 0% { top: 0; opacity: 0; } 6% { opacity: 1; } 62% { top: calc(100% - 2px); opacity: 1; } 70%, 100% { top: calc(100% - 2px); opacity: 0; } }
+  @keyframes scanGlow { 0% { background-position: 0 100%; opacity: 1; } 62% { background-position: 0 0%; opacity: 1; } 70% { opacity: .0; } 100% { background-position: 0 0%; opacity: 0; } }
+  @keyframes scanLock { 0% { transform: translate(var(--dx), var(--dy)); opacity: .35; } 10% { transform: translate(var(--dx), var(--dy)); opacity: .6; }
+    62% { transform: none; opacity: .9; } 66% { transform: none; opacity: 1; filter: drop-shadow(0 0 6px #fff); } 72%, 92% { transform: none; opacity: 1; filter: none; } 100% { transform: translate(var(--dx), var(--dy)); opacity: .35; } }
+  @keyframes tagA { 0%, 64% { opacity: 1; } 65%, 100% { opacity: 0; } }
+  @keyframes tagB { 0%, 64% { opacity: 0; } 65%, 68% { opacity: 1; } 69%, 70% { opacity: 0; } 71%, 94% { opacity: 1; } 95%, 100% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .scan-line, .scan-glow { display: none; } .scan-c { animation: none; } .scan-tag .s1 { animation: none; opacity: 0; } .scan-tag .s2 { animation: none; opacity: 1; } }
   .hero .l1, .hero .l2 { font-size: clamp(1.15rem, 3.4vw, 2rem); letter-spacing: .14em; text-transform: uppercase; font-weight: 600; line-height: 1.35; }
   .hero .l2 { color: var(--muted); }
   .hero .cta { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 40px; }
@@ -54,7 +82,13 @@
 <body>
 <main>
   <section class="hero">
-    <img class="logo" src="logo.png" alt="Area MP3">
+    <div class="scan" aria-label="Area MP3">
+      <img class="logo" src="logo.png" alt="Area MP3">
+      <i class="scan-glow" aria-hidden="true"></i>
+      <i class="scan-line" aria-hidden="true"></i>
+      <i class="scan-c tl" aria-hidden="true"></i><i class="scan-c tr" aria-hidden="true"></i><i class="scan-c bl" aria-hidden="true"></i><i class="scan-c br" aria-hidden="true"></i>
+      <span class="scan-tag" aria-hidden="true"><b class="s1">● SCANNING</b><b class="s2">◆ TARGET FOUND</b></span>
+    </div>
     <div class="l1">Music AR experiences</div>
     <div class="l2">hidden in the real world</div>
     <div class="cta">
