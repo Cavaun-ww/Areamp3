@@ -307,7 +307,7 @@
         (opts.actions || "") +
       "</div></div>";
   }
-  const TRACK_COLS = "id, slug, owner, title, genre, description, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, duration, price, currency, created_at, audio_format, has_song, has_video, pop_scale, lift, key_mode, is_private, photo_hidden, has_location, place_name, place_area, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, profiles!owner(handle, display_name, avatar_path, verified, theme), likes(count), comments(count)";
+  const TRACK_COLS = "id, slug, owner, title, genre, description, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, duration, price, currency, created_at, audio_format, has_song, has_video, pop_scale, lift, key_mode, is_private, photo_hidden, has_location, place_name, place_area, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, profiles!owner(handle, display_name, avatar_path, verified, theme, bg_color, bg_image_path), likes(count), comments(count)";
   const nLikes = (t) => (t.likes && t.likes[0] && t.likes[0].count) || 0;
   const nComments = (t) => (t.comments && t.comments[0] && t.comments[0].count) || 0;
   // artist's share of each sale, as shown on the site (the real split is set on the server)
@@ -320,6 +320,15 @@
   // artist page colors
   const THEMES = [["mono", "Mono", "#f4f4f4"], ["blue", "Blue", "#3aa0ff"], ["red", "Red", "#ff4d4d"], ["green", "Green", "#39d98a"],
     ["purple", "Purple", "#a77bff"], ["gold", "Gold", "#ffc94d"], ["pink", "Pink", "#ff5fb7"], ["cyan", "Cyan", "#3ee6e6"]];
+  // page background: a color or a photo; content sits on a dark panel so it stays readable
+  // same names as the accent colors, in deep shades so the page stays easy to read
+  const BG_COLORS = [["#0d2a4d", "Blue"], ["#4d1414", "Red"], ["#0f3d26", "Green"], ["#2e1a52", "Purple"], ["#4a3a10", "Gold"], ["#4d1438", "Pink"], ["#0f4040", "Cyan"], ["#f4f4f4", "White"]];
+  function applyBackground(p) {
+    const b = document.body, img = p && p.bg_image_path, col = p && p.bg_color;
+    if (img) { b.style.background = "#000 center / cover no-repeat fixed url('" + publicUrl(img) + "')"; b.classList.add("custom-bg"); }
+    else if (col) { b.style.background = col; b.classList.add("custom-bg"); }
+    else { b.style.background = ""; b.classList.remove("custom-bg"); }
+  }
   function applyTheme(theme) {
     if (theme && theme !== "mono" && THEMES.some((x) => x[0] === theme)) document.body.dataset.theme = theme;
     else delete document.body.dataset.theme;
@@ -731,7 +740,7 @@
     nearReveal,
     C, sb, configured, BUCKET, SONGS, siteRoot, esc, publicUrl, trackLink, arLink, profileLink, money, priceLabel, artistName, fmtTime, fileType, songType, hasSong, hasVid,
     toast, timeAgo, getSession, signInUrl, requireAuth, callFunction, mountHeader, ensureHandle, avatarHTML, squareJpeg,
-    play, playButton, registerTracks, trackCard, TRACK_COLS, nLikes, nComments, artistCut, isPro, proBadge, vBadge, THEMES, applyTheme, loadPayPal, followerCount, mountFollow, buy, download, owns, startDownload,
+    play, playButton, registerTracks, trackCard, TRACK_COLS, nLikes, nComments, artistCut, isPro, proBadge, vBadge, THEMES, applyTheme, BG_COLORS, applyBackground, loadPayPal, followerCount, mountFollow, buy, download, owns, startDownload,
     renderQR, copy, share,
     isLocked, lockTag, lockReward, hasUnlocked, playFull,
     loadLeaflet, makeMap, pinIcon, areaCircle, pickLocation, locationColumns, hereNow, milesBetween, distLabel, directionsUrl,

@@ -376,3 +376,19 @@ body[data-theme]:not([data-theme="mono"]) .secret { border-color: var(--acc); }
 .swatches button span { position: absolute; left: 50%; top: calc(100% + 6px); transform: translateX(-50%); font-family: var(--mono); font-size: .62rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
 .swatches button.on span { color: var(--text); }
 .swatches { padding-bottom: 20px; }
+
+/* page background (color or photo): content sits on a dark glass panel so it stays readable */
+body.custom-bg .site-header { background: rgba(0, 0, 0, .72); }
+body.custom-bg main.wrap { background: rgba(0, 0, 0, .74); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(255, 255, 255, .10); border-left: 0; border-right: 0; }
+@media (min-width: 760px) { body.custom-bg main.wrap { border: 1px solid rgba(255, 255, 255, .10); margin-top: 18px; margin-bottom: 18px; } }
+body.custom-bg .footer { background: rgba(0, 0, 0, .72); }
+.sum-mini { display: inline-flex; gap: 6px; margin-left: auto; margin-right: 10px; }
+.sum-mini .mini { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--line-2); display: inline-block; }
+/* background circles look exactly like the accent circles */
+.swatches .bg-swatch, .swatches .color-pick { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--line-2); cursor: pointer; padding: 0; position: relative; display: inline-block; }
+.swatches .bg-swatch.on, .swatches .color-pick.on { border-color: var(--text); box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--text); }
+.swatches .bg-swatch span, .swatches .color-pick span { position: absolute; left: 50%; top: calc(100% + 6px); transform: translateX(-50%); font-family: var(--mono); font-size: .62rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); white-space: nowrap; pointer-events: none; }
+.swatches .bg-swatch.on span, .swatches .color-pick.on span { color: var(--text); }
+.swatches .color-pick { background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); }
+.swatches .color-pick input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; border-radius: 50%; }
+.bg-preview { height: 110px; border: 1px solid var(--line-2); margin-top: 12px; background: linear-gradient(#141414, #000); }
