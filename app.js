@@ -748,4 +748,26 @@
     loadLeaflet, makeMap, pinIcon, areaCircle, pickLocation, locationColumns, hereNow, milesBetween, distLabel, directionsUrl,
     mountEffects, effectsSummary,
   };
+
+  // ── pop-up windows hold still: freeze the page behind while one is open ──
+  (function lockBehindModals() {
+    let locked = false, y = 0;
+    const sync = () => {
+      const open = !!document.querySelector(".modal-bg.show");
+      if (open === locked) return;
+      locked = open;
+      const b = document.body;
+      if (open) {
+        y = window.scrollY;
+        b.style.position = "fixed"; b.style.top = -y + "px"; b.style.left = "0"; b.style.right = "0"; b.style.width = "100%";
+        b.classList.add("modal-open");
+      } else {
+        b.style.position = b.style.top = b.style.left = b.style.right = b.style.width = "";
+        b.classList.remove("modal-open");
+        window.scrollTo(0, y);
+      }
+    };
+    const start = () => new MutationObserver(sync).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "hidden"] });
+    if (document.body) start(); else document.addEventListener("DOMContentLoaded", start);
+  })();
 })();

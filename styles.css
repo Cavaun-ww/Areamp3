@@ -416,3 +416,7 @@ body[data-theme]:not([data-theme="mono"]) .tk .cov .tags .pill:first-child { bac
 /* only the file-type chip stays, top right */
 .tk .cov .tags { justify-content: flex-end; }
 .tk .cov .tags .pill.ty, body[data-theme]:not([data-theme="mono"]) .tk .cov .tags .pill.ty { background: rgba(0,0,0,.62); color: #f4f4f4; border-color: rgba(255,255,255,.22); box-shadow: none; }
+/* pop-up windows: scroll inside, never drag the page or bounce */
+.modal-bg { overscroll-behavior: contain; }
+.modal { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; max-height: calc(100dvh - 32px); }
+html:has(body.modal-open) { overflow: hidden; }
