@@ -396,3 +396,12 @@ body.custom-bg .footer { background: rgba(0, 0, 0, .72); }
 /* the tags on a card (price / FIND IT, and VIDEO or WAV) sit side by side and wrap instead of overlapping */
 .tk .cov .tags { position: absolute; left: 10px; right: 10px; top: 10px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; pointer-events: none; z-index: 2; }
 .tk .cov .tags .pill { max-width: 100%; }
+/* card tags: small glass chips on one line */
+.tk .cov .tags { flex-wrap: nowrap; left: 8px; right: 8px; top: 8px; }
+.tk .cov .tags .pill { background: rgba(0,0,0,.62); color: #f4f4f4; border: 1px solid rgba(255,255,255,.22); font-size: .62rem; padding: 2px 7px; letter-spacing: .1em; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.tk .cov .tags .pill:first-child { background: #f4f4f4; color: #000; border-color: #f4f4f4; flex-shrink: 0; }
+body[data-theme]:not([data-theme="mono"]) .tk .cov .tags .pill:first-child { background: var(--acc); border-color: var(--acc); }
+.tk .cov .hide-badge { display: inline-flex; align-items: center; gap: 7px; font-size: .62rem; padding: 6px 10px; background: rgba(0,0,0,.66); border-color: rgba(255,255,255,.28); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.tk .cov .hide-badge i { width: 6px; height: 6px; background: #f4f4f4; box-shadow: 0 0 0 3px rgba(255,255,255,.18); animation: hbp 1.6s ease-in-out infinite; }
+@keyframes hbp { 50% { opacity: .25; } }
+.tk .cov .tags .pill:first-child { box-shadow: 0 0 0 1px rgba(0,0,0,.35); }

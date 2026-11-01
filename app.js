@@ -293,8 +293,8 @@
     const p = t.profiles || {};
     return '<div class="tk' + (isLocked(t) ? " locked" : "") + '">' +
       '<div class="cov"><a href="' + esc(trackLink(t.slug)) + '"><img loading="lazy" alt=""' + (t.photo_hidden ? ' class="blurred"' : "") + ' src="' + esc(publicUrl(t.cover_path)) + '"></a>' +
-        (t.photo_hidden ? '<span class="hide-badge">FIND IT IN PERSON</span>' : "") +
-        '<div class="tags"><span class="pill solid">' + esc(isLocked(t) ? lockTag(t) : priceLabel(t)) + "</span>" +
+        (t.photo_hidden ? '<span class="hide-badge"><i></i>FIND IT IN PERSON</span>' : "") +
+        '<div class="tags"><span class="pill solid">' + esc(isLocked(t) ? ({ listen: "LISTEN", buy: money(t.price, t.currency) }[t.song_lock] || "FREE") : priceLabel(t)) + "</span>" +
         (!hasSong(t) || hasVid(t) || t.audio_format === "wav" ? '<span class="pill solid">' + esc(!hasSong(t) ? "VIDEO" : hasVid(t) ? songType(t) + "+VID" : "WAV") + "</span>" : "") + "</div>" +
         "</div>" + // music only plays in the AR camera
       '<div class="body">' +
