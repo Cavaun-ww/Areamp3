@@ -102,6 +102,12 @@
   }
 
   // ── header ───────────────────────────────────────────────────
+  // AR camera icon: viewfinder corners around a pixel camera, with a scan line sweeping the lens
+  const AR_CAM_SVG = '<svg class="ar-cam-i" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square">' +
+    '<path d="M2 7V2h5M17 2h5v5M22 17v5h-5M7 22H2v-5"/>' +
+    '<path d="M7 9h2l1-1.5h4L15 9h2v8H7z" stroke-linejoin="miter"/>' +
+    '<rect x="10.5" y="11" width="3" height="3" fill="currentColor" stroke="none"/>' +
+    '<line class="ar-cam-scan" x1="5" y1="12" x2="19" y2="12" stroke-width="1"/></svg>';
   async function mountHeader(active) {
     document.title = document.title.replace("{site}", C.SITE_NAME);
     const h = document.createElement("header");
@@ -120,6 +126,7 @@
     const s = await getSession();
     const on = (k) => (active === k ? " on" : "");
     nav.innerHTML =
+      '<a class="ar-cam" href="ar.html?explore=1&go=1" aria-label="Open AR camera" title="Open AR camera">' + AR_CAM_SVG + '<span class="ar-cam-t">AR</span></a>' +
       '<a class="link' + on("explore") + '" href="explore.html">Explore</a>' +
       '<a class="link hide-sm' + on("upload") + '" href="upload.html">Create</a>' +
       (s ? '<a class="btn btn-sm my-btn' + (active === "me" ? " on" : "") + '" href="dashboard.html">My page<span class="dot" id="inbox-dot" hidden></span></a>'
