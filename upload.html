@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=50">
+<link rel="stylesheet" href="styles.css?v=51">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=50"></script>
-<script src="app.js?v=50"></script>
+<script src="config.js?v=51"></script>
+<script src="app.js?v=51"></script>
 <style>
   .wave { width: 100%; height: 64px; display: block; background: #050505; border: 1px solid var(--line); margin-top: 12px; }
   .rng { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: .82rem; color: var(--text-2); }
@@ -34,16 +34,12 @@
   <div id="creator" hidden>
     <div style="margin-bottom:18px">
       <h2>Make a music AR experience</h2>
-      <ol class="easy3">
-        <li><b>01</b><span>Upload your art. This is the image people scan.</span></li>
-        <li><b>02</b><span>Add a photo, GIF, video, 3D model or audio that will appear on your phone.</span></li>
-        <li><b>03</b><span>Publish it, then hide your art out in the real world.</span></li>
-      </ol>
+      <div class="easy3-t">3 easy steps</div>
     </div>
 
     <!-- 1 TARGET IMAGE (same as Pixi Wizard) -->
     <div class="card">
-      <div class="step-head"><span class="step-num" id="n1">1</span><div><div class="step-title">Target image</div><div class="step-sub">The physical image people will point at</div></div></div>
+      <div class="step-head"><span class="step-num" id="n1">1</span><div><div class="step-title">Target image</div><div class="step-sub">Upload your art. This is the image people see.</div></div></div>
       <div class="drop" id="drop-img">
         <input type="file" id="file-img" accept="image/jpeg,image/png,image/webp">
         <div class="empty-state"><div class="icon">[ IMG ]</div><div>Drop image here or <span class="browse">browse</span></div><div class="hint">JPG · PNG · WEBP</div></div>
@@ -53,7 +49,7 @@
 
     <!-- 2 WHAT PLAYS WHEN SCANNED: overlay (photo, GIF or video) + song. A video with a song plays silent; the song is the sound. -->
     <div class="card">
-      <div class="step-head"><span class="step-num" id="n2">2</span><div><div class="step-title">Video, 3D &amp; song</div><div class="step-sub">What people see, hear and download. A photo, GIF, video or 3D model, plus your song.</div></div></div>
+      <div class="step-head"><span class="step-num" id="n2">2</span><div><div class="step-title">Video, 3D &amp; song</div><div class="step-sub">Add a photo, GIF, video, 3D model or audio that will appear over your art.</div></div></div>
       <div class="part-label">Video, GIF, photo or 3D model <span>appears on top of the image. Listeners can download videos too.</span></div>
       <div class="drop" id="drop-vid">
         <input type="file" id="file-vid" accept="video/mp4,video/webm,video/quicktime,image/gif,image/jpeg,image/png,image/webp,.glb,model/gltf-binary">
@@ -90,7 +86,7 @@
 
     <!-- 3 NAME IT & PUBLISH (same as Pixi Wizard, plus price) -->
     <div class="card">
-      <div class="step-head"><span class="step-num" id="n4">3</span><div><div class="step-title">Name it &amp; publish</div><div class="step-sub">Give it a title and choose who can find it</div></div></div>
+      <div class="step-head"><span class="step-num" id="n4">3</span><div><div class="step-title">Name it &amp; publish</div><div class="step-sub">Give it a title and choose who can find it.</div></div></div>
       <div class="stack">
         <label class="field"><span>Title</span><input class="input" id="title" maxlength="100" placeholder="e.g. Summer single, album poster"></label>
         <div class="field"><span>Your page</span><div class="input mono small" id="handle-box" style="color:var(--text-2);overflow-wrap:anywhere">…</div></div>

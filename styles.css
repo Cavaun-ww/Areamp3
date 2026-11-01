@@ -457,3 +457,4 @@ html:has(body.modal-open) { overflow: hidden; }
 .drop .model-ph svg { animation: mphSpin 6s linear infinite; }
 @keyframes mphSpin { from { transform: rotateY(0); } to { transform: rotateY(360deg); } }
 @media (prefers-reduced-motion: reduce) { .drop .model-ph svg { animation: none; } }
+.easy3-t { margin-top: 8px; font-family: var(--mono); font-size: .78rem; letter-spacing: .16em; text-transform: uppercase; color: var(--text-2); }
