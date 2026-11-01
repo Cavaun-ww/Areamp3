@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=39">
+<link rel="stylesheet" href="styles.css?v=40">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=39"></script>
-<script src="app.js?v=39"></script>
+<script src="config.js?v=40"></script>
+<script src="app.js?v=40"></script>
 <style>
   .head-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
   .head-row .vf { display: inline-block; width: 13px; height: 13px; margin-right: 10px; vertical-align: -1px; border: 2px solid currentColor; border-radius: 2px; box-shadow: inset 0 0 0 2px var(--text), inset 0 0 0 5px currentColor; }
@@ -259,19 +259,8 @@
     const fc = new Map();
     all.forEach((t) => { if (passes(t, "format", q, fol)) fmts(t).forEach((f) => fc.set(f, (fc.get(f) || 0) + 1)); });
     h += '<div class="facet"><h4>Media type</h4>' + ["mp3", "wav", "video"].map((k) => optHTML("format", k, k === "video" ? "Video" : k.toUpperCase() + " audio", fc.get(k) || 0)).join("") + "</div>";
-    // genre
-    const gc = counts("genre", (t) => t.genre || "Other", q, fol);
-    const gl = [...gc.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-    sel.genre.forEach((g) => { if (!gc.has(g)) gl.push([g, 0]); });
-    if (gl.length) h += '<div class="facet"><h4>Genre</h4>' + gl.slice(0, genresOpen ? 99 : 8).map(([k, n]) => optHTML("genre", k, k, n)).join("") +
-      (gl.length > 8 ? '<button type="button" class="more-btn" id="g-more">' + (genresOpen ? "Show less" : "More (" + (gl.length - 8) + ")") + "</button>" : "") + "</div>";
-    // artists
+    // no genre or artist lists here: the search box finds both
     const names = {}; all.forEach((t) => (names[artistKey(t)] = artistLabel(t)));
-    const ac = counts("artist", artistKey, q, fol);
-    const al = [...ac.entries()].filter(([k]) => k).sort((a, b) => b[1] - a[1] || names[a[0]].localeCompare(names[b[0]]));
-    sel.artist.forEach((a) => { if (!ac.has(a)) al.push([a, 0]); });
-    if (al.length) h += '<div class="facet"><h4>Artist</h4>' + al.slice(0, artistsOpen ? 200 : 8).map(([k, n]) => optHTML("artist", k, names[k] || "@" + k, n)).join("") +
-      (al.length > 8 ? '<button type="button" class="more-btn" id="a-more">' + (artistsOpen ? "Show less" : "More (" + (al.length - 8) + ")") + "</button>" : "") + "</div>";
     $("side").innerHTML = h;
     // chips for what's turned on
     const chips = [];
