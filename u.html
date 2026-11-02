@@ -62,8 +62,8 @@
   box.innerHTML =
     '<div class="prof">' + App.avatarHTML(p) +
       '<div class="info">' +
-        // anyone who has put out a drop is an Artist; everyone else is a Listener
-        '<div class="label">' + (list.length ? "Artist" : "Listener") + "</div>" +
+        // anyone who has put out a drop is an Artist; everyone else is Experiencing
+        '<div class="label">' + (list.length ? "Artist" : "Experiencing") + "</div>" +
         "<h1>" + esc(name) + App.vBadge(p) + (App.isPro(p) ? " " + App.proBadge(p) : "") + "</h1>" +
         '<div class="muted mono small">@' + esc(p.handle) + "</div>" +
         (p.bio ? '<p class="bio">' + esc(p.bio) + "</p>" : "") +
