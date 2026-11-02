@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=52">
+<link rel="stylesheet" href="styles.css?v=53">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=52"></script>
-<script src="app.js?v=52"></script>
+<script src="config.js?v=53"></script>
+<script src="app.js?v=53"></script>
 <style>
   .rel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
   @media (max-width: 760px) { .rel { grid-template-columns: minmax(0, 1fr); gap: 20px; } }
@@ -112,6 +112,9 @@
   const locked = App.isLocked(t);
   const found = await App.hasUnlocked(t); // scanned it in the AR camera (and found it, if blurred)
   const heard = mine || owned || found; // you have to hear it in the AR camera before you can download or buy it
+  // limited copies: your numbered copy, if you have one
+  let myCopy = null;
+  if (me && t.max_copies != null) { const c = await sb.from("copies").select("num").eq("track_id", t.id).eq("user_id", me).maybeSingle(); myCopy = c.data ? c.data.num : null; }
   const finds = locked ? ((await sb.rpc("unlock_count", { tid: t.id })).data || 0) : 0;
   const blur = t.photo_hidden && !mine;
   t._found = found || mine; // they found it (or it's theirs): the whole song plays
@@ -122,7 +125,7 @@
     (!t.is_published ? '<div class="banner">HIDDEN — only you can see this track. Publish it from My page.</div>' : "") +
     '<div class="rel">' +
       '<div class="art"><img alt=""' + (blur ? ' class="blurred"' : "") + ' src="' + esc(App.publicUrl(t.cover_path)) + '">' +
-        (blur ? '<span class="hide-badge">FIND THE REAL ONE IN PERSON</span>' : "") + "</div>" + // music only plays in the AR camera
+        (blur ? '<span class="hide-badge">FIND THE REAL ONE IN PERSON</span>' : "") + App.copiesBadge(t) + "</div>" + // music only plays in the AR camera
       "<div>" +
         '<div class="label">' + esc(t.genre || "Single") + (App.hasSong(t) && !locked ? " · scan to listen" : App.hasSong(t) ? " · plays once you find it" : "") + "</div>" +
         '<h1 style="margin-top:6px">' + esc(t.title) + "</h1>" +
@@ -133,6 +136,7 @@
         '<div class="price-big">' + (owned && !mine && paid ? "OWNED ✓" : locked ? (found && !mine ? "FOUND ✓" : "LOCKED") : esc(App.priceLabel(t))) + "</div>" +
         '<div class="small muted">' + (locked ? "Secret " + App.secretWord(t) + " · find the real image and scan it to unlock " + esc(App.lockReward(t))
           : paid ? App.fileType(t) + " download · pay with PayPal or card · straight to your phone" : "Free " + App.fileType(t) + " download · sign in to save it") + "</div>" +
+        '<div id="copies"></div>' +
         (!heard && !locked ? '<div class="note small" style="margin-top:12px">Hear it first: scan the art with the AR camera and listen. After that you can ' + (paid ? "buy and download" : "download") + " it here." + (me ? "" : ' <a href="' + esc(App.signInUrl("t.html?s=" + t.slug)) + '">Sign in</a> first so your scan counts.') + "</div>" : "") +
         (locked ? '<div class="secret"><div class="label">Secret ' + App.secretWord(t) + '</div>' +
           '<p>' + (t.has_location ? "Go to the spot, open the AR camera and point it at the real image. When you're there, the " + App.secretWord(t) + " unlocks: " : "Find the real image out in the world, open the AR camera and point it at it. The " + App.secretWord(t) + " unlocks: ") + esc(App.lockReward(t)) + ".</p>" +
@@ -172,10 +176,33 @@
       '<div id="c-list"></div>' +
     "</section>";
 
+  // limited copies meter: how many are left, and your number if you have one
+  const paintCopies = () => {
+    const c = App.copiesInfo(t); if (!c) return;
+    $("copies").innerHTML = '<div class="copies-box ' + c.level + '"><div class="top"><b>Limited edition · ' + c.max.toLocaleString() + (c.max === 1 ? " copy" : " copies") + "</b><span>" +
+      (c.soldOut ? "Sold out" : c.left === 1 ? "Last one" : c.left.toLocaleString() + " left") + "</span></div>" +
+      '<div class="bar"><i style="width:' + Math.round((c.taken / c.max) * 100) + '%"></i></div>' +
+      (mine ? '<div class="mine">' + c.taken.toLocaleString() + " of " + c.max.toLocaleString() + " taken</div>"
+        : myCopy ? '<div class="mine">◆ You have copy #' + myCopy + " of " + c.max.toLocaleString() + "</div>" : "") + "</div>";
+  };
+  paintCopies();
+  const soldOutForMe = () => { const c = App.copiesInfo(t); return !!(c && c.soldOut && !mine && !owned && !myCopy); };
+  // after someone buys or downloads a limited track, show their copy number
+  const refreshCopies = async () => {
+    if (t.max_copies == null || !me) return;
+    const [c, tr] = await Promise.all([
+      sb.from("copies").select("num").eq("track_id", t.id).eq("user_id", me).maybeSingle(),
+      sb.from("tracks").select("copies_taken").eq("id", t.id).maybeSingle(),
+    ]);
+    if (c.data) myCopy = c.data.num;
+    if (tr.data) t.copies_taken = tr.data.copies_taken;
+    paintCopies();
+  };
   const buyBtn = $("buy");
   const main = App.hasSong(t) ? App.songType(t) : "video";
   const label = () => {
-    if (mine || owned) return "↓ Download " + main;
+    if (mine || owned || myCopy) return "↓ Download " + main;
+    if (soldOutForMe() && !(locked && t.song_lock === "listen")) return "Sold out";
     if (locked && !found) return "Go find it · open AR camera";
     if (!heard) return "Hear it in the AR camera first";
     if (locked) return t.song_lock === "free" ? "↓ Download " + main : t.song_lock === "listen" ? "Listen in the AR camera" : "Buy " + App.money(t.price, t.currency);
@@ -185,6 +212,8 @@
   const paintVid = () => { $("buy-vid").hidden = !(App.hasSong(t) && App.hasVid(t) && buyBtn.textContent.startsWith("↓")); };
   $("buy-vid").onclick = (e) => App.download(t, e.currentTarget, "video");
   buyBtn.textContent = label(); paintVid();
+  if (buyBtn.textContent === "Sold out") buyBtn.disabled = true;
+  buyBtn.addEventListener("click", () => setTimeout(refreshCopies, 2500));
   buyBtn.onclick = () => {
     if ((locked && !found && !mine) || !heard) { location.href = App.arLink(t.slug, true); return; }
     App.buy(t, () => { $("content").querySelector(".price-big").textContent = "OWNED ✓"; buyBtn.textContent = "↓ Download " + main; paintVid(); });

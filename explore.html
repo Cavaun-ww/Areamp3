@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=52">
+<link rel="stylesheet" href="styles.css?v=53">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=52"></script>
-<script src="app.js?v=52"></script>
+<script src="config.js?v=53"></script>
+<script src="app.js?v=53"></script>
 <style>
   .head-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
   .head-row .vf { display: inline-block; width: 13px; height: 13px; margin-right: 10px; vertical-align: -1px; border: 2px solid currentColor; border-radius: 2px; box-shadow: inset 0 0 0 2px var(--text), inset 0 0 0 5px currentColor; }
@@ -201,7 +201,7 @@
   // what a listener can download: the song's format and/or "video"
   const fmts = (t) => (App.hasSong(t) ? [t.audio_format || "mp3"] : []).concat(App.hasVid(t) ? ["video"] : []);
   const typeOf = (t) => (App.isLocked(t) ? "find" : +t.price > 0 ? "sale" : "free");
-  const TYPE_NAMES = { free: "Free download", sale: "For sale", find: "Find it in person" };
+  const TYPE_NAMES = { free: "Free download", sale: "For sale", find: "Find it in person", limited: "Limited copies" };
   const artistKey = (t) => (t.profiles && t.profiles.handle) || "";
   const artistLabel = (t) => App.artistName(t.profiles);
   const years = all.map(year);
@@ -223,7 +223,7 @@
       const hay = (t.title + " " + (t.genre || "") + " " + artistLabel(t) + " " + artistKey(t) + " " + (t.description || "") + " " + (t.place_name || "") + " " + (t.place_area || "")).toLowerCase();
       if (!q.split(/\s+/).every((w) => hay.includes(w))) return false;
     }
-    if (skip !== "type" && sel.type.size && !sel.type.has(typeOf(t))) return false;
+    if (skip !== "type" && sel.type.size && ![...sel.type].some((k) => k === "limited" ? t.max_copies != null : k === typeOf(t))) return false;
     if (skip !== "format" && sel.format.size && !fmts(t).some((f) => sel.format.has(f))) return false;
     if (skip !== "genre" && sel.genre.size && !sel.genre.has(t.genre || "Other")) return false;
     if (skip !== "artist" && sel.artist.size && !sel.artist.has(artistKey(t))) return false;
@@ -254,7 +254,9 @@
       '<div class="yr"><input class="input" type="number" id="y1" inputmode="numeric" min="' + minY + '" max="' + maxY + '" value="' + (yFrom || minY) + '" aria-label="From year"><span>–</span><input class="input" type="number" id="y2" inputmode="numeric" min="' + minY + '" max="' + maxY + '" value="' + (yTo || maxY) + '" aria-label="To year"></div></div>';
     // type
     const tc = counts("type", typeOf, q, fol);
-    h += '<div class="facet"><h4>Type</h4>' + ["free", "sale", "find"].map((k) => optHTML("type", k, TYPE_NAMES[k], tc.get(k) || 0)).join("") + "</div>";
+    const nLim = counts("type", (t) => (t.max_copies != null ? "limited" : "-"), q, fol).get("limited") || 0;
+    h += '<div class="facet"><h4>Type</h4>' + ["free", "sale", "find"].map((k) => optHTML("type", k, TYPE_NAMES[k], tc.get(k) || 0)).join("") +
+      (nLim || sel.type.has("limited") ? optHTML("type", "limited", TYPE_NAMES.limited, nLim) : "") + "</div>";
     // format
     const fc = new Map();
     all.forEach((t) => { if (passes(t, "format", q, fol)) fmts(t).forEach((f) => fc.set(f, (fc.get(f) || 0) + 1)); });
@@ -278,7 +280,7 @@
     return '<div class="tile" data-href="' + link + '">' +
       '<div class="cov"><a href="' + link + '"><img loading="lazy" alt=""' + (t.photo_hidden ? ' class="blurred"' : "") + ' src="' + esc(App.publicUrl(t.cover_path)) + '"></a>' +
         (t.photo_hidden ? '<span class="hide-badge">FIND IT IN PERSON</span>' : "") +
-        (t.has_location ? '<span class="pin-badge" title="Has a location">' + ICON.pin + "</span>" : "") + "</div>" + // music only plays in the AR camera
+        (t.has_location ? '<span class="pin-badge" title="Has a location">' + ICON.pin + "</span>" : "") + App.copiesBadge(t) + "</div>" + // music only plays in the AR camera
       '<div class="info"><a class="t" href="' + link + '">' + esc(t.title) + "</a>" +
         (p.handle ? '<a class="a" href="' + esc(App.profileLink(p.handle)) + '">' + esc(artistLabel(t)) + App.vBadge(p) + "</a>" : "") +
         (t.has_location ? '<div class="loc">' + ICON.pin + "<span>" + esc([t.place_name || t.place_area, here && t.area_lat != null ? App.distLabel(App.milesBetween(here, { lat: t.area_lat, lng: t.area_lng })) : ""].filter(Boolean).join(" · ").toUpperCase() || "ON THE MAP") + "</span></div>" : "") +

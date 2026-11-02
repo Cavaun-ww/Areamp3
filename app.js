@@ -297,6 +297,18 @@
   });
 
   // track card used on Explore, profiles and the home page
+  // ── limited copies ("only 50 copies") ──
+  function copiesInfo(t) {
+    if (!t || t.max_copies == null) return null;
+    const max = +t.max_copies, taken = Math.min(max, +t.copies_taken || 0), left = Math.max(0, max - taken);
+    const level = left <= 0 ? "out" : left === 1 ? "last" : left <= 10 ? "low" : "lim";
+    const label = level === "out" ? "SOLD OUT" : level === "last" ? "LAST ONE" : level === "low" ? "ONLY " + left + " LEFT" : "LIMITED · " + max.toLocaleString();
+    return { max, taken, left, level, label, soldOut: left <= 0 };
+  }
+  function copiesBadge(t) {
+    const c = copiesInfo(t); if (!c) return "";
+    return '<span class="ed ed-' + c.level + '" title="' + esc(c.taken + " of " + c.max + " copies taken") + '"><i></i>' + esc(c.label) + "</span>";
+  }
   const PIN_SVG = '<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M8 15s-4.8-5-4.8-8.4a4.8 4.8 0 0 1 9.6 0C12.8 10 8 15 8 15z"/><circle cx="8" cy="6.6" r="1.7"/></svg>';
   function trackCard(t, opts) {
     opts = opts || {};
@@ -306,6 +318,7 @@
         (t.photo_hidden ? '<span class="hide-badge"><i></i>FIND IT IN PERSON</span>' : "") +
         '<div class="tags">' + (t.has_location ? '<span class="pin-chip" title="Has a location">' + PIN_SVG + "</span>" : "") +
         (!hasSong(t) || hasVid(t) || t.audio_format === "wav" ? '<span class="pill solid ty">' + esc(!hasSong(t) ? "VIDEO" : hasVid(t) ? songType(t) + "+VID" : "WAV") + "</span>" : "") + "</div>" +
+        copiesBadge(t) +
         "</div>" + // music only plays in the AR camera
       '<div class="body">' +
         '<a class="t" href="' + esc(trackLink(t.slug)) + '">' + esc(t.title) + "</a>" +
@@ -317,7 +330,7 @@
         (opts.actions || "") +
       "</div></div>";
   }
-  const TRACK_COLS = "id, slug, owner, title, genre, description, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, duration, price, currency, created_at, audio_format, has_song, has_video, pop_scale, lift, key_mode, is_private, photo_hidden, has_location, place_name, place_area, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, profiles!owner(handle, display_name, avatar_path, verified, theme, bg_color, bg_image_path), likes(count), comments(count)";
+  const TRACK_COLS = "id, slug, owner, title, genre, description, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, duration, price, currency, created_at, audio_format, has_song, has_video, pop_scale, lift, key_mode, is_private, photo_hidden, has_location, place_name, place_area, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, profiles!owner(handle, display_name, avatar_path, verified, theme, bg_color, bg_image_path), likes(count), comments(count)";
   const nLikes = (t) => (t.likes && t.likes[0] && t.likes[0].count) || 0;
   const nComments = (t) => (t.comments && t.comments[0] && t.comments[0].count) || 0;
   // artist's share of each sale, as shown on the site (the real split is set on the server)
@@ -752,7 +765,7 @@
     toast, timeAgo, getSession, signInUrl, requireAuth, callFunction, mountHeader, ensureHandle, avatarHTML, squareJpeg,
     play, playButton, registerTracks, trackCard, TRACK_COLS, nLikes, nComments, artistCut, isPro, proBadge, vBadge, THEMES, applyTheme, BG_COLORS, applyBackground, loadPayPal, followerCount, mountFollow, buy, download, owns, startDownload,
     renderQR, copy, share,
-    isLocked, lockTag, lockReward, secretWord, hasUnlocked, playFull,
+    isLocked, lockTag, lockReward, secretWord, copiesInfo, copiesBadge, hasUnlocked, playFull,
     loadLeaflet, makeMap, pinIcon, areaCircle, pickLocation, locationColumns, hereNow, milesBetween, distLabel, directionsUrl,
     mountEffects, effectsSummary,
   };

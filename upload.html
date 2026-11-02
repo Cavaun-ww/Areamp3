@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=52">
+<link rel="stylesheet" href="styles.css?v=53">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=52"></script>
-<script src="app.js?v=52"></script>
+<script src="config.js?v=53"></script>
+<script src="app.js?v=53"></script>
 <style>
   .wave { width: 100%; height: 64px; display: block; background: #050505; border: 1px solid var(--line); margin-top: 12px; }
   .rng { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: .82rem; color: var(--text-2); }
@@ -144,6 +144,10 @@
                 <div class="note small" id="seller-ok" hidden></div>
               </div>
             </div>
+            <label class="toggle" style="margin-top:14px"><input type="checkbox" id="limit-on"><span class="switch" aria-hidden="true"></span>
+              <span><b>Limited copies</b><br><span class="small muted">Only this many people can get it. Each one gets a numbered copy (#1, #2…). When they're gone it shows SOLD OUT.</span></span></label>
+            <label class="field" id="limit-field" hidden style="margin-top:10px"><span>How many copies</span>
+              <input class="input mono" id="limit-n" type="number" min="1" step="1" inputmode="numeric" placeholder="e.g. 50" style="max-width:180px"></label>
           </div>
         </details>
 
@@ -179,6 +183,7 @@
   App.mountHeader("upload");
   const C = App.C, sb = App.sb, $ = (id) => document.getElementById(id);
   document.querySelectorAll(".js-mp3mb").forEach((e) => (e.textContent = C.MAX_MP3_MB));
+  $("limit-on").addEventListener("change", () => { $("limit-field").hidden = !$("limit-on").checked; if ($("limit-on").checked) $("limit-n").focus(); });
   document.querySelectorAll(".js-glbmb").forEach((e) => (e.textContent = C.MAX_MODEL_MB || 25));
   document.querySelectorAll(".js-wavmb").forEach((e) => (e.textContent = C.MAX_WAV_MB || 50));
   document.querySelectorAll(".js-prev").forEach((e) => (e.textContent = C.PREVIEW_SECONDS));
@@ -679,6 +684,7 @@
     if (!vid) return ["Add your video, GIF, photo or 3D model (step 2).", "drop-vid"];
     if (!mp3 && vid.kind !== "video") return ["Add your song (step 2), or use a video instead.", "drop-mp3"];
     if (!$("title").value.trim()) return ["Give it a title.", "title"];
+    if ($("limit-on").checked && !(Math.floor(+$("limit-n").value) >= 1)) { $("price-box").open = true; return ["Enter how many copies (1 or more), or turn off Limited copies.", "limit-n"]; }
     const lock = lockValue();
     const selling = lock === "buy" || (lock === "none" && mode === "sell");
     if (selling) {
@@ -788,6 +794,7 @@
         song_lock: lock,
         unlock_radius_m: +$("radius").value || 100,
         hint: lock !== "none" ? ($("hint").value.trim() || null) : null,
+        max_copies: $("limit-on").checked ? Math.floor(+$("limit-n").value) : null,
         ...fx.get(),
         ...App.locationColumns(loc),
       };

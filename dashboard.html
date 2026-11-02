@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=52">
+<link rel="stylesheet" href="styles.css?v=53">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=52"></script>
-<script src="app.js?v=52"></script>
+<script src="config.js?v=53"></script>
+<script src="app.js?v=53"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -334,7 +334,8 @@
     if (!data.length) { $("tracks").innerHTML = '<p class="muted mono small" style="padding:20px 0">No drops match “' + esc(q) + '”.</p>'; return; }
     $("tracks").innerHTML = '<div class="grid">' + data.map((t) => App.trackCard(t, {
       hideArtist: true,
-      actions: '<div class="small muted mono">' + [t.is_published ? (t.is_private ? "PRIVATE" : "PUBLIC") : "HIDDEN", t.photo_hidden || App.isLocked(t) ? "BLURRED · " + (finds[t.id] || 0) + " FOUND" : ""].filter(Boolean).join(" · ") + "</div>" +
+      actions: '<div class="small muted mono">' + [t.is_published ? (t.is_private ? "PRIVATE" : "PUBLIC") : "HIDDEN", t.photo_hidden || App.isLocked(t) ? "BLURRED · " + (finds[t.id] || 0) + " FOUND" : "",
+          t.max_copies != null ? (+t.copies_taken || 0) + "/" + t.max_copies + " COPIES" : ""].filter(Boolean).join(" · ") + "</div>" +
         '<div class="actions">' +
           '<button class="btn btn-sm" data-act="price" data-id="' + t.id + '">Price</button>' +
           '<button class="btn btn-sm" data-act="edit" data-id="' + t.id + '">Edit</button>' +
@@ -344,6 +345,7 @@
         '<details class="box" data-more="' + t.id + '"' + (openMore.has(t.id) ? " open" : "") + '><summary>Settings</summary><div class="stack" style="margin-top:10px">' +
           '<button class="btn btn-sm btn-block" data-act="priv" data-id="' + t.id + '">' + (t.is_private ? "Make public" : "Make private") + "</button>" +
           '<button class="btn btn-sm btn-block" data-act="lock" data-id="' + t.id + '">' + (t.photo_hidden || App.isLocked(t) ? "Blur: on" : "Blur") + "</button>" +
+          '<button class="btn btn-sm btn-block" data-act="copies" data-id="' + t.id + '">' + (t.max_copies != null ? "Limit: " + t.max_copies + " copies" : "Limit copies") + "</button>" +
           '<button class="btn btn-sm btn-block" data-act="fx" data-id="' + t.id + '">' + (App.effectsSummary(t) ? "Effects: " + esc(App.effectsSummary(t)) : "Pop-out effects") + "</button>" +
           '<button class="btn btn-sm btn-block" data-act="loc" data-id="' + t.id + '">' + (t.has_location ? "Location: " + esc(t.place_name || "set") : "Add location") + "</button>" +
         "</div></details>",
@@ -381,7 +383,36 @@
     } else if (act === "fx") openEffects(t);
     else if (act === "loc") changeLocation(t);
     else if (act === "lock") openLock(t);
+    else if (act === "copies") openCopies(t);
   });
+
+  // limited copies: cap how many people can get this track
+  function openCopies(t) {
+    const on = t.max_copies != null, taken = +t.copies_taken || 0;
+    const bg = modal(
+      '<div class="label">Limited copies</div><h3 style="margin:4px 0 6px;text-transform:none;letter-spacing:.02em">' + esc(t.title) + "</h3>" +
+      '<p class="small muted" style="margin-bottom:12px">Only this many people can get it. Each person who buys it or downloads it free takes one numbered copy (#1, #2…). When they\'re gone it shows SOLD OUT, and it still plays in the AR camera.</p>' +
+      '<label class="field"><span>How many copies</span><input class="input mono" id="cp-n" type="number" min="' + Math.max(1, taken) + '" step="1" inputmode="numeric" placeholder="e.g. 50"></label>' +
+      (taken ? '<p class="small muted mono" style="margin-top:8px">' + taken + " already given out</p>" : "") +
+      '<div class="row" style="margin-top:16px"><button class="btn btn-primary" id="cp-save">Save</button><button class="btn btn-ghost" id="cp-cancel">Cancel</button>' +
+        (on ? '<button class="btn" id="cp-off" style="margin-left:auto">Remove limit</button>' : "") + "</div>");
+    const q = (s) => bg.querySelector(s);
+    q("#cp-n").value = on ? t.max_copies : "";
+    q("#cp-cancel").onclick = () => bg.remove();
+    q("#cp-save").onclick = async () => {
+      const n = Math.floor(+q("#cp-n").value);
+      if (!(n >= 1)) return App.toast("Enter how many copies (1 or more).", true);
+      if (n < taken) return App.toast("You've already given out " + taken + " copies. The limit can't be lower than that.", true);
+      const { error } = await sb.from("tracks").update({ max_copies: n }).eq("id", t.id);
+      if (error) return App.toast(error.message, true);
+      bg.remove(); App.toast("Limited to " + n + (n === 1 ? " copy" : " copies")); loadTracks();
+    };
+    if (q("#cp-off")) q("#cp-off").onclick = async () => {
+      const { error } = await sb.from("tracks").update({ max_copies: null }).eq("id", t.id);
+      if (error) return App.toast(error.message, true);
+      bg.remove(); App.toast("No limit: anyone can get it"); loadTracks();
+    };
+  }
 
   function modal(html) {
     const bg = document.createElement("div");
@@ -612,12 +643,16 @@
     const { data } = await sb.from("purchases").select("id, track_id, track_title, amount, currency, created_at, tracks(id, slug, owner, title, cover_path, price, audio_format, has_song, has_video, profiles!owner(handle, display_name))").eq("buyer", uid).order("created_at", { ascending: false });
     const rows = data || [];
     $("n-purchases").textContent = rows.length || "";
+    // numbered copies of limited tracks ("#12 of 50")
+    const nums = {};
+    if (rows.length) { const c = await sb.from("copies").select("track_id, num, tracks(max_copies)").eq("user_id", uid); (c.data || []).forEach((x) => (nums[x.track_id] = x)); }
     $("purchases").innerHTML = rows.length
       ? '<div class="list">' + rows.map((r, i) => {
           const t = r.tracks;
           return '<div class="li">' + (t ? '<img alt="" src="' + esc(App.publicUrl(t.cover_path)) + '">' : '<img alt="">') +
             '<div class="grow"><b>' + (t ? '<a href="' + esc(App.trackLink(t.slug)) + '" style="text-decoration:none">' + esc(r.track_title) + "</a>" : esc(r.track_title)) + "</b>" +
-            "<span>" + esc((t && App.artistName(t.profiles) ? App.artistName(t.profiles) + " · " : "") + App.money(r.amount, r.currency) + " · " + App.timeAgo(r.created_at)) + "</span></div>" +
+            "<span>" + esc((t && App.artistName(t.profiles) ? App.artistName(t.profiles) + " · " : "") + App.money(r.amount, r.currency) + " · " + App.timeAgo(r.created_at)) + "</span>" +
+            (nums[r.track_id] ? '<span class="mono" style="color:var(--text)">◆ #' + nums[r.track_id].num + (nums[r.track_id].tracks && nums[r.track_id].tracks.max_copies ? " of " + nums[r.track_id].tracks.max_copies : "") + "</span>" : "") + "</div>" +
             (t ? '<button class="btn btn-sm btn-primary" data-dl="' + i + '">↓ ' + (App.hasSong(t) ? App.songType(t) : "Video") + "</button>" +
               (App.hasSong(t) && App.hasVid(t) ? ' <button class="btn btn-sm" data-dlv="' + i + '">↓ Video</button>' : "") : '<span class="small muted mono">REMOVED</span>') + "</div>";
         }).join("") + "</div>"
