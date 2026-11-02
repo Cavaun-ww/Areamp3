@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=51">
+<link rel="stylesheet" href="styles.css?v=52">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=51"></script>
-<script src="app.js?v=51"></script>
+<script src="config.js?v=52"></script>
+<script src="app.js?v=52"></script>
 <style>
   .prof { display: flex; gap: 24px; align-items: center; padding: 18px 0 30px; border-bottom: 1px solid var(--line); margin-bottom: 26px; flex-wrap: wrap; }
   .prof .avatar { width: 120px; height: 120px; font-size: 3rem; }
@@ -43,7 +43,7 @@
     ? await sb.from("profiles").select("id, handle, display_name, bio, avatar_path, pro_until, verified, theme, bg_color, bg_image_path").eq("handle", handle).maybeSingle()
     : { data: null };
   if (!p) {
-    box.innerHTML = '<div class="empty"><h2>Artist not found</h2><p class="muted" style="margin:8px 0 18px">There\'s no page at this link.</p><a class="btn btn-primary" href="explore.html">Explore music</a></div>';
+    box.innerHTML = '<div class="empty"><h2>Page not found</h2><p class="muted" style="margin:8px 0 18px">There\'s no page at this link.</p><a class="btn btn-primary" href="explore.html">Explore music</a></div>';
     return;
   }
   const name = App.artistName(p);
@@ -62,7 +62,8 @@
   box.innerHTML =
     '<div class="prof">' + App.avatarHTML(p) +
       '<div class="info">' +
-        '<div class="label">Artist</div>' +
+        // anyone who has put out a drop is an Artist; everyone else is a Listener
+        '<div class="label">' + (list.length ? "Artist" : "Listener") + "</div>" +
         "<h1>" + esc(name) + App.vBadge(p) + (App.isPro(p) ? " " + App.proBadge(p) : "") + "</h1>" +
         '<div class="muted mono small">@' + esc(p.handle) + "</div>" +
         (p.bio ? '<p class="bio">' + esc(p.bio) + "</p>" : "") +
@@ -70,14 +71,16 @@
         '<div class="acts"><button class="btn" id="follow" hidden></button><a class="btn" id="msg" hidden>Message</a><button class="btn" id="share">Share</button><button class="btn btn-ghost" id="block" hidden>Block</button><a class="btn" id="edit" href="dashboard.html#profile" hidden>Edit my page</a></div>' +
       "</div>" +
     "</div>" +
-    '<div class="row" style="margin-bottom:14px"><h2>Tracks</h2></div>' +
-    (list.length ? '<div class="grid">' + list.map((t) => App.trackCard(t, { hideArtist: true })).join("") + "</div>"
-                 : '<div class="empty">No tracks yet. Follow to catch the first drop.</div>');
+    (list.length ? '<div class="row" style="margin-bottom:14px"><h2>Tracks</h2></div><div class="grid">' + list.map((t) => App.trackCard(t, { hideArtist: true })).join("") + "</div>"
+                 : '<div id="no-drops"></div>');
 
   $("share").onclick = () => App.share(name + " on " + App.C.SITE_NAME, location.href);
   const s = await App.getSession();
   const me = s && s.user.id;
   if (me === p.id) $("edit").hidden = false;
+  // your own page with no drops yet: invite you to make one (other people just see the listener's profile)
+  if (!list.length && me === p.id) $("no-drops").innerHTML =
+    '<div class="empty"><p style="margin-bottom:14px">You haven\'t made a drop yet. Make one and your page shows as an Artist.</p><a class="btn btn-primary" href="upload.html">Create an experience</a></div>';
   else {
     const to = "messages.html?to=" + encodeURIComponent(p.handle);
     $("msg").hidden = false; $("msg").href = me ? to : App.signInUrl(to);
