@@ -10,10 +10,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=53">
+<link rel="stylesheet" href="styles.css?v=54">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=53"></script>
-<script src="app.js?v=53"></script>
+<script src="config.js?v=54"></script>
+<script src="app.js?v=54"></script>
 <style>
   .hero { min-height: min(78vh, 720px); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 60px 20px 50px; border-bottom: 1px solid var(--line); }
   .hero .logo { width: min(440px, 78vw); display: block; }
@@ -42,9 +42,35 @@
   @keyframes scanGlow { 0% { background-position: 0 100%; opacity: 1; } 62% { background-position: 0 0%; opacity: 1; } 70% { opacity: .0; } 100% { background-position: 0 0%; opacity: 0; } }
   @keyframes scanLock { 0% { transform: translate(var(--dx), var(--dy)); opacity: .35; } 10% { transform: translate(var(--dx), var(--dy)); opacity: .6; }
     62% { transform: none; opacity: .9; } 66% { transform: none; opacity: 1; filter: drop-shadow(0 0 6px #fff); } 72%, 92% { transform: none; opacity: 1; filter: none; } 100% { transform: translate(var(--dx), var(--dy)); opacity: .35; } }
+  /* on TARGET FOUND the "MP3" part wipes to gray with a quick glitch, holds, then resets for the next scan */
+  .scan-mp3 { position: absolute; inset: 22px 26px; pointer-events: none; background: #8c8c8c;
+    -webkit-mask: url(logo-mask.png) center / 100% 100% no-repeat; mask: url(logo-mask.png) center / 100% 100% no-repeat;
+    clip-path: inset(0 44% 0 56%); opacity: 0; animation: mp3Gray var(--dur) steps(60, end) infinite; }
+  .scan-mp3::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0,0,0,.28) 0 2px, transparent 2px 5px); }
+  .scan-mp3.g2 { background: #d9d9d9; animation-name: mp3Glitch; }
+  .scan-mp3.g2::after { display: none; }
+  @keyframes mp3Gray {
+    0%, 64% { opacity: 0; clip-path: inset(0 44% 0 56%); transform: none; }
+    65% { opacity: 1; clip-path: inset(0 44% 0 56%); }
+    67% { clip-path: inset(0 26% 0 56%); transform: translateX(-2px); }
+    68% { clip-path: inset(0 30% 0 56%); transform: translateX(3px); }
+    70% { clip-path: inset(0 8% 0 56%); transform: translateX(-1px); }
+    72% { clip-path: inset(0 0 0 56%); transform: none; }
+    73% { opacity: .55; } 74% { opacity: 1; }
+    92% { opacity: 1; clip-path: inset(0 0 0 56%); }
+    96%, 100% { opacity: 0; clip-path: inset(0 0 0 56%); }
+  }
+  @keyframes mp3Glitch {
+    0%, 65% { opacity: 0; clip-path: inset(0 44% 0 56%); transform: none; }
+    66% { opacity: .9; clip-path: inset(18% 20% 52% 56%); transform: translate(5px, -1px); }
+    67% { opacity: .8; clip-path: inset(60% 6% 12% 56%); transform: translate(-4px, 1px); }
+    69% { opacity: .9; clip-path: inset(34% 0 38% 56%); transform: translate(3px, 0); }
+    71% { opacity: .6; clip-path: inset(8% 0 76% 56%); transform: translate(-3px, 0); }
+    72%, 100% { opacity: 0; clip-path: inset(0 0 0 56%); transform: none; }
+  }
   @keyframes tagA { 0%, 64% { opacity: 1; } 65%, 100% { opacity: 0; } }
   @keyframes tagB { 0%, 64% { opacity: 0; } 65%, 68% { opacity: 1; } 69%, 70% { opacity: 0; } 71%, 94% { opacity: 1; } 95%, 100% { opacity: 0; } }
-  @media (prefers-reduced-motion: reduce) { .scan-line, .scan-glow { display: none; } .scan-c { animation: none; } .scan-tag .s1 { animation: none; opacity: 0; } .scan-tag .s2 { animation: none; opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .scan-line, .scan-glow, .scan-mp3.g2 { display: none; } .scan-mp3 { animation: none; opacity: 1; clip-path: inset(0 0 0 56%); } .scan-c { animation: none; } .scan-tag .s1 { animation: none; opacity: 0; } .scan-tag .s2 { animation: none; opacity: 1; } }
   .hero .l1, .hero .l2 { font-size: clamp(1.15rem, 3.4vw, 2rem); letter-spacing: .14em; text-transform: uppercase; font-weight: 600; line-height: 1.35; }
   .hero .l2 { color: var(--muted); }
   .hero .cta { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 40px; }
@@ -85,6 +111,7 @@
     <div class="scan" aria-label="Area MP3">
       <img class="logo" src="logo.png" alt="Area MP3">
       <i class="scan-glow" aria-hidden="true"></i>
+      <i class="scan-mp3 g2" aria-hidden="true"></i><i class="scan-mp3" aria-hidden="true"></i>
       <i class="scan-line" aria-hidden="true"></i>
       <i class="scan-c tl" aria-hidden="true"></i><i class="scan-c tr" aria-hidden="true"></i><i class="scan-c bl" aria-hidden="true"></i><i class="scan-c br" aria-hidden="true"></i>
       <span class="scan-tag" aria-hidden="true"><b class="s1">● PROCESSING</b><b class="s2">◆ TARGET FOUND</b></span>
