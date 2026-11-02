@@ -113,7 +113,7 @@
     const h = document.createElement("header");
     h.className = "site-header";
     h.innerHTML =
-      '<a class="brand" href="index.html" aria-label="' + esc(C.SITE_NAME) + ' home"><img class="brand-logo" src="logo.png" alt="' + esc(C.SITE_NAME) + '"></a>' +
+      '<a class="brand" href="index.html" aria-label="' + esc(C.SITE_NAME) + ' home"><img class="brand-logo" src="logo-v2.png" alt="' + esc(C.SITE_NAME) + '"></a>' +
       '<nav class="nav" id="nav"></nav>';
     document.body.prepend(h);
     if (!configured) {
