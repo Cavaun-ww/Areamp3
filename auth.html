@@ -44,6 +44,15 @@
   </div>
 </main>
 <script>
+  // plain-English versions of common sign-up errors
+  function friendly(m) {
+    m = String(m || "");
+    if (/rate limit/i.test(m)) return "Too many sign-up emails right now. Try again in a little while, or use Continue with Google.";
+    if (/already registered|already been registered/i.test(m)) return "That email already has an account. Tap Sign in instead.";
+    if (/invalid login credentials/i.test(m)) return "Wrong email or password.";
+    if (/email not confirmed/i.test(m)) return "Confirm your email first: check your inbox for the link.";
+    return m;
+  }
   App.mountHeader();
   const params = new URLSearchParams(location.search);
   const rawNext = params.get("next") || "dashboard.html";
@@ -91,7 +100,7 @@
       }
       location.replace(next);
     } catch (err) {
-      App.toast(err.message, true);
+      App.toast(friendly(err.message), true);
       $("submit").disabled = false;
     }
   };
@@ -100,7 +109,7 @@
     const email = $("email").value.trim();
     if (!email) return App.toast("Enter your email first", true);
     const { error } = await App.sb.auth.resetPasswordForEmail(email, { redirectTo: App.siteRoot + "dashboard.html" });
-    App.toast(error ? error.message : "Password reset email sent", !!error);
+    App.toast(error ? friendly(error.message) : "Password reset email sent", !!error);
   };
 </script>
 </body>
