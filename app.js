@@ -315,7 +315,7 @@
   const STEP_SLIDES = [
     { img: "step-1.jpg", n: "Step 1 of 3", h: "Upload your art.", p: "Pick the image people will point their camera at: a poster, sticker, mural or album cover. It becomes your cover art too.", by: "" },
     { img: "step-2.jpg", n: "Step 2 of 3", h: "Add your sound.", p: "Add your song, plus a photo, GIF, video or 3D model that appears over your art when people see it through their phone.", by: "" },
-    { img: "step-3.jpg", n: "Step 3 of 3", h: "Hide it. Get discovered.", p: "Name it, set your price, pin a location and publish. Listeners find your art, see it come to life, and unlock your music.", by: "" },
+    { img: "step-3.jpg", n: "Step 3 of 3", h: "Use for your events.", p: "Name it, set your price, pin a location and publish. Listeners find your art, see it come to life, and unlock your music.", by: "" },
   ];
   function stepsSlider(el, opts) {
     opts = opts || {};
