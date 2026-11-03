@@ -530,5 +530,5 @@ html:has(body.modal-open) { overflow: hidden; }
 .album-tl .btn-sm { min-width: 38px; padding: 6px 10px; }
 /* Single / Album: both boxes take the same space so the page below doesn't jump */
 #single-box > .drop, #album-box { min-height: 190px; }
-#album-box #album-pro { min-height: 190px; display: flex; align-items: center; margin: 0; }
+#album-box #album-pro { min-height: 190px; display: block; padding-top: 58px; margin: 0; box-sizing: border-box; }
 #album-box #album-pro[hidden] { display: none; }
