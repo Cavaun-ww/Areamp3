@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=104">
+<link rel="stylesheet" href="styles.css?v=105">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=104"></script>
-<script src="app.js?v=104"></script>
-<script src="depth.js?v=104"></script>
+<script src="config.js?v=105"></script>
+<script src="app.js?v=105"></script>
+<script src="depth.js?v=105"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -302,11 +302,6 @@
 
   // ── my tracks ──────────────────────────────────────────────
   let mine = [], finds = {};
-  const openMore = new Set(); // keep a card's settings open after it refreshes
-  $("tracks").addEventListener("toggle", (e) => {
-    const d = e.target; if (!d.dataset || !d.dataset.more) return;
-    if (d.open) openMore.add(d.dataset.more); else openMore.delete(d.dataset.more);
-  }, true);
   async function loadTracks() {
     const { data, error } = await sb.from("tracks").select(App.TRACK_COLS + ", is_published, overlay_depth_path, overlay_depth_meta").eq("owner", uid).order("created_at", { ascending: false });
     if (error) { $("tracks").innerHTML = '<p class="muted">' + esc(error.message) + "</p>"; return; }
@@ -368,20 +363,33 @@
           '<button class="btn btn-sm" data-act="vis" data-id="' + t.id + '">' + (t.is_published ? "Hide" : "Publish") + "</button>" +
           '<button class="btn btn-sm btn-danger" data-act="del" data-id="' + t.id + '" aria-label="Delete">✕</button>' +
         "</div>" +
-        '<details class="box" data-more="' + t.id + '"' + (openMore.has(t.id) ? " open" : "") + '><summary>Settings</summary><div class="stack" style="margin-top:10px">' +
-          '<button class="btn btn-sm btn-block" data-act="priv" data-id="' + t.id + '">' + (t.is_private ? "Make public" : "Make private") + "</button>" +
-          '<button class="btn btn-sm btn-block" data-act="lock" data-id="' + t.id + '">' + (t.photo_hidden || App.isLocked(t) ? "Blur: on" : "Blur") + "</button>" +
-          '<button class="btn btn-sm btn-block" data-act="copies" data-id="' + t.id + '">' + (t.max_copies != null ? "Limit: " + t.max_copies + " copies" : "Limit copies") + "</button>" +
-          '<button class="btn btn-sm btn-block" data-act="fx" data-id="' + t.id + '">' + ((s) => s ? "Effects: " + esc(s) : "Pop-out effects")([App.effectsSummary(t), t.depth_path || t.overlay_depth_path ? "3D" : ""].filter(Boolean).join(" · ")) + "</button>" +
-          '<button class="btn btn-sm btn-block" data-act="loc" data-id="' + t.id + '">' + (t.has_location ? "Location: " + esc(t.place_name || "set") : "Add location") + "</button>" +
-        "</div></details>",
+        '<button class="btn btn-sm btn-block set-open" data-act="more" data-id="' + t.id + '">Settings <span aria-hidden="true">⋯</span></button>',
     })).join("") + "</div>";
   }
   $("drop-q").addEventListener("input", () => { if (mine.length) paintTracks(); });
-  $("tracks").addEventListener("click", async (e) => {
+  // the settings for one drop, in a pop-up list
+  function openSettings(t) {
+    const blurred = t.photo_hidden || App.isLocked(t);
+    const fxs = [App.effectsSummary(t), t.depth_path || t.overlay_depth_path ? "3D" : ""].filter(Boolean).join(" · ");
+    const row = (act, label, val) => '<button class="set-row" data-sact="' + act + '"><span class="set-l">' + label + '</span><span class="set-v">' + esc(val) + '</span><span class="set-c" aria-hidden="true">›</span></button>';
+    const bg = modal('<div class="label">Settings</div><h3 style="margin:6px 0 14px;text-transform:none;letter-spacing:.02em">' + esc(t.title) + '</h3>' +
+      '<div class="set-list">' +
+        row("priv", "Who can see it", t.is_private ? "Private" : "Public") +
+        row("lock", "Blur", blurred ? "On" : "Off") +
+        row("copies", "Limit copies", t.max_copies != null ? t.max_copies + " copies" : "Off") +
+        row("fx", "Pop-out effects", fxs || "Off") +
+        row("loc", "Location", t.has_location ? (t.place_name || "Set") : "Off") +
+      '</div><button class="btn btn-ghost btn-block" id="set-close" style="margin-top:14px">Close</button>');
+    bg.querySelector("#set-close").onclick = () => bg.remove();
+    bg.querySelectorAll("[data-sact]").forEach((r) => (r.onclick = () => { bg.remove(); doAct(r.dataset.sact, t, r); }));
+  }
+  $("tracks").addEventListener("click", (e) => {
     const b = e.target.closest("[data-act]"); if (!b) return;
     const t = mine.find((x) => x.id === b.dataset.id); if (!t) return;
-    const act = b.dataset.act;
+    doAct(b.dataset.act, t, b);
+  });
+  async function doAct(act, t, b) {
+    if (act === "more") return openSettings(t);
     if (act === "vis") {
       b.disabled = true;
       const { error } = await sb.from("tracks").update({ is_published: !t.is_published }).eq("id", t.id);
@@ -410,7 +418,7 @@
     else if (act === "loc") changeLocation(t);
     else if (act === "lock") openLock(t);
     else if (act === "copies") openCopies(t);
-  });
+  }
 
   // limited copies: cap how many people can get this track
   function openCopies(t) {

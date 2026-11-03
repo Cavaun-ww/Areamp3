@@ -539,3 +539,13 @@ canvas.d3 { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1;
 .drop .d3-wrap { position: relative; display: inline-block; max-width: 100%; line-height: 0; }
 .drop .d3-wrap img { display: block; max-width: 100%; max-height: 300px; width: auto; height: auto; }
 .drop .d3-wrap canvas.d3 { z-index: 2; }
+
+/* drop settings: pop-up list */
+.set-open { margin-top: 12px; display: flex; justify-content: center; gap: 8px; }
+.set-list { border: 1px solid var(--line-2); border-radius: var(--radius); }
+.set-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 15px 14px; background: transparent; border: 0; border-top: 1px solid var(--line-2); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.set-row:first-child { border-top: 0; }
+.set-row:hover, .set-row:focus-visible { background: rgba(255,255,255,.05); outline: none; }
+.set-l { flex: 0 0 auto; font-family: var(--font); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; font-size: 13px; }
+.set-v { flex: 1 1 auto; min-width: 0; text-align: right; color: var(--text-2); font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.set-c { flex: 0 0 auto; color: var(--muted, #8a8a8a); font-size: 18px; line-height: 1; }
