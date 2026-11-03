@@ -134,7 +134,7 @@
           '<button class="btn btn-sm" id="follow" hidden></button>' +
         "</div>" +
         '<div class="price-big">' + (owned && !mine && paid ? "OWNED ✓" : locked ? (found && !mine ? "FOUND ✓" : "LOCKED") : esc(App.priceLabel(t))) + "</div>" +
-        '<div class="small muted">' + (locked ? "Secret " + App.secretWord(t) + " · find the real image and scan it to unlock " + esc(App.lockReward(t))
+        '<div class="small muted">' + (locked ? "Secret " + App.secretWord(t) + " · find the real image and use the AR camera to unlock " + esc(App.lockReward(t))
           : paid ? App.fileType(t) + " download · pay with PayPal or card · straight to your phone" : "Free " + App.fileType(t) + " download · sign in to save it") + "</div>" +
         '<div id="copies"></div>' +
         (!heard && !locked ? '<div class="note small" style="margin-top:12px">Hear it first: scan the art with the AR camera and listen. After that you can ' + (paid ? "buy and download" : "download") + " it here." + (me ? "" : ' <a href="' + esc(App.signInUrl("t.html?s=" + t.slug)) + '">Sign in</a> first so your scan counts.') + "</div>" : "") +
