@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=60">
+<link rel="stylesheet" href="styles.css?v=61">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=60"></script>
-<script src="app.js?v=60"></script>
+<script src="config.js?v=61"></script>
+<script src="app.js?v=61"></script>
 <style>
   .wrap.chat-wrap { max-width: 640px; padding-bottom: 0; }
   .convo { display: flex; gap: 12px; align-items: center; padding: 12px 10px; text-decoration: none; color: var(--text); border-bottom: 1px solid var(--line); }
@@ -139,8 +139,8 @@
         const more = () => { const m = $("act-more"); if (m) m.onclick = () => { shown += 30; $("pane").innerHTML = actHTML(); more(); }; };
         more();
         if (actUnread) sb.rpc("mark_activity_read").then(() => {
+          App.refreshInbox();
           const b = main.querySelector('.tabs [data-t="activity"] .count-badge'); if (b) b.remove();
-          const d = $("inbox-dot"); if (d && !d.hidden) { const n = Math.max(0, (parseInt(d.textContent) || 0) - actUnread); d.hidden = !n; d.textContent = n; }
         });
       }
     };
@@ -218,7 +218,7 @@
     const stick = atBottom() || !msgs.length;
     msgs = fresh;
     if (changed || !$("thread").innerHTML) { render(); if (stick) toBottom(); }
-    if (msgs.some((m) => m.recipient === me && !m.read_at)) sb.rpc("mark_read", { other: them.id });
+    if (msgs.some((m) => m.recipient === me && !m.read_at)) sb.rpc("mark_read", { other: them.id }).then(() => App.refreshInbox());
   }
   await Promise.all([refreshGate(), load()]);
   toBottom();

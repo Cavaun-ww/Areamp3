@@ -133,9 +133,20 @@
       '<a class="link hide-sm' + on("upload") + '" href="upload.html">Create</a>' +
       (s ? '<a class="btn btn-sm my-btn' + (active === "me" ? " on" : "") + '" href="dashboard.html">My page<span class="dot" id="inbox-dot" hidden></span></a>'
          : '<a class="btn btn-sm" href="' + signInUrl() + '">Sign in</a>');
-    if (s) sb.rpc("unread_count").then(({ data }) => {
+    if (s) {
+      refreshInbox();
+      setInterval(() => { if (!document.hidden) refreshInbox(); }, 30000);
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshInbox(); });
+    }
+  }
+  // the number on My page: unread messages + new activity. Goes away once they're read.
+  function refreshInbox() {
+    return sb.rpc("unread_count").then(({ data }) => {
+      const n = data || 0;
       const d = document.getElementById("inbox-dot");
-      if (d && data > 0) { d.hidden = false; d.textContent = data > 9 ? "9+" : data; }
+      if (d) { d.hidden = !(n > 0); d.textContent = n > 9 ? "9+" : n; }
+      document.querySelectorAll("[data-inbox-count]").forEach((b) => { b.hidden = !(n > 0); b.textContent = n > 9 ? "9+" : n; });
+      return n;
     });
   }
 
@@ -769,7 +780,7 @@
     toast, timeAgo, getSession, signInUrl, requireAuth, callFunction, mountHeader, ensureHandle, avatarHTML, squareJpeg,
     play, playButton, registerTracks, trackCard, TRACK_COLS, nLikes, nComments, artistCut, isPro, proBadge, vBadge, THEMES, applyTheme, BG_COLORS, applyBackground, loadPayPal, followerCount, mountFollow, buy, download, owns, startDownload,
     renderQR, copy, share,
-    isLocked, lockTag, lockReward, secretWord, copiesInfo, copiesBadge, hasUnlocked, playFull,
+    isLocked, lockTag, lockReward, secretWord, copiesInfo, copiesBadge, refreshInbox, hasUnlocked, playFull,
     loadLeaflet, makeMap, pinIcon, areaCircle, pickLocation, locationColumns, hereNow, milesBetween, distLabel, directionsUrl,
     mountEffects, effectsSummary,
   };
