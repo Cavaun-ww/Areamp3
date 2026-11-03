@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=102">
+<link rel="stylesheet" href="styles.css?v=103">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=102"></script>
-<script src="app.js?v=102"></script>
-<script src="depth.js?v=102"></script>
+<script src="config.js?v=103"></script>
+<script src="app.js?v=103"></script>
+<script src="depth.js?v=103"></script>
 <style>
   .wave { width: 100%; height: 64px; display: block; background: #050505; border: 1px solid var(--line); margin-top: 12px; }
   .rng { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: .82rem; color: var(--text-2); }
@@ -69,6 +69,8 @@
       <details class="box" id="fx-box">
         <summary>Pop-out effects <span class="small muted" id="fx-sum">(optional)</span></summary>
         <div id="fx"></div>
+        <label class="toggle" style="margin-top:14px"><input type="checkbox" id="d3-on"><span class="switch" aria-hidden="true"></span>
+          <span><b>3D effect</b><br><span class="small muted">Your art and photo or GIF move in 3D on the site and in the AR camera.</span></span></label>
       </details>
 
       <div class="part-label" style="margin-top:22px">Song <span id="song-sub">MP3 or WAV. Plays in the AR camera when people see your art.</span></div>
@@ -169,8 +171,6 @@
         <details class="box" id="more-box">
           <summary>More details <span class="small muted">(optional)</span></summary>
           <div class="stack" style="margin-top:12px">
-            <label class="toggle"><input type="checkbox" id="d3-on"><span class="switch" aria-hidden="true"></span>
-              <span><b>3D effect</b><br><span class="small muted">Your art and photo or GIF move in 3D on the site and in the AR camera.</span></span></label>
             <label class="field"><span>Genre</span>
               <select class="input" id="genre">
                 <option value="">Choose…</option>
@@ -690,8 +690,10 @@
 
   // pop-out effects
   const fx = App.mountEffects($("fx"), {});
-  $("fx").addEventListener("click", () => setTimeout(() => ($("fx-sum").textContent = App.effectsSummary(fx.get()) || "optional"), 0));
-  $("fx").addEventListener("input", () => ($("fx-sum").textContent = App.effectsSummary(fx.get()) || "optional"));
+  const fxSum = () => ($("fx-sum").textContent = [App.effectsSummary(fx.get()), $("d3-on").checked ? "3D" : ""].filter(Boolean).join(" · ") || "optional");
+  $("fx").addEventListener("click", () => setTimeout(fxSum, 0));
+  $("fx").addEventListener("input", fxSum);
+  $("d3-on").addEventListener("change", fxSum);
 
   // ── 05 privacy, location & unlock ────────────────────────────────
   let loc = null;

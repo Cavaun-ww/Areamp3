@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=102">
+<link rel="stylesheet" href="styles.css?v=103">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=102"></script>
-<script src="app.js?v=102"></script>
-<script src="depth.js?v=102"></script>
+<script src="config.js?v=103"></script>
+<script src="app.js?v=103"></script>
+<script src="depth.js?v=103"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -372,8 +372,7 @@
           '<button class="btn btn-sm btn-block" data-act="priv" data-id="' + t.id + '">' + (t.is_private ? "Make public" : "Make private") + "</button>" +
           '<button class="btn btn-sm btn-block" data-act="lock" data-id="' + t.id + '">' + (t.photo_hidden || App.isLocked(t) ? "Blur: on" : "Blur") + "</button>" +
           '<button class="btn btn-sm btn-block" data-act="copies" data-id="' + t.id + '">' + (t.max_copies != null ? "Limit: " + t.max_copies + " copies" : "Limit copies") + "</button>" +
-          '<button class="btn btn-sm btn-block" data-act="fx" data-id="' + t.id + '">' + (App.effectsSummary(t) ? "Effects: " + esc(App.effectsSummary(t)) : "Pop-out effects") + "</button>" +
-          '<button class="btn btn-sm btn-block" data-act="d3" data-id="' + t.id + '">' + (t.depth_path || t.overlay_depth_path ? "3D effect: on" : "3D effect") + "</button>" +
+          '<button class="btn btn-sm btn-block" data-act="fx" data-id="' + t.id + '">' + ((s) => s ? "Effects: " + esc(s) : "Pop-out effects")([App.effectsSummary(t), t.depth_path || t.overlay_depth_path ? "3D" : ""].filter(Boolean).join(" · ")) + "</button>" +
           '<button class="btn btn-sm btn-block" data-act="loc" data-id="' + t.id + '">' + (t.has_location ? "Location: " + esc(t.place_name || "set") : "Add location") + "</button>" +
         "</div></details>",
     })).join("") + "</div>";
@@ -398,12 +397,6 @@
       const priv = [f.audio_path, f.video_dl_path, ...(t.is_album ? (await sb.from("album_tracks").select("audio_path").eq("track_id", t.id)).data || [] : []).map((x) => x.audio_path)].filter(Boolean);
       if (priv.length) sb.storage.from("songs").remove(priv);
       App.toast("Deleted"); loadTracks();
-    } else if (act === "d3") {
-      const on = !!(t.depth_path || t.overlay_depth_path);
-      b.disabled = true; b.textContent = on ? "Turning off…" : "Making 3D…";
-      try { if (on) await clear3D(t); else await make3D(t); App.toast(on ? "3D effect off" : "3D effect on"); }
-      catch (err) { console.warn(err); App.toast(on ? "Couldn't turn it off. Try again." : "3D didn't work on this device. Try on a computer.", true); }
-      paintTracks();
     } else if (act === "price") openPrice(t);
     else if (act === "edit") openEdit(t);
     else if (act === "priv") {
@@ -457,12 +450,21 @@
   }
   function openEffects(t) {
     const bg = modal('<div class="label">Pop-out effects</div><h3 style="margin:6px 0 4px;text-transform:none;letter-spacing:.02em">' + esc(t.title) + '</h3><div id="fx-edit"></div>' +
+      '<label class="toggle" style="margin-top:14px"><input type="checkbox" id="fx-d3"' + (t.depth_path || t.overlay_depth_path ? " checked" : "") + '><span class="switch" aria-hidden="true"></span>' +
+      '<span><b>3D effect</b><br><span class="small muted">Your art and photo or GIF move in 3D on the site and in the AR camera.</span></span></label>' +
       '<div class="row" style="margin-top:18px"><button class="btn btn-primary" id="fx-save">Save</button><button class="btn btn-ghost" id="fx-cancel">Cancel</button></div>');
     const ed = App.mountEffects(bg.querySelector("#fx-edit"), t);
     bg.querySelector("#fx-cancel").onclick = () => bg.remove();
-    bg.querySelector("#fx-save").onclick = async () => {
+    bg.querySelector("#fx-save").onclick = async (e) => {
+      const btn = e.currentTarget;
       const { error } = await sb.from("tracks").update(ed.get()).eq("id", t.id);
       if (error) return App.toast("Couldn't save effects. Try again.", true);
+      const was = !!(t.depth_path || t.overlay_depth_path), want = bg.querySelector("#fx-d3").checked;
+      if (want !== was) {
+        btn.disabled = true; btn.textContent = want ? "Making 3D…" : "Saving…";
+        try { if (want) await make3D(t); else await clear3D(t); }
+        catch (err) { console.warn(err); btn.disabled = false; btn.textContent = "Save"; return App.toast(want ? "3D didn't work on this device. Try on a computer." : "Couldn't turn off 3D. Try again.", true); }
+      }
       bg.remove(); App.toast("Effects saved. Scan it to see"); loadTracks();
     };
   }
