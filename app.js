@@ -310,6 +310,39 @@
   });
 
   // track card used on Explore, profiles and the home page
+  // ── "3 easy steps" banner: big photo slides that rotate on their own (swipe or tap the dots too) ──
+  // Photos: put step-1.jpg, step-2.jpg, step-3.jpg in the site folder. Until then each slide uses a dark backdrop.
+  const STEP_SLIDES = [
+    { img: "step-1.jpg", n: "Step 1 of 3", h: "Upload your art.", p: "Pick the image people will point their camera at: a poster, sticker, mural or album cover. It becomes your cover art too.", by: "" },
+    { img: "step-2.jpg", n: "Step 2 of 3", h: "Bring it to life.", p: "Add your song, plus a photo, GIF, video or 3D model that appears over your art when people see it through their phone.", by: "" },
+    { img: "step-3.jpg", n: "Step 3 of 3", h: "Hide it. Get found.", p: "Name it, set your price, pin a location and publish. Listeners find your art, see it come to life, and unlock your music.", by: "" },
+  ];
+  function stepsSlider(el, opts) {
+    opts = opts || {};
+    const btns = opts.buttons !== false;
+    el.classList.add("slides");
+    el.innerHTML = '<div class="slides-track">' + STEP_SLIDES.map((s, i) =>
+      '<div class="slide s' + (i + 1) + '" role="group" aria-label="' + esc(s.n) + '">' +
+        '<img class="slide-bg" alt="" src="' + esc(s.img) + '" onerror="this.remove()">' +
+        '<div class="slide-in"><div class="slide-n">' + esc(s.n) + "</div><h3>" + esc(s.h) + "</h3><p>" + esc(s.p) + "</p>" +
+        (btns ? '<div class="slide-cta"><a class="btn btn-primary" href="upload.html">Create an experience</a>' + (i === 2 ? '<a class="btn btn-ghost" href="explore.html">Explore music</a>' : "") + "</div>" : "") +
+        "</div>" + (s.by ? '<div class="slide-by">' + esc(s.by) + "</div>" : "") + "</div>").join("") + "</div>" +
+      '<div class="slide-dots">' + STEP_SLIDES.map((_, i) => '<button type="button" aria-label="Slide ' + (i + 1) + '"' + (i ? "" : ' class="on"') + "></button>").join("") + "</div>";
+    const track = el.querySelector(".slides-track"), dots = [...el.querySelectorAll(".slide-dots button")];
+    let cur = 0, timer = 0;
+    const go = (i, smooth = true) => { cur = (i + STEP_SLIDES.length) % STEP_SLIDES.length; track.scrollTo({ left: cur * track.clientWidth, behavior: smooth ? "smooth" : "auto" }); };
+    const paint = () => dots.forEach((d, i) => d.classList.toggle("on", i === cur));
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const restart = () => { clearInterval(timer); if (!reduce) timer = setInterval(() => { if (!document.hidden) go(cur + 1); }, 6000); };
+    dots.forEach((d, i) => (d.onclick = () => { go(i); restart(); }));
+    let t;
+    track.addEventListener("scroll", () => { clearTimeout(t); t = setTimeout(() => { cur = Math.round(track.scrollLeft / track.clientWidth); paint(); }, 60); }, { passive: true });
+    track.addEventListener("touchstart", () => clearInterval(timer), { passive: true });
+    track.addEventListener("touchend", restart, { passive: true });
+    window.addEventListener("resize", () => go(cur, false));
+    restart();
+  }
+
   // ── limited copies ("only 50 copies") ──
   function copiesInfo(t) {
     if (!t || t.max_copies == null) return null;
@@ -780,7 +813,7 @@
     toast, timeAgo, getSession, signInUrl, requireAuth, callFunction, mountHeader, ensureHandle, avatarHTML, squareJpeg,
     play, playButton, registerTracks, trackCard, TRACK_COLS, nLikes, nComments, artistCut, isPro, proBadge, vBadge, THEMES, applyTheme, BG_COLORS, applyBackground, loadPayPal, followerCount, mountFollow, buy, download, owns, startDownload,
     renderQR, copy, share,
-    isLocked, lockTag, lockReward, secretWord, copiesInfo, copiesBadge, refreshInbox, hasUnlocked, playFull,
+    isLocked, lockTag, lockReward, secretWord, copiesInfo, copiesBadge, refreshInbox, stepsSlider, hasUnlocked, playFull,
     loadLeaflet, makeMap, pinIcon, areaCircle, pickLocation, locationColumns, hereNow, milesBetween, distLabel, directionsUrl,
     mountEffects, effectsSummary,
   };

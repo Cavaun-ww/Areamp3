@@ -485,3 +485,27 @@ html:has(body.modal-open) { overflow: hidden; }
 .trim .row { flex-wrap: wrap; }
 .trim #trim-go { white-space: normal; height: auto; min-height: 44px; line-height: 1.35; padding: 10px 14px; flex: 1 1 100%; max-width: 100%; overflow-wrap: anywhere; text-align: center; }
 .trim #trim-cancel { flex: 0 0 auto; }
+/* "3 easy steps" photo slides */
+.slides { position: relative; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); background: #0a0a0a; }
+.slides-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+.slides-track::-webkit-scrollbar { display: none; }
+.slide { position: relative; flex: 0 0 100%; min-height: 420px; scroll-snap-align: start; display: flex; align-items: flex-end; overflow: hidden; }
+.slide::before { content: ""; position: absolute; inset: 0; z-index: 0; }
+.slide.s1::before { background: radial-gradient(ellipse at 75% 30%, #2a2a2a, #050505 70%); }
+.slide.s2::before { background: radial-gradient(ellipse at 70% 40%, #1d2a33, #050505 70%); }
+.slide.s3::before { background: radial-gradient(ellipse at 80% 25%, #302618, #050505 70%); }
+.slide-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+.slide::after { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(90deg, rgba(0,0,0,.78), rgba(0,0,0,.35) 60%, rgba(0,0,0,.15)), linear-gradient(0deg, rgba(0,0,0,.55), transparent 55%); }
+.slide-in { position: relative; z-index: 2; padding: 34px 28px 58px; max-width: 640px; }
+.slide-n { font-family: var(--mono); font-size: .74rem; letter-spacing: .2em; text-transform: uppercase; color: var(--text-2); margin-bottom: 10px; }
+.slide h3 { font-size: clamp(2.1rem, 7vw, 4.2rem); line-height: .98; font-weight: 700; text-transform: uppercase; letter-spacing: .01em; color: #fff; margin: 0; }
+.slide p { margin-top: 14px; font-size: clamp(.98rem, 2.4vw, 1.18rem); line-height: 1.45; color: #e8e8e8; max-width: 520px; }
+.slide-cta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+.slide-by { position: absolute; right: 18px; bottom: 50px; z-index: 2; font-size: .82rem; color: #ddd; text-align: right; }
+.slide-dots { position: absolute; left: 0; right: 0; bottom: 18px; z-index: 3; display: flex; justify-content: center; gap: 10px; }
+.slide-dots button { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid #fff; background: transparent; padding: 0; cursor: pointer; }
+.slide-dots button.on { background: #fff; }
+@media (max-width: 560px) { .slide { min-height: 400px; } .slide-in { padding: 26px 20px 56px; } }
+#creator .slide { min-height: 290px; }
+#creator .slide h3 { font-size: clamp(1.7rem, 6vw, 2.8rem); }
+#creator .slide-in { padding: 22px 20px 50px; }
