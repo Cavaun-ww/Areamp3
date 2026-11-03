@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=95"></script>
+<script src="config.js?v=96"></script>
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; font-family: "Chakra Petch", ui-monospace, monospace; color: #f4f4f4; }
@@ -203,7 +203,7 @@ body.desktop .steps, body.desktop #start { display: none; }
   (async function load() {
     if (typeof AFRAME === "undefined") { status("AR library failed to load. Refresh to try again."); return; }
     if (isExplore) return loadExplore();
-    var cols = "id, slug, owner, title, price, currency, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, pop_scale, lift, key_mode, photo_hidden, has_location, place_name, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, has_song, has_video, profiles!owner(handle, display_name, avatar_path, verified)";
+    var cols = "id, slug, owner, title, price, currency, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, pop_scale, lift, key_mode, photo_hidden, has_location, place_name, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, overlay_depth_path, has_song, has_video, profiles!owner(handle, display_name, avatar_path, verified)";
     var r = await sb.from("tracks").select(cols).eq("slug", slug).maybeSingle();
     if (r.error || !r.data) { $("title").textContent = "Not found"; $("by").textContent = "This link may have been removed."; $("start").textContent = "Unavailable"; $("song-btn").hidden = true; return; }
     t = r.data;
@@ -268,7 +268,7 @@ body.desktop .steps, body.desktop #start { display: none; }
     $("by").innerHTML = "Loading songs…";
     $("step2").innerHTML = "Point your phone at <b>any " + esc(C.SITE_NAME) + " image</b>: a poster, sticker, mural or cover";
     $("song-btn").textContent = "Explore music"; $("song-btn").href = "explore.html";
-    var cols = "id, slug, owner, title, price, currency, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, pop_scale, lift, key_mode, photo_hidden, has_location, place_name, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, has_song, has_video, created_at, profiles!owner(handle, display_name, avatar_path, verified), likes(count), comments(count)";
+    var cols = "id, slug, owner, title, price, currency, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, pop_scale, lift, key_mode, photo_hidden, has_location, place_name, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, overlay_depth_path, has_song, has_video, created_at, profiles!owner(handle, display_name, avatar_path, verified), likes(count), comments(count)";
     var base = function () { return sb.from("tracks").select(cols).eq("is_published", true).eq("is_private", false).not("mind_path", "is", null); };
     session = (await sb.auth.getSession()).data.session;
     me = session ? session.user.id : null;
@@ -653,7 +653,27 @@ body.desktop .steps, body.desktop #start { display: none; }
         if (!this.eq && ["green", "black", "white"].indexOf(tr.key_mode) >= 0) applyKey(mat, tr.key_mode);
         if (lift) el.object3D.position.z = 0.01 + lift;
         this.lift = lift;
-        el.setObject3D("mesh", new THREE.Mesh(new THREE.PlaneGeometry(pw * pop, ph * pop), mat));
+        var mesh = new THREE.Mesh(new THREE.PlaneGeometry(pw * pop, ph * pop), mat);
+        el.setObject3D("mesh", mesh);
+        // 3D depth: a photo overlay with a depth map stands out from the art (close things come forward)
+        if (path && isPhoto(path) && tr.overlay_depth_path) {
+          var di = new Image(); di.crossOrigin = "anonymous";
+          di.onload = function () {
+            try {
+              var c = document.createElement("canvas"), W = c.width = Math.min(256, di.naturalWidth), H = c.height = Math.min(256, Math.round(di.naturalHeight * W / di.naturalWidth));
+              var g = c.getContext("2d"); g.drawImage(di, 0, 0, W, H); var px = g.getImageData(0, 0, W, H).data;
+              var seg = 96, geo = new THREE.PlaneGeometry(pw * pop, ph * pop, seg, seg), pos = geo.attributes.position, uv = geo.attributes.uv;
+              var amt = 0.16 * pop * Math.min(pw, ph);
+              for (var i = 0; i < pos.count; i++) {
+                var x = Math.min(W - 1, Math.round(uv.getX(i) * (W - 1))), y = Math.min(H - 1, Math.round((1 - uv.getY(i)) * (H - 1)));
+                pos.setZ(i, (px[(y * W + x) * 4] / 255) * amt);
+              }
+              pos.needsUpdate = true; geo.computeVertexNormals();
+              mesh.geometry.dispose(); mesh.geometry = geo;
+            } catch (e) {}
+          };
+          di.src = pub(tr.overlay_depth_path);
+        }
         this.mat = mat; this.visible = false;
         target.addEventListener("targetFound", function () {
           self.visible = true;

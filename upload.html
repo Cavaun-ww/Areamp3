@@ -9,10 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=95">
+<link rel="stylesheet" href="styles.css?v=96">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=95"></script>
-<script src="app.js?v=95"></script>
+<script src="config.js?v=96"></script>
+<script src="app.js?v=96"></script>
+<script src="depth.js?v=96"></script>
 <style>
   .wave { width: 100%; height: 64px; display: block; background: #050505; border: 1px solid var(--line); margin-top: 12px; }
   .rng { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: .82rem; color: var(--text-2); }
@@ -45,6 +46,8 @@
         <div class="empty-state"><div class="icon">[ IMG ]</div><div>Drop image here or <span class="browse">browse</span></div><div class="hint">JPG · PNG · WEBP</div></div>
       </div>
       <p class="small muted" style="margin-top:12px">Tip: detailed, high-contrast images track best. Plain logos or mostly-empty images are hard for the camera to lock onto. This image is also your cover art.</p>
+      <label class="toggle" style="margin-top:14px"><input type="checkbox" id="depth-on" checked><span class="switch" aria-hidden="true"></span>
+        <span><b>3D depth</b><br><span class="small muted">Your photo shifts with real depth when people tilt their phone, and stands out in 3D in the AR camera. Works best on photos with a clear subject. Adds a few seconds when you publish.</span></span></label>
     </div>
 
     <!-- 2 WHAT PLAYS WHEN SCANNED: overlay (photo, GIF or video) + song. A video with a song plays silent; the song is the sound. -->
@@ -818,12 +821,23 @@
         try { previewBlob = await makePreview((p) => progress(41 + p * 5, null)); } catch (e) { console.warn(e); }
       }
 
+      // 2b. 3D depth maps (made right here in the browser). Never stops the upload if it fails.
+      let depthBlob = null, ovDepthBlob = null;
+      if ($("depth-on").checked && window.AreaDepth) {
+        try {
+          depthBlob = await AreaDepth.depthMap(img.blob, (m) => progress(46, m));
+          if (vid && vid.kind === "image" && !vid.gif) ovDepthBlob = await AreaDepth.depthMap(vid.file, (m) => progress(46, m));
+        } catch (e) { console.warn("depth", e); App.toast("3D depth couldn't be added on this device. Publishing without it."); }
+      }
+
       // 3. upload everything
       const folder = uid + "/" + crypto.randomUUID();
       const files = [
         { bucket: "media", path: folder + "/target.jpg", body: img.blob, type: "image/jpeg", msg: "Uploading image…", from: 46, to: 49 },
         { bucket: "media", path: folder + "/target.mind", body: mindBlob, type: "application/octet-stream", msg: "Uploading AR target…", from: 49, to: 51 },
       ];
+      if (depthBlob) files.push({ bucket: "media", path: folder + "/depth.png", body: depthBlob, type: "image/png", msg: "Uploading 3D depth…", from: 51, to: 52 });
+      if (ovDepthBlob) files.push({ bucket: "media", path: folder + "/overlay-depth.png", body: ovDepthBlob, type: "image/png", msg: "Uploading 3D depth…", from: 52, to: 53 });
       // blurred songs stay silent until found, so no public sample of them
       if (previewBlob && !isLocked()) files.push({ bucket: "media", path: folder + "/preview.mp3", body: previewBlob, type: "audio/mpeg", msg: "Uploading preview…", from: 51, to: 54 });
       if (vid && vid.kind === "model") {
@@ -868,6 +882,8 @@
         video_path: pathOf(/\/(video|overlay|model)\.[a-z0-9]+$/),
         audio_path: kind === "album" ? pathOf(/\/album\/01\.(mp3|wav)$/) : pathOf(/\/song\.(mp3|wav)$/),
         is_album: kind === "album",
+        depth_path: pathOf(/\/depth\.png$/),
+        overlay_depth_path: pathOf(/\/overlay-depth\.png$/),
         video_dl_path: pathOf(/\/download\.[a-z0-9]+$/),
         audio_format: mp3 ? mp3.format : "mp3",
         cover_aspect: img.w / img.h,

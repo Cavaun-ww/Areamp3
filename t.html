@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=95">
+<link rel="stylesheet" href="styles.css?v=96">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=95"></script>
-<script src="app.js?v=95"></script>
+<script src="config.js?v=96"></script>
+<script src="app.js?v=96"></script>
 <style>
   .rel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
   @media (max-width: 760px) { .rel { grid-template-columns: minmax(0, 1fr); gap: 20px; } }
@@ -126,7 +126,8 @@
     (t.is_private && mine ? '<div class="banner">PRIVATE — hidden from Explore and your page. Anyone with the link or QR code can still open it.</div>' : "") +
     (!t.is_published ? '<div class="banner">HIDDEN — only you can see this track. Publish it from My page.</div>' : "") +
     '<div class="rel">' +
-      '<div class="art"><img alt=""' + (blur ? ' class="blurred"' : "") + ' src="' + esc(App.publicUrl(t.cover_path)) + '">' +
+      '<div class="art"><img alt=""' + (blur ? ' class="blurred"' : App.depthAttr(t)) + ' src="' + esc(App.publicUrl(t.cover_path)) + '">' +
+        (!blur && t.depth_path && App.Depth3D.needsAsk() ? '<button type="button" class="d3-ask" id="d3-ask">◆ Tap for 3D tilt</button>' : "") +
         (blur ? '<span class="hide-badge">FIND THE REAL ONE IN PERSON</span>' : "") + App.copiesBadge(t) + "</div>" + // music only plays in the AR camera
       "<div>" +
         '<div class="label">' + esc(t.genre || "Single") + (App.hasSong(t) && !locked ? " · scan to listen" : App.hasSong(t) ? " · plays once you find it" : "") + "</div>" +
@@ -203,6 +204,8 @@
     if (tr.data) t.copies_taken = tr.data.copies_taken;
     paintCopies();
   };
+  // iPhone: motion needs one tap to allow, then the cover tilts in 3D
+  if ($("d3-ask")) $("d3-ask").onclick = () => { App.Depth3D.askMotion(); $("d3-ask").remove(); };
   const buyBtn = $("buy");
   const main = App.hasSong(t) ? App.songType(t) : "video";
   const label = () => {

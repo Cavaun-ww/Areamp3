@@ -343,6 +343,111 @@
     restart();
   }
 
+  // ── 3D depth: photos shift with depth when you tilt your phone (or move the mouse, or scroll) ──
+  // Any <img data-depth="…"> on the page gets the effect. One shared WebGL renderer draws them all.
+  function depthAttr(t) { return t && t.depth_path && !t.photo_hidden ? ' data-depth="' + esc(publicUrl(t.depth_path)) + '"' : ""; }
+  const Depth3D = (function () {
+    const items = new Set();
+    let gl, prog, buf, loc, glc, tilt = { x: 0, y: 0 }, tiltOn = false, base = null, raf = 0, mouse = null;
+    const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    function setup() {
+      if (gl !== undefined) return !!gl;
+      glc = document.createElement("canvas");
+      gl = glc.getContext("webgl", { premultipliedAlpha: false, preserveDrawingBuffer: true }) || null;
+      if (!gl) return false;
+      const vs = "attribute vec2 p;varying vec2 v;void main(){v=vec2(p.x*.5+.5,.5-p.y*.5);gl_Position=vec4(p,0.,1.);}";
+      // look up the photo a little to the side, more for close things than far things (7 small steps to avoid tearing)
+      const fs = "precision mediump float;varying vec2 v;uniform sampler2D img,dep;uniform vec2 off,sc,o;" +
+        "vec2 m(vec2 u){return o+u*sc;}" +
+        "void main(){vec2 u=v;for(int i=0;i<7;i++){float d=texture2D(dep,m(u)).r;u=v+off*(d-.45);}" +
+        "gl_FragColor=texture2D(img,m(clamp(u,0.,1.)));}";
+      const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
+      prog = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(prog);
+      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { gl = null; return false; }
+      gl.useProgram(prog);
+      buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+      const a = gl.getAttribLocation(prog, "p"); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
+      loc = { img: gl.getUniformLocation(prog, "img"), dep: gl.getUniformLocation(prog, "dep"), off: gl.getUniformLocation(prog, "off"), sc: gl.getUniformLocation(prog, "sc"), o: gl.getUniformLocation(prog, "o") };
+      gl.uniform1i(loc.img, 0); gl.uniform1i(loc.dep, 1);
+      return true;
+    }
+    function tex(im) {
+      const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, im); return t;
+    }
+    const loadImg = (src) => new Promise((ok, no) => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => ok(i); i.onerror = no; i.src = src; });
+    async function attach(el) {
+      if (el._d3 || !el.dataset.depth || el.classList.contains("blurred")) return;
+      el._d3 = true;
+      if (!setup()) return;
+      try {
+        const [im, dp] = await Promise.all([loadImg(el.currentSrc || el.src), loadImg(el.dataset.depth)]);
+        const cv = document.createElement("canvas"); cv.className = "d3"; cv.setAttribute("aria-hidden", "true");
+        el.insertAdjacentElement("afterend", cv);
+        const it = { el, cv, ctx: cv.getContext("2d"), ti: tex(im), td: tex(dp), ar: im.naturalWidth / im.naturalHeight, vis: true, last: "" };
+        items.add(it);
+        if ("IntersectionObserver" in window) new IntersectionObserver((es) => es.forEach((e) => (it.vis = e.isIntersecting)), { rootMargin: "60px" }).observe(cv);
+        kick();
+      } catch (e) { /* no depth for this one: the normal photo stays */ }
+    }
+    function draw(it, now) {
+      if (!document.contains(it.el)) { items.delete(it); it.cv.remove(); return; }
+      if (!it.vis) return;
+      const r = it.el.getBoundingClientRect(); if (!r.width) return;
+      // which way to shift: phone tilt → mouse over it → where it sits on the screen while you scroll
+      let x = 0, y = 0;
+      if (tiltOn) { x = tilt.x; y = tilt.y; }
+      else if (mouse) { x = (mouse.x - (r.left + r.width / 2)) / Math.max(200, r.width); y = (mouse.y - (r.top + r.height / 2)) / Math.max(200, r.height); }
+      else { y = ((r.top + r.height / 2) / innerHeight - 0.5) * 1.2; x = reduce ? 0 : Math.sin(now / 2600 + r.left / 300) * 0.35; }
+      x = Math.max(-1, Math.min(1, x)); y = Math.max(-1, Math.min(1, y));
+      const big = r.width > 360, k = big ? 0.045 : 0.035;
+      const key = x.toFixed(3) + y.toFixed(3) + r.width + "x" + r.height;
+      if (key === it.last) return; it.last = key;
+      const dpr = Math.min(2, devicePixelRatio || 1), W = Math.round(r.width * dpr), H = Math.round(r.height * dpr);
+      if (it.cv.width !== W || it.cv.height !== H) { it.cv.width = W; it.cv.height = H; }
+      glc.width = W; glc.height = H; gl.viewport(0, 0, W, H);
+      // object-fit: cover
+      const br = r.width / r.height; let sx = 1, sy = 1;
+      if (it.ar > br) sx = br / it.ar; else sy = it.ar / br;
+      gl.uniform2f(loc.sc, sx, sy); gl.uniform2f(loc.o, (1 - sx) / 2, (1 - sy) / 2); gl.uniform2f(loc.off, -x * k, -y * k);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, it.ti);
+      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, it.td);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      it.ctx.clearRect(0, 0, W, H); it.ctx.drawImage(glc, 0, 0);
+    }
+    function frame(now) { raf = 0; items.forEach((it) => draw(it, now)); if (items.size) raf = requestAnimationFrame(frame); }
+    function kick() { if (!raf && items.size) raf = requestAnimationFrame(frame); }
+    // phone tilt (Android right away; iPhone after it allows motion)
+    function onTilt(e) {
+      if (e.beta == null) return;
+      if (!base) base = { b: e.beta, g: e.gamma };
+      tilt = { x: Math.max(-1, Math.min(1, (e.gamma - base.g) / 18)), y: Math.max(-1, Math.min(1, (e.beta - base.b) / 18)) }; tiltOn = true;
+    }
+    function askMotion() {
+      const D = window.DeviceOrientationEvent;
+      if (D && typeof D.requestPermission === "function") D.requestPermission().then((s) => {
+        if (s === "granted") { addEventListener("deviceorientation", onTilt); try { localStorage.setItem("d3ok", "1"); } catch (e) {} }
+      }).catch(() => {});
+    }
+    if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission !== "function") addEventListener("deviceorientation", onTilt);
+    // iPhone that already said yes once: turn tilt back on with the first tap on any page (no new prompt)
+    else { let ok = false; try { ok = localStorage.getItem("d3ok") === "1"; } catch (e) {} if (ok) addEventListener("touchend", askMotion, { once: true, passive: true }); }
+    addEventListener("pointermove", (e) => { if (e.pointerType === "mouse") { mouse = { x: e.clientX, y: e.clientY }; kick(); } }, { passive: true });
+    addEventListener("scroll", kick, { passive: true });
+    document.addEventListener("mouseleave", () => (mouse = null));
+    function scan(root) { (root || document).querySelectorAll("img[data-depth]").forEach((el) => { if (el.complete) attach(el); else el.addEventListener("load", () => attach(el), { once: true }); }); }
+    function start() {
+      scan();
+      new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((n) => { if (n.nodeType === 1) { if (n.matches && n.matches("img[data-depth]")) scan(n.parentNode); else if (n.querySelector) scan(n); } })))
+        .observe(document.body, { childList: true, subtree: true });
+    }
+    if (document.body) start(); else document.addEventListener("DOMContentLoaded", start);
+    return { askMotion, scan, needsAsk: () => !!(window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === "function") && !tiltOn && matchMedia("(pointer: coarse)").matches };
+  })();
+
   // ── limited copies ("only 50 copies") ──
   function copiesInfo(t) {
     if (!t || t.max_copies == null) return null;
@@ -362,7 +467,7 @@
     // blurred drops stay blurred on every public page (even for the artist); only My page shows them clear
     const blur = t.photo_hidden && !opts.mine;
     return '<div class="tk' + (isLocked(t) ? " locked" : "") + '">' +
-      '<div class="cov"><a href="' + esc(trackLink(t.slug)) + '"><img loading="lazy" alt=""' + (blur ? ' class="blurred"' : "") + ' src="' + esc(publicUrl(t.cover_path)) + '"></a>' +
+      '<div class="cov"><a href="' + esc(trackLink(t.slug)) + '"><img loading="lazy" alt=""' + (blur ? ' class="blurred"' : depthAttr(t)) + ' src="' + esc(publicUrl(t.cover_path)) + '"></a>' +
         (t.photo_hidden ? '<span class="hide-badge"><i></i>FIND IT IN PERSON</span>' : "") +
         '<div class="tags">' + (t.has_location ? '<span class="pin-chip" title="Has a location">' + PIN_SVG + "</span>" : "") +
         '<span class="pill solid ty">' + esc(t.is_album ? "ALBUM · " + (t.album_count || "") : !hasSong(t) ? "VIDEO" : hasVid(t) ? songType(t) + "+VID" : songType(t)) + "</span>" + "</div>" + // always say what the file is
@@ -378,7 +483,7 @@
         (opts.actions || "") +
       "</div></div>";
   }
-  const TRACK_COLS = "id, slug, owner, title, genre, description, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, duration, price, currency, created_at, audio_format, has_song, has_video, pop_scale, lift, key_mode, is_private, photo_hidden, has_location, place_name, place_area, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, profiles!owner(handle, display_name, avatar_path, verified, theme, bg_color, bg_image_path), likes(count), comments(count)";
+  const TRACK_COLS = "id, slug, owner, title, genre, description, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, duration, price, currency, created_at, audio_format, has_song, has_video, pop_scale, lift, key_mode, is_private, photo_hidden, has_location, place_name, place_area, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, depth_path, profiles!owner(handle, display_name, avatar_path, verified, theme, bg_color, bg_image_path), likes(count), comments(count)";
   const nLikes = (t) => (t.likes && t.likes[0] && t.likes[0].count) || 0;
   const nComments = (t) => (t.comments && t.comments[0] && t.comments[0].count) || 0;
   // artist's share of each sale, as shown on the site (the real split is set on the server)
@@ -814,7 +919,7 @@
     toast, timeAgo, getSession, signInUrl, requireAuth, callFunction, mountHeader, ensureHandle, avatarHTML, squareJpeg,
     play, playButton, registerTracks, trackCard, TRACK_COLS, nLikes, nComments, artistCut, isPro, proBadge, vBadge, THEMES, applyTheme, BG_COLORS, applyBackground, loadPayPal, followerCount, mountFollow, buy, download, owns, startDownload,
     renderQR, copy, share,
-    isLocked, lockTag, lockReward, secretWord, copiesInfo, copiesBadge, refreshInbox, stepsSlider, hasUnlocked, playFull,
+    isLocked, lockTag, lockReward, secretWord, copiesInfo, copiesBadge, refreshInbox, stepsSlider, Depth3D, depthAttr, hasUnlocked, playFull,
     loadLeaflet, makeMap, pinIcon, areaCircle, pickLocation, locationColumns, hereNow, milesBetween, distLabel, directionsUrl,
     mountEffects, effectsSummary,
   };
