@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=64">
+<link rel="stylesheet" href="styles.css?v=65">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=64"></script>
-<script src="app.js?v=64"></script>
+<script src="config.js?v=65"></script>
+<script src="app.js?v=65"></script>
 <style>
   .rel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
   @media (max-width: 760px) { .rel { grid-template-columns: minmax(0, 1fr); gap: 20px; } }
@@ -116,7 +116,7 @@
   let myCopy = null;
   if (me && t.max_copies != null) { const c = await sb.from("copies").select("num").eq("track_id", t.id).eq("user_id", me).maybeSingle(); myCopy = c.data ? c.data.num : null; }
   const finds = locked ? ((await sb.rpc("unlock_count", { tid: t.id })).data || 0) : 0;
-  const blur = t.photo_hidden && !mine;
+  const blur = t.photo_hidden; // blurred for everyone on the song page, the artist too (only My page shows it clear)
   t._found = found || mine; // they found it (or it's theirs): the whole song plays
 
   box.innerHTML =
