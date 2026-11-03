@@ -503,7 +503,7 @@ html:has(body.modal-open) { overflow: hidden; }
 .slide-cta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
 .slide-by { position: absolute; right: 18px; bottom: 50px; z-index: 2; font-size: .82rem; color: #ddd; text-align: right; }
 .slide-dots { position: absolute; left: 0; right: 0; bottom: 18px; z-index: 3; display: flex; justify-content: center; gap: 10px; }
-.slide-dots button { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid #fff; background: transparent; padding: 0; cursor: pointer; }
+.slide-dots button { width: 10px; height: 10px; border-radius: 0; border: 1.5px solid #fff; background: transparent; padding: 0; cursor: pointer; }
 .slide-dots button.on { background: #fff; }
 @media (max-width: 560px) { .slide { min-height: 400px; } .slide-in { padding: 26px 20px 56px; } }
 #creator .slide { min-height: 290px; }
