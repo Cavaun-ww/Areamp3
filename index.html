@@ -10,18 +10,25 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=78">
+<link rel="stylesheet" href="styles.css?v=79">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=78"></script>
-<script src="app.js?v=78"></script>
+<script src="config.js?v=79"></script>
+<script src="app.js?v=79"></script>
 <style>
   .hero { min-height: min(78vh, 720px); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 60px 20px 50px; border-bottom: 1px solid var(--line); }
-  /* New Drops: one row you swipe across */
-  .drops-row { display: flex !important; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 10px; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: #333 transparent; }
-  .drops-row > .tk { flex: 0 0 calc((100% - 14px) / 2.2); scroll-snap-align: start; min-width: 0; }
-  @media (min-width: 700px) { .drops-row > .tk { flex-basis: calc((100% - 56px) / 5); } } /* computer: all 5 fit across */
-  .drops-row::-webkit-scrollbar { height: 4px; } .drops-row::-webkit-scrollbar-thumb { background: #333; }
-  .drops-row > .empty { flex: 1 1 100%; }
+  /* New Drops: right under the logo, sliding left on its own (pauses when you touch or hover it) */
+  .hero { min-height: auto; padding-bottom: 28px; border-bottom: 0; }
+  .sec.drops-sec { padding-top: 0; }
+  .marquee { overflow: hidden; position: relative; margin: 0 -16px; padding: 0 16px;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); }
+  .marquee-track { display: flex; gap: 14px; width: max-content; }
+  .marquee-track.run { animation: dropsSlide var(--slide, 40s) linear infinite; }
+  .marquee:hover .marquee-track, .marquee.hold .marquee-track { animation-play-state: paused; }
+  .marquee-track > .tk { flex: 0 0 200px; min-width: 0; }
+  @media (min-width: 700px) { .marquee-track > .tk { flex-basis: 240px; } }
+  .marquee-track > .empty { width: min(92vw, 1100px); }
+  @keyframes dropsSlide { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  @media (prefers-reduced-motion: reduce) { .marquee { overflow-x: auto; } .marquee-track.run { animation: none; } }
   .hero .logo { width: min(440px, 78vw); display: block; }
   /* AR scan over the logo: brackets lock on, a beam sweeps, the letters light up as it passes */
   .scan { position: relative; margin-bottom: 44px; padding: 22px 26px; --dur: 4.2s; }
@@ -131,6 +138,11 @@
     <div class="boot cursor">AR › MUSIC › LOCATION › FIND › UNLOCK</div>
   </section>
 
+  <section class="sec drops-sec">
+    <div class="sec-head"><h2>New drops <span>/ latest experiences</span></h2><a class="btn btn-sm" href="explore.html">See all →</a></div>
+    <div class="marquee" id="latest-wrap"><div class="marquee-track" id="latest"><p class="muted mono small">Loading<span class="cursor"></span></p></div></div>
+  </section>
+
   <section class="sec">
     <div class="sec-head"><h2>How it works <span>/ 3 steps</span></h2></div>
     <div class="steps">
@@ -140,10 +152,6 @@
     </div>
   </section>
 
-  <section class="sec">
-    <div class="sec-head"><h2>New drops <span>/ latest experiences</span></h2><a class="btn btn-sm" href="explore.html">See all →</a></div>
-    <div class="grid drops-row" id="latest"><p class="muted mono small">Loading<span class="cursor"></span></p></div>
-  </section>
 
   <section class="sec">
     <div class="split">
@@ -201,8 +209,19 @@
     const { data, error } = await App.sb.from("tracks").select(App.TRACK_COLS).eq("is_published", true).eq("is_private", false).order("created_at", { ascending: false }).limit(5); // 5 newest; See all opens the rest
     if (error) throw error;
     App.registerTracks(data);
-    $("latest").innerHTML = data.length ? data.map((t) => App.trackCard(t)).join("")
-      : '<div class="empty" style="grid-column:1/-1">No tracks yet. <a href="upload.html">Be the first →</a></div>';
+    if (!data.length) { $("latest").innerHTML = '<div class="empty">No tracks yet. <a href="upload.html">Be the first →</a></div>'; }
+    else {
+      // repeat the cards so the row is always wider than the screen, then twice for a seamless loop
+      const one = data.map((t) => App.trackCard(t)).join("");
+      const per = Math.max(1, Math.ceil((window.innerWidth + 300) / (data.length * 254)));
+      const half = one.repeat(per);
+      $("latest").innerHTML = half + half;
+      $("latest").style.setProperty("--slide", Math.max(20, data.length * per * 6) + "s");
+      $("latest").classList.add("run");
+      const w = $("latest-wrap");
+      w.addEventListener("touchstart", () => w.classList.add("hold"), { passive: true });
+      w.addEventListener("touchend", () => setTimeout(() => w.classList.remove("hold"), 1500), { passive: true });
+    }
   } catch (e) {
     $("latest").innerHTML = '<div class="empty" style="grid-column:1/-1"><a href="explore.html">See music on Explore →</a></div>';
   }
