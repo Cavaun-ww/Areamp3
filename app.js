@@ -315,8 +315,8 @@
   function trackCard(t, opts) {
     opts = opts || {};
     const p = t.profiles || {};
-    // blurred drops stay blurred for everyone except the artist who uploaded them
-    const blur = t.photo_hidden && !opts.mine && !(meId && t.owner === meId);
+    // blurred drops stay blurred on every public page (even for the artist); only My page shows them clear
+    const blur = t.photo_hidden && !opts.mine;
     return '<div class="tk' + (isLocked(t) ? " locked" : "") + '">' +
       '<div class="cov"><a href="' + esc(trackLink(t.slug)) + '"><img loading="lazy" alt=""' + (blur ? ' class="blurred"' : "") + ' src="' + esc(publicUrl(t.cover_path)) + '"></a>' +
         (t.photo_hidden ? '<span class="hide-badge"><i></i>FIND IT IN PERSON</span>' : "") +
