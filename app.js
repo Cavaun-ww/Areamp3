@@ -315,7 +315,7 @@
   const STEP_SLIDES = [
     { img: "step-1.jpg", n: "Step 1 of 3", h: "Upload your art.", p: "Pick the image people will point their camera at: a poster, sticker, mural or album cover. It becomes your cover art too.", by: "" },
     { img: "step-2.jpg", n: "Step 2 of 3", h: "Bring it to life.", p: "Add your song, plus a photo, GIF, video or 3D model that appears over your art when people see it through their phone.", by: "" },
-    { img: "step-3.jpg", n: "Step 3 of 3", h: "Hide it. Get found.", p: "Name it, set your price, pin a location and publish. Listeners find your art, see it come to life, and unlock your music.", by: "" },
+    { img: "step-3.jpg", n: "Step 3 of 3", h: "Hide it. Get discovered.", p: "Name it, set your price, pin a location and publish. Listeners find your art, see it come to life, and unlock your music.", by: "" },
   ];
   function stepsSlider(el, opts) {
     opts = opts || {};
@@ -325,7 +325,7 @@
       '<div class="slide s' + (i + 1) + '" role="group" aria-label="' + esc(s.n) + '">' +
         '<img class="slide-bg" alt="" src="' + esc(s.img) + '" onerror="this.remove()">' +
         '<div class="slide-in"><div class="slide-n">' + esc(s.n) + "</div><h3>" + esc(s.h) + "</h3><p>" + esc(s.p) + "</p>" +
-        (btns ? '<div class="slide-cta"><a class="btn btn-primary" href="upload.html">Create an experience</a>' + (i === 2 ? '<a class="btn btn-ghost" href="explore.html">Explore music</a>' : "") + "</div>" : "") +
+        (btns ? '<div class="slide-cta"><a class="btn btn-primary" href="upload.html">Get started</a>' + (i === 2 ? '<a class="btn btn-ghost" href="explore.html">Explore music</a>' : "") + "</div>" : "") +
         "</div>" + (s.by ? '<div class="slide-by">' + esc(s.by) + "</div>" : "") + "</div>").join("") + "</div>" +
       '<div class="slide-dots">' + STEP_SLIDES.map((_, i) => '<button type="button" aria-label="Slide ' + (i + 1) + '"' + (i ? "" : ' class="on"') + "></button>").join("") + "</div>";
     const track = el.querySelector(".slides-track"), dots = [...el.querySelectorAll(".slide-dots button")];
