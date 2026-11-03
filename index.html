@@ -10,28 +10,26 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=80">
+<link rel="stylesheet" href="styles.css?v=81">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=80"></script>
-<script src="app.js?v=80"></script>
+<script src="config.js?v=81"></script>
+<script src="app.js?v=81"></script>
 <style>
   .hero { min-height: min(78vh, 720px); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 60px 20px 50px; border-bottom: 1px solid var(--line); }
   /* New Drops: right under the logo, sliding left on its own (pauses when you touch or hover it) */
   .hero { min-height: auto; padding-bottom: 28px; border-bottom: 0; }
   .sec.drops-sec { padding-top: 0; }
   /* (no CSS mask here: iPhone Safari stops drawing moving cards inside a mask) */
-  .marquee { overflow: hidden; position: relative; margin: 0 -16px; padding: 0 16px; }
-  .marquee::before, .marquee::after { content: ""; position: absolute; top: 0; bottom: 0; width: 28px; z-index: 3; pointer-events: none; }
-  .marquee::before { left: 0; background: linear-gradient(90deg, var(--bg, #000), transparent); }
-  .marquee::after { right: 0; background: linear-gradient(270deg, var(--bg, #000), transparent); }
-  .marquee-track { display: flex; gap: 14px; width: max-content; will-change: transform; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
-  .marquee-track.run { animation: dropsSlide var(--slide, 40s) linear infinite; }
-  .marquee:hover .marquee-track, .marquee.hold .marquee-track { animation-play-state: paused; }
+  .marquee { overflow-x: auto; overflow-y: hidden; position: relative; margin: 0 -16px; padding: 0 16px; -webkit-overflow-scrolling: touch; scrollbar-width: none; overscroll-behavior-x: contain; }
+  .marquee::-webkit-scrollbar { display: none; }
+  .marquee-wrap { position: relative; }
+  .marquee-wrap::before, .marquee-wrap::after { content: ""; position: absolute; top: 0; bottom: 0; width: 22px; z-index: 3; pointer-events: none; }
+  .marquee-wrap::before { left: -16px; background: linear-gradient(90deg, var(--bg, #000), transparent); }
+  .marquee-wrap::after { right: -16px; background: linear-gradient(270deg, var(--bg, #000), transparent); }
+  .marquee-track { display: flex; gap: 14px; width: max-content; }
   .marquee-track > .tk { flex: 0 0 200px; min-width: 0; }
   @media (min-width: 700px) { .marquee-track > .tk { flex-basis: 240px; } }
   .marquee-track > .empty { width: min(92vw, 1100px); }
-  @keyframes dropsSlide { from { transform: translate3d(0,0,0); } to { transform: translate3d(-50%,0,0); } }
-  @media (prefers-reduced-motion: reduce) { .marquee { overflow-x: auto; } .marquee-track.run { animation: none; } }
   .hero .logo { width: min(440px, 78vw); display: block; }
   /* AR scan over the logo: brackets lock on, a beam sweeps, the letters light up as it passes */
   .scan { position: relative; margin-bottom: 44px; padding: 22px 26px; --dur: 4.2s; }
@@ -143,7 +141,7 @@
 
   <section class="sec drops-sec">
     <div class="sec-head"><h2>New drops <span>/ latest experiences</span></h2><a class="btn btn-sm" href="explore.html">See all →</a></div>
-    <div class="marquee" id="latest-wrap"><div class="marquee-track" id="latest"><p class="muted mono small">Loading<span class="cursor"></span></p></div></div>
+    <div class="marquee-wrap"><div class="marquee" id="latest-wrap"><div class="marquee-track" id="latest"><p class="muted mono small">Loading<span class="cursor"></span></p></div></div></div>
   </section>
 
   <section class="sec">
@@ -209,7 +207,7 @@
   $("foot-name").textContent = "© " + new Date().getFullYear() + " " + App.C.SITE_NAME;
   if (!App.configured) { $("latest").innerHTML = '<div class="empty" style="grid-column:1/-1">Tracks show up here once the site is connected.</div>'; return; }
   try {
-    const { data, error } = await App.sb.from("tracks").select(App.TRACK_COLS).eq("is_published", true).eq("is_private", false).order("created_at", { ascending: false }).limit(5); // 5 newest; See all opens the rest
+    const { data, error } = await App.sb.from("tracks").select(App.TRACK_COLS).eq("is_published", true).eq("is_private", false).order("created_at", { ascending: false }).limit(10); // 10 newest; See all opens the rest
     if (error) throw error;
     App.registerTracks(data);
     if (!data.length) { $("latest").innerHTML = '<div class="empty">No tracks yet. <a href="upload.html">Be the first →</a></div>'; }
@@ -219,11 +217,26 @@
       const per = Math.max(1, Math.ceil((window.innerWidth + 300) / (data.length * 254)));
       const half = one.repeat(per);
       $("latest").innerHTML = (half + half).replace(/ loading="lazy"/g, ""); // load every cover now (lazy images never load inside a moving row on iPhone)
-      $("latest").style.setProperty("--slide", Math.max(20, data.length * per * 6) + "s");
-      $("latest").classList.add("run");
-      const w = $("latest-wrap");
-      w.addEventListener("touchstart", () => w.classList.add("hold"), { passive: true });
-      w.addEventListener("touchend", () => setTimeout(() => w.classList.remove("hold"), 1500), { passive: true });
+      // slides left on its own; touch or hover pauses it and you can swipe/scroll it yourself
+      const w = $("latest-wrap"), reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      let hold = 0, last = 0, x = 0;
+      const pause = (ms) => { hold = Math.max(hold, performance.now() + ms); };
+      w.addEventListener("touchstart", () => pause(1e9), { passive: true });
+      w.addEventListener("touchend", () => { hold = 0; pause(2500); }, { passive: true });
+      w.addEventListener("mouseenter", () => pause(1e9));
+      w.addEventListener("mouseleave", () => { hold = 0; pause(800); });
+      w.addEventListener("wheel", () => pause(2500), { passive: true });
+      const step = (now) => {
+        requestAnimationFrame(step);
+        const dt = Math.min(64, now - (last || now)); last = now;
+        const k = $("latest").children, halfW = k.length > 1 ? k[k.length / 2].offsetLeft - k[0].offsetLeft : 1e9;
+        if (w.scrollLeft >= halfW) w.scrollLeft -= halfW;           // seamless loop (also after a swipe)
+        else if (w.scrollLeft <= 0 && now < hold) w.scrollLeft += halfW;
+        if (reduce || now < hold || document.hidden) { x = w.scrollLeft; return; }
+        x = (Math.abs(x - w.scrollLeft) > 2 ? w.scrollLeft : x) + dt * 0.035; // ~35px a second
+        w.scrollLeft = x;
+      };
+      requestAnimationFrame(step);
     }
   } catch (e) {
     $("latest").innerHTML = '<div class="empty" style="grid-column:1/-1"><a href="explore.html">See music on Explore →</a></div>';
