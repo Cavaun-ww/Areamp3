@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=100">
+<link rel="stylesheet" href="styles.css?v=102">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=100"></script>
-<script src="app.js?v=100"></script>
-<script src="depth.js?v=100"></script>
+<script src="config.js?v=102"></script>
+<script src="app.js?v=102"></script>
+<script src="depth.js?v=102"></script>
 <style>
   .wave { width: 100%; height: 64px; display: block; background: #050505; border: 1px solid var(--line); margin-top: 12px; }
   .rng { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: .82rem; color: var(--text-2); }
@@ -169,6 +169,8 @@
         <details class="box" id="more-box">
           <summary>More details <span class="small muted">(optional)</span></summary>
           <div class="stack" style="margin-top:12px">
+            <label class="toggle"><input type="checkbox" id="d3-on"><span class="switch" aria-hidden="true"></span>
+              <span><b>3D effect</b><br><span class="small muted">Your art and photo or GIF move in 3D on the site and in the AR camera.</span></span></label>
             <label class="field"><span>Genre</span>
               <select class="input" id="genre">
                 <option value="">Choose…</option>
@@ -198,6 +200,10 @@
   App.mountHeader("upload");
   const C = App.C, sb = App.sb, $ = (id) => document.getElementById(id);
   document.querySelectorAll(".js-mp3mb").forEach((e) => (e.textContent = C.MAX_MP3_MB));
+  $("d3-on").addEventListener("change", () => {
+    if ($("d3-on").checked) makeOverlayDepth();
+    else { ovDepth = null; depthRun++; const c = $("drop-vid").querySelector("canvas.d3"); if (c) c.remove(); const pi = $("drop-vid").querySelector(".d3-wrap img"); if (pi) { delete pi.dataset.depth; pi._d3 = false; } }
+  });
   $("limit-on").addEventListener("change", () => { $("limit-field").hidden = !$("limit-on").checked; if ($("limit-on").checked) $("limit-n").focus(); });
   document.querySelectorAll(".js-glbmb").forEach((e) => (e.textContent = C.MAX_MODEL_MB || 25));
   document.querySelectorAll(".js-wavmb").forEach((e) => (e.textContent = C.MAX_WAV_MB || 50));
@@ -498,7 +504,7 @@
         showPreview("drop-vid", w, isGif ? "GIF" : "Photo");
         overlayDone();
         ovDepth = null; depthRun++;
-        if (!isGif) makeOverlayDepth(); // 3D depth happens on its own, quietly
+        if (!isGif && $("d3-on").checked) makeOverlayDepth();
       };
       im.onerror = () => App.toast(isGif ? "That GIF couldn't be read." : "That photo couldn't be read.", true);
       im.src = URL.createObjectURL(file);
@@ -839,7 +845,9 @@
 
       // 2b. 3D depth for the photo in step 2 (and the cover, so cards tilt too). Never stops the upload if it fails.
       let depthBlob = null, ovDepthBlob = null, ovDepthMeta = null;
-      if (window.AreaDepth && vid && vid.kind === "image" && !vid.gif) {
+      const want3D = $("d3-on").checked;
+      if (!want3D) { /* 3D is off: publish flat */ }
+      else if (window.AreaDepth && vid && vid.kind === "image" && !vid.gif) {
         try {
           ovDepthBlob = ovDepth || await AreaDepth.depthMap(vid.file, () => progress(46, "Getting your photo ready…"));
           depthBlob = await AreaDepth.depthMap(img.blob, () => progress(46, "Getting your photo ready…"));
@@ -852,7 +860,7 @@
         } catch (e) { console.warn("depth", e); ovDepthBlob = null; ovDepthMeta = null; }
       }
       // the cover always gets depth, so its card tilts on the site
-      if (window.AreaDepth && !depthBlob) { try { depthBlob = await AreaDepth.depthMap(img.blob); } catch (e) { console.warn("depth", e); } }
+      if (want3D && window.AreaDepth && !depthBlob) { try { depthBlob = await AreaDepth.depthMap(img.blob); } catch (e) { console.warn("depth", e); } }
 
       // 3. upload everything
       const folder = uid + "/" + crypto.randomUUID();
