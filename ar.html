@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=94"></script>
+<script src="config.js?v=95"></script>
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; font-family: "Chakra Petch", ui-monospace, monospace; color: #f4f4f4; }
@@ -268,7 +268,7 @@ body.desktop .steps, body.desktop #start { display: none; }
     $("by").innerHTML = "Loading songs…";
     $("step2").innerHTML = "Point your phone at <b>any " + esc(C.SITE_NAME) + " image</b>: a poster, sticker, mural or cover";
     $("song-btn").textContent = "Explore music"; $("song-btn").href = "explore.html";
-    var cols = "id, slug, owner, title, price, currency, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, pop_scale, lift, key_mode, photo_hidden, has_location, place_name, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, has_song, has_video, created_at, profiles!owner(handle, display_name, avatar_path, verified)";
+    var cols = "id, slug, owner, title, price, currency, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, pop_scale, lift, key_mode, photo_hidden, has_location, place_name, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, has_song, has_video, created_at, profiles!owner(handle, display_name, avatar_path, verified), likes(count), comments(count)";
     var base = function () { return sb.from("tracks").select(cols).eq("is_published", true).eq("is_private", false).not("mind_path", "is", null); };
     session = (await sb.auth.getSession()).data.session;
     me = session ? session.user.id : null;
@@ -287,7 +287,10 @@ body.desktop .steps, body.desktop #start { display: none; }
     near.concat(rs[0].data || []).forEach(function (x) { if (!seen[x.id] && list.length < EXPLORE_LIMIT) { seen[x.id] = 1; list.push(x); } });
     if (!list.length) { $("by").textContent = "No AR experiences yet."; $("start").textContent = "Nothing to scan yet"; return; }
     // collage of what you can scan (blurred where the artist hid the image)
-    $("collage").innerHTML = list.slice(0, 3).map(function (x) { return '<div><img alt="" loading="lazy"' + (x.photo_hidden ? ' class="blurred"' : "") + ' src="' + pub(x.cover_path) + '"></div>'; }).join("");
+    // the 3 most popular (most likes + comments) on the start screen
+    var pop = function (x) { return ((x.likes && x.likes[0] && x.likes[0].count) || 0) + ((x.comments && x.comments[0] && x.comments[0].count) || 0); };
+    var top3 = list.slice().sort(function (a, b) { return pop(b) - pop(a) || new Date(b.created_at) - new Date(a.created_at); }).slice(0, 3);
+    $("collage").innerHTML = top3.map(function (x) { return '<div><img alt="" loading="lazy"' + (x.photo_hidden ? ' class="blurred"' : "") + ' src="' + pub(x.cover_path) + '"></div>'; }).join("");
     $("collage").hidden = false;
     $("by").innerHTML = '<a href="explore.html">see all</a>';
     if (!isMobile) { $("start").textContent = "Open AR camera"; return; }
