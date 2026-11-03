@@ -389,6 +389,7 @@
         el.insertAdjacentElement("afterend", cv);
         const it = { el, cv, ctx: cv.getContext("2d"), ti: tex(im), td: tex(dp), ar: im.naturalWidth / im.naturalHeight, vis: true, last: "" };
         items.add(it);
+        if (items.size === 1 && needsAsk()) addEventListener("touchend", askMotion, { once: true, passive: true }); // iPhone: tilt after the first tap
         if ("IntersectionObserver" in window) new IntersectionObserver((es) => es.forEach((e) => (it.vis = e.isIntersecting)), { rootMargin: "60px" }).observe(cv);
         kick();
       } catch (e) { /* no depth for this one: the normal photo stays */ }
@@ -401,9 +402,9 @@
       let x = 0, y = 0;
       if (tiltOn) { x = tilt.x; y = tilt.y; }
       else if (mouse) { x = (mouse.x - (r.left + r.width / 2)) / Math.max(200, r.width); y = (mouse.y - (r.top + r.height / 2)) / Math.max(200, r.height); }
-      else { y = ((r.top + r.height / 2) / innerHeight - 0.5) * 1.2; x = reduce ? 0 : Math.sin(now / 2600 + r.left / 300) * 0.35; }
+      else { y = ((r.top + r.height / 2) / innerHeight - 0.5) * 1.6 + (reduce ? 0 : Math.cos(now / 3100 + r.top / 400) * 0.35); x = reduce ? 0 : Math.sin(now / 2200 + r.left / 300) * 0.9; }
       x = Math.max(-1, Math.min(1, x)); y = Math.max(-1, Math.min(1, y));
-      const big = r.width > 360, k = big ? 0.045 : 0.035;
+      const big = r.width > 360, k = big ? 0.06 : 0.07;
       const key = x.toFixed(3) + y.toFixed(3) + r.width + "x" + r.height;
       if (key === it.last) return; it.last = key;
       const dpr = Math.min(2, devicePixelRatio || 1), W = Math.round(r.width * dpr), H = Math.round(r.height * dpr);
@@ -445,7 +446,8 @@
         .observe(document.body, { childList: true, subtree: true });
     }
     if (document.body) start(); else document.addEventListener("DOMContentLoaded", start);
-    return { askMotion, scan, needsAsk: () => !!(window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === "function") && !tiltOn && matchMedia("(pointer: coarse)").matches };
+    function needsAsk() { return !!(window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === "function") && !tiltOn && matchMedia("(pointer: coarse)").matches; }
+    return { askMotion, scan, needsAsk };
   })();
 
   // ── limited copies ("only 50 copies") ──

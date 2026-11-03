@@ -9,10 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=98">
+<link rel="stylesheet" href="styles.css?v=99">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=98"></script>
-<script src="app.js?v=98"></script>
+<script src="config.js?v=99"></script>
+<script src="app.js?v=99"></script>
+<script src="depth.js?v=99"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -307,7 +308,7 @@
     if (d.open) openMore.add(d.dataset.more); else openMore.delete(d.dataset.more);
   }, true);
   async function loadTracks() {
-    const { data, error } = await sb.from("tracks").select(App.TRACK_COLS + ", is_published").eq("owner", uid).order("created_at", { ascending: false });
+    const { data, error } = await sb.from("tracks").select(App.TRACK_COLS + ", is_published, overlay_depth_path, overlay_depth_meta").eq("owner", uid).order("created_at", { ascending: false });
     if (error) { $("tracks").innerHTML = '<p class="muted">' + esc(error.message) + "</p>"; return; }
     mine = data; App.registerTracks(data);
     finds = {};
@@ -320,6 +321,43 @@
     $("drop-search-wrap").hidden = data.length < 2;
     if (!data.length) { $("tracks").innerHTML = '<div class="empty"><p style="margin-bottom:16px">Nothing here yet.</p><a class="btn btn-primary" href="upload.html">Create your first experience</a></div>'; return; }
     paintTracks();
+    setTimeout(catchUpDepth, 1500);
+  }
+  // drops made before 3D depth existed: make their depth now, quietly, one at a time, in this browser
+  let depthBusy = false;
+  async function catchUpDepth() {
+    if (depthBusy || !window.AreaDepth) return; depthBusy = true;
+    const tries = (() => { try { return JSON.parse(localStorage.getItem("d3try") || "{}"); } catch (e) { return {}; } })();
+    const saveTries = () => { try { localStorage.setItem("d3try", JSON.stringify(tries)); } catch (e) {} };
+    const isPic = (p) => /\.(jpe?g|png|webp)$/i.test(p || ""), isGif = (p) => /\.gif$/i.test(p || "");
+    let changed = false;
+    try {
+      for (const t of mine.slice()) {
+        const needCover = !t.depth_path && t.cover_path;
+        const needOv = t.video_path && !t.overlay_depth_path && (isPic(t.video_path) || isGif(t.video_path));
+        if (!needCover && !needOv) continue;
+        if ((tries[t.id] || 0) >= 2) continue; // tried twice already: leave it flat
+        tries[t.id] = (tries[t.id] || 0) + 1; saveTries();
+        const folder = (t.cover_path || t.video_path).split("/").slice(0, -1).join("/");
+        if (folder.split("/")[0] !== uid) continue;
+        const get = async (p) => { const r = await fetch(App.publicUrl(p)); if (!r.ok) throw new Error("fetch"); return r.blob(); };
+        const put = async (name, blob) => { const p = folder + "/" + name; const { error } = await sb.storage.from("media").upload(p, blob, { contentType: "image/png", upsert: false }); if (error) throw error; return p; };
+        const stamp = Date.now().toString(36), row = {};
+        try {
+          if (needCover) row.depth_path = await put("depth-" + stamp + ".png", await AreaDepth.depthMap(await get(t.cover_path)));
+          if (needOv && isPic(t.video_path)) row.overlay_depth_path = await put("overlay-depth-" + stamp + ".png", await AreaDepth.depthMap(await get(t.video_path)));
+          if (needOv && isGif(t.video_path)) {
+            const r = await AreaDepth.gifDepth(new File([await get(t.video_path)], "a.gif", { type: "image/gif" }));
+            row.overlay_depth_path = await put("overlay-depth-" + stamp + ".png", r.blob); row.overlay_depth_meta = r.meta;
+          }
+        } catch (e) { console.warn("depth", e); }
+        if (Object.keys(row).length) {
+          const { error } = await sb.from("tracks").update(row).eq("id", t.id);
+          if (!error) { Object.assign(t, row); changed = true; delete tries[t.id]; saveTries(); }
+        }
+      }
+    } finally { depthBusy = false; }
+    if (changed) paintTracks();
   }
   const norm = (s) => String(s || "").toLowerCase();
   function paintTracks() {

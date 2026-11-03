@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=98"></script>
+<script src="config.js?v=99"></script>
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; font-family: "Chakra Petch", ui-monospace, monospace; color: #f4f4f4; }
@@ -203,7 +203,7 @@ body.desktop .steps, body.desktop #start { display: none; }
   (async function load() {
     if (typeof AFRAME === "undefined") { status("AR library failed to load. Refresh to try again."); return; }
     if (isExplore) return loadExplore();
-    var cols = "id, slug, owner, title, price, currency, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, pop_scale, lift, key_mode, photo_hidden, has_location, place_name, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, overlay_depth_path, has_song, has_video, profiles!owner(handle, display_name, avatar_path, verified)";
+    var cols = "id, slug, owner, title, price, currency, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, pop_scale, lift, key_mode, photo_hidden, has_location, place_name, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, overlay_depth_path, overlay_depth_meta, has_song, has_video, profiles!owner(handle, display_name, avatar_path, verified)";
     var r = await sb.from("tracks").select(cols).eq("slug", slug).maybeSingle();
     if (r.error || !r.data) { $("title").textContent = "Not found"; $("by").textContent = "This link may have been removed."; $("start").textContent = "Unavailable"; $("song-btn").hidden = true; return; }
     t = r.data;
@@ -268,7 +268,7 @@ body.desktop .steps, body.desktop #start { display: none; }
     $("by").innerHTML = "Loading songs…";
     $("step2").innerHTML = "Point your phone at <b>any " + esc(C.SITE_NAME) + " image</b>: a poster, sticker, mural or cover";
     $("song-btn").textContent = "Explore music"; $("song-btn").href = "explore.html";
-    var cols = "id, slug, owner, title, price, currency, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, pop_scale, lift, key_mode, photo_hidden, has_location, place_name, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, overlay_depth_path, has_song, has_video, created_at, profiles!owner(handle, display_name, avatar_path, verified), likes(count), comments(count)";
+    var cols = "id, slug, owner, title, price, currency, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, pop_scale, lift, key_mode, photo_hidden, has_location, place_name, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, overlay_depth_path, overlay_depth_meta, has_song, has_video, created_at, profiles!owner(handle, display_name, avatar_path, verified), likes(count), comments(count)";
     var base = function () { return sb.from("tracks").select(cols).eq("is_published", true).eq("is_private", false).not("mind_path", "is", null); };
     session = (await sb.auth.getSession()).data.session;
     me = session ? session.user.id : null;
@@ -453,6 +453,8 @@ body.desktop .steps, body.desktop #start { display: none; }
       tctx.putImageData(im, 0, 0); ctx.drawImage(tmp, d.left, d.top);
       prev = f; self.changed = true;
     }
+    self.frame = function () { return i; };
+    self.count = function () { return frames.length; };
     self.step = function (dt) {
       if (!self.ready) return;
       wait -= dt; var guard = 0;
@@ -674,6 +676,33 @@ body.desktop .steps, body.desktop #start { display: none; }
           };
           di.src = pub(tr.overlay_depth_path);
         }
+        // 3D depth for GIFs and videos: a sheet of depth frames, followed in step with the animation
+        var dm = tr.overlay_depth_meta;
+        if (path && tr.overlay_depth_path && dm && dm.kind === "gif" && dm.n > 0 && dm.cols > 0 && this.gif) {
+          var si = new Image(); si.crossOrigin = "anonymous";
+          si.onload = function () {
+            try {
+              var cell = dm.cell || 128, c = document.createElement("canvas"); c.width = si.naturalWidth; c.height = si.naturalHeight;
+              var g = c.getContext("2d"); g.drawImage(si, 0, 0); var px = g.getImageData(0, 0, c.width, c.height).data, SW = c.width;
+              var seg = 64, geo = new THREE.PlaneGeometry(pw * pop, ph * pop, seg, seg), pos = geo.attributes.position, uv = geo.attributes.uv;
+              var nv = pos.count, at = new Int32Array(nv);
+              for (var v = 0; v < nv; v++) {
+                var x = Math.min(cell - 1, Math.round(uv.getX(v) * (cell - 1))), y = Math.min(cell - 1, Math.round((1 - uv.getY(v)) * (cell - 1)));
+                at[v] = y * SW + x;
+              }
+              // each frame's depth values for every vertex (0..1)
+              var fr = [];
+              for (var k = 0; k < dm.n; k++) {
+                var ox = (k % dm.cols) * cell, oy = Math.floor(k / dm.cols) * cell, base = oy * SW + ox, a = new Float32Array(nv);
+                for (var q = 0; q < nv; q++) a[q] = px[(base + at[q]) * 4] / 255;
+                fr.push(a);
+              }
+              mesh.geometry.dispose(); mesh.geometry = geo;
+              self.dz = { fr: fr, pos: pos, amt: 0.16 * pop * Math.min(pw, ph), meta: dm, last: -1, video: video };
+            } catch (e) { console.warn("depth", e); }
+          };
+          si.src = pub(tr.overlay_depth_path);
+        }
         this.mat = mat; this.visible = false;
         target.addEventListener("targetFound", function () {
           self.visible = true;
@@ -750,6 +779,22 @@ body.desktop .steps, body.desktop #start { display: none; }
           if (song) song.pause();
         });
       },
+      moveDepth: function () {
+        var z = this.dz, m = z.meta, n = z.fr.length, A, B, w = 0, key;
+        if (m.kind === "gif" && this.gif) {
+          var tot = this.gif.count(), f = this.gif.frame(); if (f < 0 || !tot) return;
+          var k = tot > 1 ? Math.round(f * (n - 1) / (tot - 1)) : 0; A = B = Math.min(n - 1, k); key = A;
+        } else if (z.video) {
+          var t = (z.video.currentTime || 0) / (m.step || 1), kA = Math.min(n - 1, Math.floor(t));
+          A = kA; B = Math.min(n - 1, kA + 1); w = t - kA; if (w < 0 || w > 1) w = 0;
+          key = A + Math.round(w * 8) / 8; // update about 8 times between depth frames: smooth and light
+          w = key - A;
+        } else return;
+        if (key === z.last) return; z.last = key;
+        var a = z.fr[A], b = z.fr[B], pos = z.pos, amt = z.amt, arr = pos.array;
+        for (var i = 0, len = a.length; i < len; i++) arr[i * 3 + 2] = (a[i] + (b[i] - a[i]) * w) * amt;
+        pos.needsUpdate = true;
+      },
       tick: function (time, dt) {
         if (this.isModel) {
           if (!this.holder) return;
@@ -764,6 +809,7 @@ body.desktop .steps, body.desktop #start { display: none; }
         if (!this.mat) return;
         if (this.lift && this.visible) this.el.object3D.position.z = 0.01 + this.lift + Math.sin(time / 900) * this.lift * 0.08;
         if (this.gif && this.visible) { this.gif.step(dt || 16); if (this.gif.changed) { this.gif.changed = false; this.gifTex.needsUpdate = true; } }
+        if (this.dz && this.visible) this.moveDepth();
         if (this.eq) this.eq.draw(time);
         this.mat.opacity += ((this.visible ? 1 : 0) - this.mat.opacity) * 0.2;
       },

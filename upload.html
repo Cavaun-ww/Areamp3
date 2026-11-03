@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=98">
+<link rel="stylesheet" href="styles.css?v=99">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=98"></script>
-<script src="app.js?v=98"></script>
-<script src="depth.js?v=98"></script>
+<script src="config.js?v=99"></script>
+<script src="app.js?v=99"></script>
+<script src="depth.js?v=99"></script>
 <style>
   .wave { width: 100%; height: 64px; display: block; background: #050505; border: 1px solid var(--line); margin-top: 12px; }
   .rng { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: .82rem; color: var(--text-2); }
@@ -838,13 +838,21 @@
       }
 
       // 2b. 3D depth for the photo in step 2 (and the cover, so cards tilt too). Never stops the upload if it fails.
-      let depthBlob = null, ovDepthBlob = null;
+      let depthBlob = null, ovDepthBlob = null, ovDepthMeta = null;
       if (window.AreaDepth && vid && vid.kind === "image" && !vid.gif) {
         try {
           ovDepthBlob = ovDepth || await AreaDepth.depthMap(vid.file, () => progress(46, "Getting your photo ready…"));
           depthBlob = await AreaDepth.depthMap(img.blob, () => progress(46, "Getting your photo ready…"));
         } catch (e) { console.warn("depth", e); } // no 3D on this device: publish as normal
+      } else if (window.AreaDepth && vid && vid.gif) {
+        progress(46, "Getting your GIF ready…");
+        try {
+          const r = await AreaDepth.gifDepth(vid.file, (p) => progress(46, "Getting your GIF ready… " + Math.round(p * 100) + "%"));
+          ovDepthBlob = r.blob; ovDepthMeta = r.meta;
+        } catch (e) { console.warn("depth", e); ovDepthBlob = null; ovDepthMeta = null; }
       }
+      // the cover always gets depth, so its card tilts on the site
+      if (window.AreaDepth && !depthBlob) { try { depthBlob = await AreaDepth.depthMap(img.blob); } catch (e) { console.warn("depth", e); } }
 
       // 3. upload everything
       const folder = uid + "/" + crypto.randomUUID();
@@ -900,6 +908,7 @@
         is_album: kind === "album",
         depth_path: pathOf(/\/depth\.png$/),
         overlay_depth_path: pathOf(/\/overlay-depth\.png$/),
+        overlay_depth_meta: pathOf(/\/overlay-depth\.png$/) ? ovDepthMeta : null,
         video_dl_path: pathOf(/\/download\.[a-z0-9]+$/),
         audio_format: mp3 ? mp3.format : "mp3",
         cover_aspect: img.w / img.h,
