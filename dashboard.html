@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=58">
+<link rel="stylesheet" href="styles.css?v=59">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=58"></script>
-<script src="app.js?v=58"></script>
+<script src="config.js?v=59"></script>
+<script src="app.js?v=59"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -333,7 +333,7 @@
     $("drop-count").textContent = words.length ? data.length + " of " + mine.length : "";
     if (!data.length) { $("tracks").innerHTML = '<p class="muted mono small" style="padding:20px 0">No drops match “' + esc(q) + '”.</p>'; return; }
     $("tracks").innerHTML = '<div class="grid">' + data.map((t) => App.trackCard(t, {
-      hideArtist: true,
+      hideArtist: true, mine: true,
       actions: '<div class="small muted mono">' + [t.is_published ? (t.is_private ? "PRIVATE" : "PUBLIC") : "HIDDEN", t.photo_hidden || App.isLocked(t) ? "BLURRED · " + (finds[t.id] || 0) + " FOUND" : "",
           t.max_copies != null ? (+t.copies_taken || 0) + "/" + t.max_copies + " COPIES" : ""].filter(Boolean).join(" · ") + "</div>" +
         '<div class="actions">' +

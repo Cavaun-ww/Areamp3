@@ -70,9 +70,11 @@
     return new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
   }
 
+  let meId = null; // who's looking (so artists see their own blurred art clearly)
   async function getSession() {
     if (!configured) return null;
     const { data } = await sb.auth.getSession();
+    meId = data.session ? data.session.user.id : null;
     return data.session;
   }
   function signInUrl(next) {
@@ -313,8 +315,10 @@
   function trackCard(t, opts) {
     opts = opts || {};
     const p = t.profiles || {};
+    // blurred drops stay blurred for everyone except the artist who uploaded them
+    const blur = t.photo_hidden && !opts.mine && !(meId && t.owner === meId);
     return '<div class="tk' + (isLocked(t) ? " locked" : "") + '">' +
-      '<div class="cov"><a href="' + esc(trackLink(t.slug)) + '"><img loading="lazy" alt=""' + (t.photo_hidden ? ' class="blurred"' : "") + ' src="' + esc(publicUrl(t.cover_path)) + '"></a>' +
+      '<div class="cov"><a href="' + esc(trackLink(t.slug)) + '"><img loading="lazy" alt=""' + (blur ? ' class="blurred"' : "") + ' src="' + esc(publicUrl(t.cover_path)) + '"></a>' +
         (t.photo_hidden ? '<span class="hide-badge"><i></i>FIND IT IN PERSON</span>' : "") +
         '<div class="tags">' + (t.has_location ? '<span class="pin-chip" title="Has a location">' + PIN_SVG + "</span>" : "") +
         (!hasSong(t) || hasVid(t) || t.audio_format === "wav" ? '<span class="pill solid ty">' + esc(!hasSong(t) ? "VIDEO" : hasVid(t) ? songType(t) + "+VID" : "WAV") + "</span>" : "") + "</div>" +

@@ -479,3 +479,5 @@ html:has(body.modal-open) { overflow: hidden; }
 .copies-box .mine { margin-top: 10px; font-family: var(--mono); font-size: .74rem; color: var(--text); letter-spacing: .08em; }
 .copies-box.last { border-color: #f4f4f4; }
 .copies-box.out .bar i { background: var(--muted); }
+/* blurred drops on cards: the card's own image styles must not undo the blur */
+.tk .cov img.blurred, .tk:hover .cov img.blurred { filter: blur(22px) grayscale(.4) brightness(.8); transform: scale(1.18); }
