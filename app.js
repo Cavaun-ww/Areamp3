@@ -332,7 +332,7 @@
       '<div class="cov"><a href="' + esc(trackLink(t.slug)) + '"><img loading="lazy" alt=""' + (blur ? ' class="blurred"' : "") + ' src="' + esc(publicUrl(t.cover_path)) + '"></a>' +
         (t.photo_hidden ? '<span class="hide-badge"><i></i>FIND IT IN PERSON</span>' : "") +
         '<div class="tags">' + (t.has_location ? '<span class="pin-chip" title="Has a location">' + PIN_SVG + "</span>" : "") +
-        (!hasSong(t) || hasVid(t) || t.audio_format === "wav" ? '<span class="pill solid ty">' + esc(!hasSong(t) ? "VIDEO" : hasVid(t) ? songType(t) + "+VID" : "WAV") + "</span>" : "") + "</div>" +
+        '<span class="pill solid ty">' + esc(!hasSong(t) ? "VIDEO" : hasVid(t) ? songType(t) + "+VID" : songType(t)) + "</span>" + "</div>" + // always say what the file is
         copiesBadge(t) +
         "</div>" + // music only plays in the AR camera
       '<div class="body">' +
