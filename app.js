@@ -325,7 +325,7 @@
       '<div class="slide s' + (i + 1) + '" role="group" aria-label="' + esc(s.n) + '">' +
         '<img class="slide-bg" alt="" src="' + esc(s.img) + '" onerror="this.remove()">' +
         '<div class="slide-in"><div class="slide-n">' + esc(s.n) + "</div><h3>" + esc(s.h) + "</h3><p>" + esc(s.p) + "</p>" +
-        (btns ? '<div class="slide-cta"><a class="btn btn-primary" href="upload.html">Get started</a>' + (i === 2 ? '<a class="btn btn-ghost" href="explore.html">Explore music</a>' : "") + "</div>" : "") +
+        (btns ? '<div class="slide-cta"><a class="btn btn-primary" href="upload.html">' + (i === 1 ? "Create an experience" : "Get started") + "</a>" + (i === 2 ? '<a class="btn btn-ghost" href="explore.html">Explore music</a>' : "") + "</div>" : "") +
         "</div>" + (s.by ? '<div class="slide-by">' + esc(s.by) + "</div>" : "") + "</div>").join("") + "</div>" +
       '<div class="slide-dots">' + STEP_SLIDES.map((_, i) => '<button type="button" aria-label="Slide ' + (i + 1) + '"' + (i ? "" : ' class="on"') + "></button>").join("") + "</div>";
     const track = el.querySelector(".slides-track"), dots = [...el.querySelectorAll(".slide-dots button")];
