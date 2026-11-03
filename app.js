@@ -242,7 +242,7 @@
       if (c && c.exp > Date.now()) fullUrl = c.url;
       else {
         callFunction("stream", { track_id: t.id }).then((o) => {
-          fullCache[t.id] = { url: o.url, exp: Date.now() + 50 * 60 * 1000 };
+          fullCache[t.id] = { url: o.url, exp: Date.now() + 50 * 1000 };
           play(t, o.url);
         }).catch((e) => toast(e.message, true));
         return;
@@ -268,7 +268,7 @@
     buy.onclick = (e) => { if (isLocked(t)) return; e.preventDefault(); App.buy(t); };
     if (wantFull) {
       callFunction("stream", { track_id: t.id }).then((o) => {
-        fullCache[t.id] = { url: o.url, exp: Date.now() + 50 * 60 * 1000 };
+        fullCache[t.id] = { url: o.url, exp: Date.now() + 50 * 1000 };
         if (!current || current.id !== t.id) return;
         audio.src = o.url; audio.currentTime = 0; audio.muted = false;
         audio.play().catch(() => toast("Tap play again to start it."));
