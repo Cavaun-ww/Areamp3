@@ -481,3 +481,7 @@ html:has(body.modal-open) { overflow: hidden; }
 .copies-box.out .bar i { background: var(--muted); }
 /* blurred drops on cards: the card's own image styles must not undo the blur */
 .tk .cov img.blurred, .tk:hover .cov img.blurred { filter: blur(22px) grayscale(.4) brightness(.8); transform: scale(1.18); }
+/* video trimmer: progress text stays inside the button on phones */
+.trim .row { flex-wrap: wrap; }
+.trim #trim-go { white-space: normal; height: auto; min-height: 44px; line-height: 1.35; padding: 10px 14px; flex: 1 1 100%; max-width: 100%; overflow-wrap: anywhere; text-align: center; }
+.trim #trim-cancel { flex: 0 0 auto; }
