@@ -35,7 +35,6 @@
     <div style="margin-bottom:18px">
       <h2>Make a music AR experience</h2>
       <div class="easy3-t">3 easy steps</div>
-      <div id="steps-slides" style="margin-top:12px"></div>
     </div>
 
     <!-- 1 TARGET IMAGE (same as Pixi Wizard) -->
@@ -183,7 +182,6 @@
 (async function () {
   App.mountHeader("upload");
   const C = App.C, sb = App.sb, $ = (id) => document.getElementById(id);
-  App.stepsSlider(document.getElementById("steps-slides"), { buttons: false });
   document.querySelectorAll(".js-mp3mb").forEach((e) => (e.textContent = C.MAX_MP3_MB));
   $("limit-on").addEventListener("change", () => { $("limit-field").hidden = !$("limit-on").checked; if ($("limit-on").checked) $("limit-n").focus(); });
   document.querySelectorAll(".js-glbmb").forEach((e) => (e.textContent = C.MAX_MODEL_MB || 25));
