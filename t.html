@@ -141,7 +141,7 @@
         '<div id="copies"></div>' +
         (!heard && !locked ? '<div class="note small" style="margin-top:12px">Hear it first: scan the art with the AR camera and listen. After that you can ' + (paid ? "buy and download" : "download") + " it here." + (me ? "" : ' <a href="' + esc(App.signInUrl("t.html?s=" + t.slug)) + '">Sign in</a> first so your scan counts.') + "</div>" : "") +
         (locked ? '<div class="secret"><div class="label">Secret ' + App.secretWord(t) + '</div>' +
-          '<p>' + (t.has_location ? "Go to the spot, open the AR camera and point it at the real image. When you're there, the " + App.secretWord(t) + " unlocks: " : "Find the real image out in the world, open the AR camera and point it at it. The " + App.secretWord(t) + " unlocks: ") + esc(App.lockReward(t)) + ".</p>" +
+          '<p>' + (t.has_location ? "Go to the spot, open the AR camera and point it at the real image. When you're there, the " + App.secretWord(t) + " unlocks: " : "Find the real image out in the world, open the AR camera and point at it. The " + App.secretWord(t) + " unlocks: ") + esc(App.lockReward(t)) + ".</p>" +
           (t.hint ? '<div class="hint">HINT: ' + esc(t.hint) + "</div>" : "") +
           '<div class="state">' + (mine ? "YOUR " + App.secretWord(t).toUpperCase() + " · " : found ? "YOU FOUND IT ✓ · " : "") + finds + (finds === 1 ? " LISTENER HAS" : " LISTENERS HAVE") + " FOUND IT</div></div>" : "") +
         (t.has_location && t.area_lat != null ? '<div class="where"><div class="where-map" id="where-map"></div><div class="where-row"><div><b>' + esc(t.place_name || "On the map") + '</b><span class="small muted">' +
