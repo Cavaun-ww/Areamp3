@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=66">
+<link rel="stylesheet" href="styles.css?v=68">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=66"></script>
-<script src="app.js?v=66"></script>
+<script src="config.js?v=68"></script>
+<script src="app.js?v=68"></script>
 <style>
   .rel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
   @media (max-width: 760px) { .rel { grid-template-columns: minmax(0, 1fr); gap: 20px; } }
@@ -98,6 +98,8 @@
   const box = $("content");
   const notFound = () => (box.innerHTML = '<div class="empty"><h2>Track not found</h2><p class="muted" style="margin:8px 0 18px">It may have been removed.</p><a class="btn btn-primary" href="explore.html">Explore music</a></div>');
   if (!slug || !App.configured) return notFound();
+  // song pages are for signed-in members: everyone else can browse the home page and Explore, then signs in to open one
+  if (!(await App.getSession())) { location.replace(App.signInUrl("t.html?s=" + encodeURIComponent(slug))); return; }
 
   const { data: t } = await sb.from("tracks").select(App.TRACK_COLS + ", is_published").eq("slug", slug).maybeSingle();
   if (!t) return notFound();
