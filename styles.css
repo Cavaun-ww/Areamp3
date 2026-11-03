@@ -509,3 +509,22 @@ html:has(body.modal-open) { overflow: hidden; }
 #creator .slide { min-height: 290px; }
 #creator .slide h3 { font-size: clamp(1.7rem, 6vw, 2.8rem); }
 #creator .slide-in { padding: 22px 20px 50px; }
+/* Single / Album switch and album tracklist on the Create page */
+.kind-seg { margin: 4px 0 12px; }
+.kind-seg .pro-tag, .pro-tag { display: inline-block; margin-left: 6px; padding: 1px 5px; font-size: .6rem; letter-spacing: .12em; border: 1px solid currentColor; vertical-align: 1px; }
+#album-pro { margin-bottom: 10px; }
+.album-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.album-list li { display: grid; grid-template-columns: 26px minmax(0, 1fr) 42px 32px 32px 32px; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--line-2); background: #070707; }
+.album-list .n, .album-list .d { font-family: var(--mono); font-size: .76rem; color: var(--text-2); }
+.album-list .input { padding: 7px 9px; font-size: .9rem; min-width: 0; }
+.album-list button { height: 32px; border: 1px solid var(--line-2); background: none; color: var(--text); cursor: pointer; font-size: .85rem; padding: 0; }
+.album-list button:disabled { opacity: .25; cursor: default; }
+.album-list button.x { color: #ff3b30; }
+/* album tracklist on the song page */
+.album-tl { margin-top: 16px; border: 1px solid var(--line-2); padding: 12px 14px; }
+.album-tl ol { list-style: none; margin: 8px 0 0; padding: 0; }
+.album-tl li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+.album-tl li:first-child { border-top: 0; }
+.album-tl .n, .album-tl .d { font-family: var(--mono); font-size: .76rem; color: var(--text-2); }
+.album-tl .tt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.album-tl .btn-sm { min-width: 38px; padding: 6px 10px; }

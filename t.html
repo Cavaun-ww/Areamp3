@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=87">
+<link rel="stylesheet" href="styles.css?v=90">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=87"></script>
-<script src="app.js?v=87"></script>
+<script src="config.js?v=90"></script>
+<script src="app.js?v=90"></script>
 <style>
   .rel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
   @media (max-width: 760px) { .rel { grid-template-columns: minmax(0, 1fr); gap: 20px; } }
@@ -141,6 +141,7 @@
         '<div class="small muted">' + (locked ? "Secret " + App.secretWord(t) + " · find the real image and use the AR camera to unlock " + esc(App.lockReward(t))
           : paid ? App.fileType(t) + " download · pay with PayPal or card · straight to your phone" : "Free " + App.fileType(t) + " download · sign in to save it") + "</div>" +
         '<div id="copies"></div>' +
+        (t.is_album ? '<div class="album-tl" id="album-tl"><div class="label">Album · ' + (t.album_count || "") + ' songs</div><ol id="album-ol"><li class="muted small">Loading…</li></ol></div>' : "") +
         (!heard && !locked ? '<div class="note small" style="margin-top:12px">Hear it first: scan the art with the AR camera and listen. After that you can ' + (paid ? "buy and download" : "download") + " it here." + (me ? "" : ' <a href="' + esc(App.signInUrl("t.html?s=" + t.slug)) + '">Sign in</a> first so your scan counts.') + "</div>" : "") +
         (locked ? '<div class="secret"><div class="label">Secret ' + App.secretWord(t) + '</div>' +
           '<p>' + (t.has_location ? "Go to the spot, open the AR camera and point it at the real image. When you're there, the " + App.secretWord(t) + " unlocks: " : "Find the real image out in the world, open the AR camera and point at it. The " + App.secretWord(t) + " unlocks: ") + esc(App.lockReward(t)) + ".</p>" +
@@ -215,12 +216,30 @@
   // song and video: a second button for the video, whenever the song can be downloaded
   const paintVid = () => { $("buy-vid").hidden = !(App.hasSong(t) && App.hasVid(t) && buyBtn.textContent.startsWith("↓")); };
   $("buy-vid").onclick = (e) => App.download(t, e.currentTarget, "video");
+  // albums: a tracklist; each song downloads on its own once you can download the album
+  let songs = [];
+  const canDl = () => buyBtn.textContent.startsWith("↓");
+  const paintAlbum = () => {
+    if (!t.is_album) return;
+    $("album-ol").innerHTML = songs.map((s) => '<li><span class="n">' + String(s.position).padStart(2, "0") + '</span><span class="tt">' + esc(s.title) + '</span><span class="d">' + (s.duration ? App.fmtTime(s.duration) : "") + "</span>" +
+      (canDl() ? '<button class="btn btn-sm" data-n="' + s.position + '" aria-label="Download ' + esc(s.title) + '">↓</button>' : "") + "</li>").join("") || '<li class="muted small">No songs yet.</li>';
+    if (canDl()) buyBtn.textContent = "↓ Download songs";
+  };
+  if (t.is_album) {
+    sb.from("album_tracks").select("position, title, duration").eq("track_id", t.id).order("position").then(({ data }) => { songs = data || []; paintAlbum(); });
+    $("album-ol").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-n]"); if (!b) return;
+      const s = songs.find((x) => x.position === +b.dataset.n);
+      App.download(t, b, "", s.position, s.title);
+    });
+  }
   buyBtn.textContent = label(); paintVid();
   if (buyBtn.textContent === "Sold out") buyBtn.disabled = true;
   buyBtn.addEventListener("click", () => setTimeout(refreshCopies, 2500));
   buyBtn.onclick = () => {
     if ((locked && !found && !mine) || !heard) { location.href = App.arLink(t.slug, true); return; }
-    App.buy(t, () => { $("content").querySelector(".price-big").textContent = "OWNED ✓"; buyBtn.textContent = "↓ Download " + main; paintVid(); });
+    if (t.is_album && canDl()) { $("album-tl").scrollIntoView({ behavior: "smooth", block: "center" }); return; }
+    App.buy(t, () => { $("content").querySelector(".price-big").textContent = "OWNED ✓"; buyBtn.textContent = "↓ Download " + main; paintVid(); paintAlbum(); });
   };
   if (t.has_location && t.area_lat != null) App.makeMap($("where-map"), t.area_lat, t.area_lng, t.loc_approx ? 14 : 16, { scrollWheelZoom: false }).then(({ L, map }) => {
     if (t.loc_approx) App.areaCircle(L, t.area_lat, t.area_lng).addTo(map); else L.marker([t.area_lat, t.area_lng], { icon: App.pinIcon(L) }).addTo(map);

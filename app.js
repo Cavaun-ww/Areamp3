@@ -46,7 +46,7 @@
   const hasSong = (t) => !t || t.has_song !== false;
   const hasVid = (t) => !!(t && t.has_video);
   function songType(t) { return (t && t.audio_format === "wav") ? "WAV" : "MP3"; }
-  function fileType(t) { return !hasSong(t) ? "video" : hasVid(t) ? songType(t) + " + video" : songType(t); }
+  function fileType(t) { return t && t.is_album ? "album" : !hasSong(t) ? "video" : hasVid(t) ? songType(t) + " + video" : songType(t); }
   function fmtTime(s) { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
 
   let toastTimer;
@@ -365,7 +365,7 @@
       '<div class="cov"><a href="' + esc(trackLink(t.slug)) + '"><img loading="lazy" alt=""' + (blur ? ' class="blurred"' : "") + ' src="' + esc(publicUrl(t.cover_path)) + '"></a>' +
         (t.photo_hidden ? '<span class="hide-badge"><i></i>FIND IT IN PERSON</span>' : "") +
         '<div class="tags">' + (t.has_location ? '<span class="pin-chip" title="Has a location">' + PIN_SVG + "</span>" : "") +
-        '<span class="pill solid ty">' + esc(!hasSong(t) ? "VIDEO" : hasVid(t) ? songType(t) + "+VID" : songType(t)) + "</span>" + "</div>" + // always say what the file is
+        '<span class="pill solid ty">' + esc(t.is_album ? "ALBUM · " + (t.album_count || "") : !hasSong(t) ? "VIDEO" : hasVid(t) ? songType(t) + "+VID" : songType(t)) + "</span>" + "</div>" + // always say what the file is
         copiesBadge(t) +
         "</div>" + // music only plays in the AR camera
       '<div class="body">' +
@@ -378,7 +378,7 @@
         (opts.actions || "") +
       "</div></div>";
   }
-  const TRACK_COLS = "id, slug, owner, title, genre, description, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, duration, price, currency, created_at, audio_format, has_song, has_video, pop_scale, lift, key_mode, is_private, photo_hidden, has_location, place_name, place_area, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, profiles!owner(handle, display_name, avatar_path, verified, theme, bg_color, bg_image_path), likes(count), comments(count)";
+  const TRACK_COLS = "id, slug, owner, title, genre, description, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, duration, price, currency, created_at, audio_format, has_song, has_video, pop_scale, lift, key_mode, is_private, photo_hidden, has_location, place_name, place_area, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, profiles!owner(handle, display_name, avatar_path, verified, theme, bg_color, bg_image_path), likes(count), comments(count)";
   const nLikes = (t) => (t.likes && t.likes[0] && t.likes[0].count) || 0;
   const nComments = (t) => (t.comments && t.comments[0] && t.comments[0].count) || 0;
   // artist's share of each sale, as shown on the site (the real split is set on the server)
@@ -453,12 +453,13 @@
     finally { if (btn) btn.disabled = false; }
   }
   // kind "video" downloads the video; otherwise the song (or the video when there's no song)
-  async function download(t, btn, kind) {
+  // n: song number on an album (1, 2, 3…)
+  async function download(t, btn, kind, n, songTitle) {
     try {
       if (btn) btn.disabled = true;
-      const out = await callFunction("download", { track_id: t.id, kind: kind || "" });
+      const out = await callFunction("download", { track_id: t.id, kind: kind || "", ...(n ? { n } : {}) });
       startDownload(out.url);
-      toast("Downloading " + (kind === "video" ? "the video" : t.title));
+      toast("Downloading " + (kind === "video" ? "the video" : songTitle || t.title));
       return true;
     } catch (e) { toast(e.message, true); return false; }
     finally { if (btn) btn.disabled = false; }

@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=87">
+<link rel="stylesheet" href="styles.css?v=90">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=87"></script>
-<script src="app.js?v=87"></script>
+<script src="config.js?v=90"></script>
+<script src="app.js?v=90"></script>
 <style>
   .wave { width: 100%; height: 64px; display: block; background: #050505; border: 1px solid var(--line); margin-top: 12px; }
   .rng { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: .82rem; color: var(--text-2); }
@@ -71,6 +71,19 @@
       </details>
 
       <div class="part-label" style="margin-top:22px">Song <span id="song-sub">MP3 or WAV. Plays in the AR camera when people see your art.</span></div>
+      <div class="seg kind-seg" id="kind-seg"><button type="button" data-k="single" class="on">Single</button><button type="button" data-k="album">Album <span class="pro-tag">PRO</span></button></div>
+      <div id="album-box" hidden>
+        <div class="note small" id="album-pro" hidden>Albums are part of <b>Pro</b>: one cover unlocks your whole tracklist in the AR camera, up to 20 songs. <a href="dashboard.html#selling">Go Pro</a> to post albums.</div>
+        <div id="album-area">
+          <div class="drop" id="drop-album">
+            <input type="file" id="file-album" multiple accept="audio/mpeg,.mp3,audio/wav,audio/x-wav,audio/wave,.wav">
+            <div class="empty-state"><div class="icon">[ ALBUM ]</div><div>Drop all your songs here or <span class="browse">browse</span></div><div class="hint">UP TO 20 SONGS · MP3 OR WAV · ADD MORE ANY TIME</div></div>
+          </div>
+          <ol class="album-list" id="album-list"></ol>
+          <p class="small muted" id="album-help" hidden style="margin-top:8px">Put them in order with ↑ ↓. The first song plays first in the AR camera. Tap a name to change it.</p>
+        </div>
+      </div>
+      <div id="single-box">
       <div class="drop" id="drop-mp3">
         <input type="file" id="file-mp3" accept="audio/mpeg,.mp3,audio/wav,audio/x-wav,audio/wave,.wav">
         <div class="empty-state"><div class="icon">[ MP3 / WAV ]</div><div>Drop your song here or <span class="browse">browse</span></div><div class="hint">MP3 UP TO <span class="js-mp3mb"></span> MB · WAV UP TO <span class="js-wavmb"></span> MB</div></div>
@@ -82,6 +95,7 @@
         <div class="row" style="margin-top:10px"><button class="btn btn-sm" type="button" id="prev-listen">Listen to preview</button><span class="small muted">Everyone hears your whole song. While it's blurred, people only hear this part until they find it.</span></div>
       </div>
       <p class="small muted" id="no-preview" hidden style="margin-top:12px">This device couldn't read the song to make a preview. It will still upload; there just won't be a preview to play.</p>
+      </div>
     </div>
 
     <!-- 3 NAME IT & PUBLISH (same as Pixi Wizard, plus price) -->
@@ -295,6 +309,68 @@
       a.onloadedmetadata = () => { mp3.duration = a.duration || 0; showPreview("drop-mp3", null, file.name + " · " + App.fmtTime(a.duration) + " · " + (file.size / 1048576).toFixed(1) + " MB"); };
     }
   });
+
+  // ── Album (Pro): many songs under one cover ──────────────────────
+  let kind = "single", album = [], proUser = false;
+  sb.from("profiles").select("pro_until").eq("id", uid).maybeSingle().then(({ data }) => { proUser = App.isPro(data); paintKind(); });
+  const MAX_ALBUM = 20;
+  const cleanName = (n) => n.replace(/\.(mp3|wav)$/i, "").replace(/^\d{1,2}[\s._-]+/, "").replace(/[_]+/g, " ").trim().slice(0, 100) || "Untitled";
+  function syncAlbum() {
+    // the first album song stands in for "the song" everywhere else on this page
+    const a = album[0];
+    mp3 = kind === "album" && a ? { file: a.file, duration: album.reduce((s, x) => s + (x.duration || 0), 0), format: a.format } : (kind === "album" ? null : mp3);
+    if (kind === "album") { songIn = album.length > 0; if (songIn && vidIn) done("n2"); else undone("n2"); }
+    paintAlbum(); try { lockState(); } catch (e) {}
+  }
+  function paintKind() {
+    $("kind-seg").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.k === kind));
+    $("album-box").hidden = kind !== "album"; $("single-box").hidden = kind === "album";
+    $("album-pro").hidden = proUser; $("album-area").hidden = !proUser;
+    $("song-sub").textContent = kind === "album" ? "Up to 20 songs. One scan of your cover plays the whole album in the AR camera." : "MP3 or WAV. Plays in the AR camera when people see your art.";
+  }
+  $("kind-seg").onclick = (e) => {
+    const b = e.target.closest("button"); if (!b || b.dataset.k === kind) return;
+    kind = b.dataset.k;
+    if (kind === "album") { REMOVE["drop-mp3"](); } else { album = []; mp3 = null; songIn = false; undone("n2"); paintAlbum(); }
+    paintKind(); syncAlbum();
+  };
+  function paintAlbum() {
+    $("album-help").hidden = album.length < 2;
+    $("album-list").innerHTML = album.map((a, i) =>
+      '<li><span class="n">' + String(i + 1).padStart(2, "0") + '</span><input class="input" data-i="' + i + '" maxlength="100" value="' + App.esc(a.title) + '" aria-label="Song ' + (i + 1) + ' name">' +
+      '<span class="d mono">' + (a.duration ? App.fmtTime(a.duration) : "…") + "</span>" +
+      '<button type="button" data-up="' + i + '" aria-label="Move up"' + (i ? "" : " disabled") + '>↑</button>' +
+      '<button type="button" data-down="' + i + '" aria-label="Move down"' + (i < album.length - 1 ? "" : " disabled") + '>↓</button>' +
+      '<button type="button" class="x" data-rm="' + i + '" aria-label="Remove">✕</button></li>').join("");
+  }
+  $("album-list").addEventListener("input", (e) => { const i = e.target.dataset.i; if (i != null) album[+i].title = e.target.value.slice(0, 100); });
+  $("album-list").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    const sw = (a, c) => { [album[a], album[c]] = [album[c], album[a]]; };
+    if (b.dataset.up) sw(+b.dataset.up, +b.dataset.up - 1);
+    else if (b.dataset.down) sw(+b.dataset.down, +b.dataset.down + 1);
+    else if (b.dataset.rm) album.splice(+b.dataset.rm, 1);
+    syncAlbum();
+  });
+  function addAlbumFiles(list) {
+    for (const file of list) {
+      if (album.length >= MAX_ALBUM) { App.toast("An album can have up to " + MAX_ALBUM + " songs.", true); break; }
+      const isWav = /^audio\/(wav|x-wav|wave|vnd\.wave)$/.test(file.type) || /\.wav$/i.test(file.name);
+      const isMp3 = !isWav && (/^audio\/(mpeg|mp3)$/.test(file.type) || /\.mp3$/i.test(file.name));
+      if (!isWav && !isMp3) { App.toast(file.name + " isn't an MP3 or WAV.", true); continue; }
+      const maxMb = isWav ? (C.MAX_WAV_MB || 50) : C.MAX_MP3_MB;
+      if (file.size > maxMb * 1048576) { App.toast(file.name + " is over " + maxMb + " MB.", true); continue; }
+      const a = { file, title: cleanName(file.name), format: isWav ? "wav" : "mp3", duration: 0 };
+      album.push(a);
+      const au = new Audio(); au.preload = "metadata"; au.src = URL.createObjectURL(file);
+      au.onloadedmetadata = () => { a.duration = au.duration || 0; syncAlbum(); };
+    }
+    syncAlbum();
+  }
+  $("file-album").addEventListener("change", () => { addAlbumFiles([...$("file-album").files].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))); $("file-album").value = ""; });
+  ["dragenter", "dragover"].forEach((ev) => $("drop-album").addEventListener(ev, (e) => { e.preventDefault(); $("drop-album").classList.add("over"); }));
+  ["dragleave", "drop"].forEach((ev) => $("drop-album").addEventListener(ev, () => $("drop-album").classList.remove("over")));
+  $("drop-album").addEventListener("drop", (e) => { e.preventDefault(); addAlbumFiles([...e.dataTransfer.files].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))); });
   function drawWave() {
     const cv = $("wave"), ctx = cv.getContext("2d"), d = pcm.getChannelData(0), W = cv.width, H = cv.height;
     ctx.clearRect(0, 0, W, H);
@@ -682,6 +758,9 @@
   function problem() {
     if (!img) return ["Add your image first (step 1).", "drop-img"];
     if (!vid) return ["Add your video, GIF, photo or 3D model (step 2).", "drop-vid"];
+    if (kind === "album" && !proUser) return ["Albums are a Pro feature. Go Pro on My page › Selling, or switch to Single.", "kind-seg"];
+    if (kind === "album" && album.length < 2) return ["Add at least 2 songs for an album.", "drop-album"];
+    if (kind === "album" && album.some((a) => !a.title.trim())) return ["Give every song on the album a name.", "album-list"];
     if (!mp3 && vid.kind !== "video") return ["Add your song (step 2), or use a video instead.", "drop-mp3"];
     if (!$("title").value.trim()) return ["Give it a title.", "title"];
     if ($("limit-on").checked && !(Math.floor(+$("limit-n").value) >= 1)) { $("price-box").open = true; return ["Enter how many copies (1 or more), or turn off Limited copies.", "limit-n"]; }
@@ -759,7 +838,11 @@
         const vx = (vid.file.name.split(".").pop() || "mp4").toLowerCase().replace(/[^a-z0-9]/g, "") || "mp4";
         files.push({ bucket: "songs", path: folder + "/download." + vx, body: vid.file, type: vid.file.type || "video/mp4", msg: "Saving the video for downloads…", from: 70, to: mp3 ? 80 : 96 });
       }
-      if (mp3) files.push(mp3.format === "wav"
+      if (kind === "album") album.forEach((a, i) => {
+        const span = 16 / album.length, from = 80 + i * span, nn = String(i + 1).padStart(2, "0");
+        files.push({ bucket: "songs", path: folder + "/album/" + nn + "." + a.format, body: a.file, type: a.format === "wav" ? "audio/wav" : "audio/mpeg", msg: "Uploading song " + (i + 1) + " of " + album.length + "…", from, to: from + span });
+      });
+      else if (mp3) files.push(mp3.format === "wav"
         ? { bucket: "songs", path: folder + "/song.wav", body: mp3.file, type: "audio/wav", msg: "Uploading WAV…", from: 80, to: 96 }
         : { bucket: "songs", path: folder + "/song.mp3", body: mp3.file, type: "audio/mpeg", msg: "Uploading song…", from: 80, to: 96 });
       for (const f of files) {
@@ -780,7 +863,8 @@
         mind_path: pathOf(/\/target\.mind$/),
         preview_path: pathOf(/\/preview\.mp3$/),
         video_path: pathOf(/\/(video|overlay|model)\.[a-z0-9]+$/),
-        audio_path: pathOf(/\/song\.(mp3|wav)$/),
+        audio_path: kind === "album" ? pathOf(/\/album\/01\.(mp3|wav)$/) : pathOf(/\/song\.(mp3|wav)$/),
+        is_album: kind === "album",
         video_dl_path: pathOf(/\/download\.[a-z0-9]+$/),
         audio_format: mp3 ? mp3.format : "mp3",
         cover_aspect: img.w / img.h,
@@ -801,6 +885,13 @@
       const { data, error } = await sb.from("tracks").insert(row).select("id, slug").single();
       if (error) throw error;
       newTrackId = data.id;
+      if (kind === "album") {
+        progress(98, "Saving the tracklist…");
+        const rows = album.map((a, i) => ({ track_id: data.id, position: i + 1, title: a.title.trim().slice(0, 100), audio_format: a.format,
+          duration: Math.round(a.duration || 0) || null, audio_path: pathOf(new RegExp("/album/" + String(i + 1).padStart(2, "0") + "\\.(mp3|wav)$")) }));
+        const at = await sb.from("album_tracks").insert(rows);
+        if (at.error) throw at.error;
+      }
       if (loc) {
         const sp = await sb.from("track_spots").insert({ track_id: data.id, lat: loc.lat, lng: loc.lng });
         if (sp.error) throw sp.error;
