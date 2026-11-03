@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=90">
+<link rel="stylesheet" href="styles.css?v=91">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=90"></script>
-<script src="app.js?v=90"></script>
+<script src="config.js?v=91"></script>
+<script src="app.js?v=91"></script>
 <style>
   .wave { width: 100%; height: 64px; display: block; background: #050505; border: 1px solid var(--line); margin-top: 12px; }
   .rng { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: .82rem; color: var(--text-2); }
@@ -73,7 +73,7 @@
       <div class="part-label" style="margin-top:22px">Song <span id="song-sub">MP3 or WAV. Plays in the AR camera when people see your art.</span></div>
       <div class="seg kind-seg" id="kind-seg"><button type="button" data-k="single" class="on">Single</button><button type="button" data-k="album">Album <span class="pro-tag">PRO</span></button></div>
       <div id="album-box" hidden>
-        <div class="note small" id="album-pro" hidden>Albums are part of <b>Pro</b>: one cover unlocks your whole tracklist in the AR camera, up to 20 songs. <a href="dashboard.html#selling">Go Pro</a> to post albums.</div>
+        <div class="note small" id="album-pro" hidden>Albums are part of <b>Pro</b>: one scan of your cover plays your whole album in the AR camera, up to 20 songs. <a href="dashboard.html#selling">Go Pro</a> to post albums.</div>
         <div id="album-area">
           <div class="drop" id="drop-album">
             <input type="file" id="file-album" multiple accept="audio/mpeg,.mp3,audio/wav,audio/x-wav,audio/wave,.wav">
@@ -326,13 +326,16 @@
     $("kind-seg").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.k === kind));
     $("album-box").hidden = kind !== "album"; $("single-box").hidden = kind === "album";
     $("album-pro").hidden = proUser; $("album-area").hidden = !proUser;
-    $("song-sub").textContent = kind === "album" ? "Up to 20 songs. One scan of your cover plays the whole album in the AR camera." : "MP3 or WAV. Plays in the AR camera when people see your art.";
+    // the line above the switch stays the same, so the switch doesn't jump when you tap it
+
   }
   $("kind-seg").onclick = (e) => {
     const b = e.target.closest("button"); if (!b || b.dataset.k === kind) return;
+    const y0 = $("kind-seg").getBoundingClientRect().top; // keep the switch where your finger is
     kind = b.dataset.k;
     if (kind === "album") { REMOVE["drop-mp3"](); } else { album = []; mp3 = null; songIn = false; undone("n2"); paintAlbum(); }
     paintKind(); syncAlbum();
+    window.scrollBy(0, $("kind-seg").getBoundingClientRect().top - y0);
   };
   function paintAlbum() {
     $("album-help").hidden = album.length < 2;

@@ -528,3 +528,7 @@ html:has(body.modal-open) { overflow: hidden; }
 .album-tl .n, .album-tl .d { font-family: var(--mono); font-size: .76rem; color: var(--text-2); }
 .album-tl .tt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .album-tl .btn-sm { min-width: 38px; padding: 6px 10px; }
+/* Single / Album: both boxes take the same space so the page below doesn't jump */
+#single-box > .drop, #album-box { min-height: 190px; }
+#album-box #album-pro { min-height: 190px; display: flex; align-items: center; margin: 0; }
+#album-box #album-pro[hidden] { display: none; }
