@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=63">
+<link rel="stylesheet" href="styles.css?v=64">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=63"></script>
-<script src="app.js?v=63"></script>
+<script src="config.js?v=64"></script>
+<script src="app.js?v=64"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -455,7 +455,8 @@
   // blur = the image is blurred on the site AND the song unlocks only when a listener scans the real image at the spot
   function openLock(t) {
     const on = t.photo_hidden || App.isLocked(t);
-    const cur = App.isLocked(t) ? t.song_lock : "free";
+    // a song that's already for sale starts on "Right to buy", so blurring it keeps its price
+    const cur = App.isLocked(t) ? t.song_lock : (+t.price > 0 ? "buy" : "free");
     const bg = modal(
       '<div class="label">Blur · find it in person</div><h3 style="margin:4px 0 6px;text-transform:none;letter-spacing:.02em">' + esc(t.title) + "</h3>" +
       '<p class="small muted" style="margin-bottom:10px">Blurred on the site. Listeners find the real one' + (t.has_location ? ' at your spot' : '') + ' and scan it. What do they get?</p>' +
@@ -483,7 +484,6 @@
       const m = (q('input[name="l-mode"]:checked') || {}).value || "free";
       // blurred songs stay silent until found: drop the old public sample
       const upd = { photo_hidden: true, song_lock: m, ...(on ? {} : { preview_path: null }), unlock_radius_m: +q("#l-radius").value || 100, hint: q("#l-hint").value.trim() || null };
-      if (m === "free" || m === "listen") upd.price = 0;
       if (m === "buy") {
         const p = +(+q("#l-price").value).toFixed(2);
         if (!(p >= C.MIN_PRICE && p <= C.MAX_PRICE)) return App.toast("Enter a price above " + App.money(0) + ".", true);
