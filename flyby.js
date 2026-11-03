@@ -1,5 +1,5 @@
 // Home page hero background: album covers and artist photos fly toward you through a dark grid,
-// with drifting letters and a few star glints. Blurred drops are never shown here.
+// with drifting letters. Blurred drops are never shown here.
 (function () {
   "use strict";
   var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -38,7 +38,6 @@
     var COUNT = (canvas.getBoundingClientRect().width || 400) < 600 ? 18 : 28;
     for (var i = 0; i < COUNT; i++) items.push(spawn({}, false));
     for (var j = 0; j < 70; j++) letters.push({ x: Math.random(), y: Math.random(), c: LETTERS[(Math.random() * LETTERS.length) | 0], v: rnd(0.002, 0.008), o: rnd(0.08, 0.32) });
-    for (var k = 0; k < 4; k++) stars.push({ x: rnd(0.08, 0.92), y: rnd(0.1, 0.9), p: rnd(0, 6.28), sp: rnd(0.6, 1.4), r: rnd(6, 14) });
 
     function grid(time) {
       var cx = W / 2, cy = H * 0.46;
@@ -104,16 +103,6 @@
         ctx.globalAlpha = 1;
       });
 
-      // star glints
-      stars.forEach(function (s) {
-        var g = (Math.sin(time / 1000 * s.sp + s.p) + 1) / 2;
-        var x = s.x * W, y = s.y * H, r = s.r * (0.6 + g);
-        var grd = ctx.createRadialGradient(x, y, 0, x, y, r);
-        grd.addColorStop(0, "rgba(220,240,255," + (0.85 * g).toFixed(3) + ")"); grd.addColorStop(1, "rgba(160,220,255,0)");
-        ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.29); ctx.fill();
-        ctx.strokeStyle = "rgba(220,240,255," + (0.5 * g).toFixed(3) + ")"; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(x - r * 1.8, y); ctx.lineTo(x + r * 1.8, y); ctx.moveTo(x, y - r * 1.8); ctx.lineTo(x, y + r * 1.8); ctx.stroke();
-      });
     }
 
     size();
