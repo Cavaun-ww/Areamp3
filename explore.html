@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=77">
+<link rel="stylesheet" href="styles.css?v=78">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=77"></script>
-<script src="app.js?v=77"></script>
+<script src="config.js?v=78"></script>
+<script src="app.js?v=78"></script>
 <style>
   .head-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
   .head-row .vf { display: inline-block; width: 13px; height: 13px; margin-right: 10px; vertical-align: -1px; border: 2px solid currentColor; border-radius: 2px; box-shadow: inset 0 0 0 2px var(--text), inset 0 0 0 5px currentColor; }
@@ -336,7 +336,7 @@
   };
 
   async function render() {
-    const q = $("q").value.trim().toLowerCase();
+    const q = artistsOnly ? "" : $("q").value.trim().toLowerCase(); // signed out: song list isn't searched
     let fol = null;
     if (tab === "following") {
       fol = await following();
@@ -405,13 +405,12 @@
   };
   $("filters-btn").onclick = () => $("side").classList.toggle("open");
   let tm;
-  // search is for signed-in members: signed out, tapping the box asks them to sign in
+  // signed out: the search box finds artists only (songs, genres and places need an account)
+  let artistsOnly = false;
   App.getSession().then((s) => {
     if (s) return;
-    const box = $("q");
-    box.value = ""; box.readOnly = true; box.placeholder = "Sign in to search songs, artists and places";
-    const go = (e) => { e.preventDefault(); box.blur(); location.href = App.signInUrl("explore.html"); };
-    box.addEventListener("focus", go); box.addEventListener("click", go);
+    artistsOnly = true;
+    $("q").placeholder = "Search artists · sign in to search songs and places";
   });
   $("q").addEventListener("input", () => { clearTimeout(tm); tm = setTimeout(() => { render(); loadPeople(); }, 200); });
 
@@ -429,6 +428,7 @@
     $("people").hidden = !list.length;
     $("people").innerHTML = list.length ? "<h4>Artists</h4><div class=\"row-p\">" + list.map((p) =>
       '<a href="' + esc(App.profileLink(p.handle)) + '">' + App.avatarHTML(p, 36) + "<span><b>" + esc(App.artistName(p)) + App.vBadge(p) + "</b><small>@" + esc(p.handle) + " · " + (drops[p.id] || 0) + ((drops[p.id] || 0) === 1 ? " drop" : " drops") + "</small></span></a>").join("") + "</div>" : "";
+    if (artistsOnly && q.length >= 2 && !list.length) { $("people").hidden = false; $("people").innerHTML = '<p class="muted small">No artists match “' + esc(q) + '”. <a href="' + esc(App.signInUrl("explore.html")) + '">Sign in</a> to search songs and places too.</p>'; }
     if (list.length && !rows.length) $("list").innerHTML = '<div class="empty" style="grid-column:1/-1">No songs match yet. Tap the artist above to see their page.</div>';
   }
   $("more").onclick = more;
