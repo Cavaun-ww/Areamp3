@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=96">
+<link rel="stylesheet" href="styles.css?v=98">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=96"></script>
-<script src="app.js?v=96"></script>
-<script src="depth.js?v=96"></script>
+<script src="config.js?v=98"></script>
+<script src="app.js?v=98"></script>
+<script src="depth.js?v=98"></script>
 <style>
   .wave { width: 100%; height: 64px; display: block; background: #050505; border: 1px solid var(--line); margin-top: 12px; }
   .rng { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: .82rem; color: var(--text-2); }
@@ -46,8 +46,6 @@
         <div class="empty-state"><div class="icon">[ IMG ]</div><div>Drop image here or <span class="browse">browse</span></div><div class="hint">JPG · PNG · WEBP</div></div>
       </div>
       <p class="small muted" style="margin-top:12px">Tip: detailed, high-contrast images track best. Plain logos or mostly-empty images are hard for the camera to lock onto. This image is also your cover art.</p>
-      <label class="toggle" style="margin-top:14px"><input type="checkbox" id="depth-on" checked><span class="switch" aria-hidden="true"></span>
-        <span><b>3D depth</b><br><span class="small muted">Your photo shifts with real depth when people tilt their phone, and stands out in 3D in the AR camera. Works best on photos with a clear subject. Adds a few seconds when you publish.</span></span></label>
     </div>
 
     <!-- 2 WHAT PLAYS WHEN SCANNED: overlay (photo, GIF or video) + song. A video with a song plays silent; the song is the sound. -->
@@ -264,7 +262,7 @@
   // what the ✕ on each upload clears
   const REMOVE = {
     "drop-img": () => { img = null; resetDrop("drop-img"); undone("n1"); },
-    "drop-vid": () => { $("trim").hidden = true; $("trim-vid").pause(); vid = null; vidIn = false; resetDrop("drop-vid"); undone("n2"); paintSongBox(); },
+    "drop-vid": () => { ovDepth = null; depthRun++; $("trim").hidden = true; $("trim-vid").pause(); vid = null; vidIn = false; resetDrop("drop-vid"); undone("n2"); paintSongBox(); },
     "drop-mp3": () => { mp3 = null; pcm = null; songIn = false; resetDrop("drop-mp3"); undone("n2"); paintSongBox(); try { lockState(); } catch (e) {} },
   };
   const done = (id) => { $(id).classList.add("done"); };
@@ -496,8 +494,11 @@
       im.onload = () => {
         vid = { file, w: im.naturalWidth || 1, h: im.naturalHeight || 1, kind: "image", gif: isGif };
         const p = new Image(); p.src = im.src; p.alt = "";
-        showPreview("drop-vid", p, isGif ? "GIF" : "Photo");
+        const w = document.createElement("div"); w.className = "d3-wrap"; w.append(p); // the 3D preview draws right over the photo
+        showPreview("drop-vid", w, isGif ? "GIF" : "Photo");
         overlayDone();
+        ovDepth = null; depthRun++;
+        if (!isGif) makeOverlayDepth(); // 3D depth happens on its own, quietly
       };
       im.onerror = () => App.toast(isGif ? "That GIF couldn't be read." : "That photo couldn't be read.", true);
       im.src = URL.createObjectURL(file);
@@ -522,6 +523,21 @@
     showPreview("drop-vid", box, "3D · " + file.name + " · " + (file.size / 1048576).toFixed(1) + " MB");
     if (file.size > 10 * 1048576) App.toast("Heads up: models over 10 MB can take a while to load on phones.");
     overlayDone();
+  }
+  // ── 3D depth for the photo in step 2: made as soon as you pick it, so you can see it before publishing ──
+  let ovDepth = null, depthRun = 0;
+  async function makeOverlayDepth() {
+    if (!window.AreaDepth || !vid || vid.kind !== "image" || vid.gif) return;
+    const run = ++depthRun;
+    try {
+      const blob = await AreaDepth.depthMap(vid.file);
+      if (run !== depthRun) return;
+      ovDepth = blob;
+      const pimg = $("drop-vid").querySelector(".d3-wrap img");
+      if (pimg) { pimg.dataset.depth = URL.createObjectURL(blob); pimg._d3 = false; App.Depth3D.scan($("drop-vid")); }
+    } catch (e) {
+      console.warn("depth", e);
+    }
   }
   function useVideo(file) {
     const v = document.createElement("video");
@@ -821,13 +837,13 @@
         try { previewBlob = await makePreview((p) => progress(41 + p * 5, null)); } catch (e) { console.warn(e); }
       }
 
-      // 2b. 3D depth maps (made right here in the browser). Never stops the upload if it fails.
+      // 2b. 3D depth for the photo in step 2 (and the cover, so cards tilt too). Never stops the upload if it fails.
       let depthBlob = null, ovDepthBlob = null;
-      if ($("depth-on").checked && window.AreaDepth) {
+      if (window.AreaDepth && vid && vid.kind === "image" && !vid.gif) {
         try {
-          depthBlob = await AreaDepth.depthMap(img.blob, (m) => progress(46, m));
-          if (vid && vid.kind === "image" && !vid.gif) ovDepthBlob = await AreaDepth.depthMap(vid.file, (m) => progress(46, m));
-        } catch (e) { console.warn("depth", e); App.toast("3D depth couldn't be added on this device. Publishing without it."); }
+          ovDepthBlob = ovDepth || await AreaDepth.depthMap(vid.file, () => progress(46, "Getting your photo ready…"));
+          depthBlob = await AreaDepth.depthMap(img.blob, () => progress(46, "Getting your photo ready…"));
+        } catch (e) { console.warn("depth", e); } // no 3D on this device: publish as normal
       }
 
       // 3. upload everything
@@ -836,8 +852,8 @@
         { bucket: "media", path: folder + "/target.jpg", body: img.blob, type: "image/jpeg", msg: "Uploading image…", from: 46, to: 49 },
         { bucket: "media", path: folder + "/target.mind", body: mindBlob, type: "application/octet-stream", msg: "Uploading AR target…", from: 49, to: 51 },
       ];
-      if (depthBlob) files.push({ bucket: "media", path: folder + "/depth.png", body: depthBlob, type: "image/png", msg: "Uploading 3D depth…", from: 51, to: 52 });
-      if (ovDepthBlob) files.push({ bucket: "media", path: folder + "/overlay-depth.png", body: ovDepthBlob, type: "image/png", msg: "Uploading 3D depth…", from: 52, to: 53 });
+      if (depthBlob) files.push({ bucket: "media", path: folder + "/depth.png", body: depthBlob, type: "image/png", msg: "Uploading…", from: 51, to: 52 });
+      if (ovDepthBlob) files.push({ bucket: "media", path: folder + "/overlay-depth.png", body: ovDepthBlob, type: "image/png", msg: "Uploading…", from: 52, to: 53 });
       // blurred songs stay silent until found, so no public sample of them
       if (previewBlob && !isLocked()) files.push({ bucket: "media", path: folder + "/preview.mp3", body: previewBlob, type: "audio/mpeg", msg: "Uploading preview…", from: 51, to: 54 });
       if (vid && vid.kind === "model") {
