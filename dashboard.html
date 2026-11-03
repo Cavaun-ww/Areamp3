@@ -565,7 +565,7 @@
           '<h3 style="margin:4px 0 6px">' + (pro ? 'Pro <span class="pill solid">PRO</span>' : "Free") + "</h3>" +
           '<p class="small muted">' + (pro
             ? "You keep " + App.artistCut(true) + "% of every sale after PayPal's fee, and you can post albums (up to 20 songs under one cover). Pro until " + esc(fmtDay(profile.pro_until)) + "."
-            : "The site keeps " + C.FREE_FEE_PERCENT + "% of each sale after PayPal's fee. Go Pro for " + App.money(C.PRO_PRICE) + "/year and " + (+C.PRO_FEE_PERCENT ? "the site keeps just " + C.PRO_FEE_PERCENT + "%." : "you keep 100%. The site takes nothing.") + " Pro also lets you post albums: up to 20 songs under one cover." + " Pro pays for itself once you sell about $" + even + " a year.") + "</p>" +
+            : "The site keeps " + C.FREE_FEE_PERCENT + "% of each sale after PayPal's fee. Go Pro for " + App.money(C.PRO_PRICE) + "/year and " + (+C.PRO_FEE_PERCENT ? "the site keeps just " + C.PRO_FEE_PERCENT + "%." : "you keep 100%. The site takes nothing.") + " Pro also lets you post albums: up to 20 songs under one cover.") + "</p>" +
         "</div>" +
         '<button class="btn ' + (pro ? "" : "btn-primary") + '" id="go-pro" type="button">' + (pro ? "Renew · adds a year" : "Go Pro · " + App.money(C.PRO_PRICE) + "/year") + "</button>" +
       "</div>" +
