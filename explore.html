@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=69">
+<link rel="stylesheet" href="styles.css?v=70">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=69"></script>
-<script src="app.js?v=69"></script>
+<script src="config.js?v=70"></script>
+<script src="app.js?v=70"></script>
 <style>
   .head-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
   .head-row .vf { display: inline-block; width: 13px; height: 13px; margin-right: 10px; vertical-align: -1px; border: 2px solid currentColor; border-radius: 2px; box-shadow: inset 0 0 0 2px var(--text), inset 0 0 0 5px currentColor; }
@@ -204,7 +204,16 @@
   App.registerTracks(all);
   const year = (t) => new Date(t.created_at).getFullYear();
   // what a listener can download: the song's format and/or "video"
-  const fmts = (t) => (App.hasSong(t) ? [t.audio_format || "mp3"] : []).concat(App.hasVid(t) ? ["video"] : []);
+  // what's in a drop: its audio (MP3/WAV) and what appears over the art (video, GIF, photo or 3D model)
+  const fmts = (t) => {
+    const f = App.hasSong(t) ? [t.audio_format || "mp3"] : [], p = (t.video_path || "").toLowerCase();
+    if (App.hasVid(t) || /\.(mp4|webm|mov|m4v)$/.test(p)) f.push("video");
+    else if (/\.gif$/.test(p)) f.push("gif");
+    else if (/\.(jpe?g|png|webp)$/.test(p)) f.push("photo");
+    else if (/\.glb$/.test(p)) f.push("3d");
+    return f;
+  };
+  const FMT_NAMES = { mp3: "MP3 audio", wav: "WAV audio", video: "Video", gif: "GIF", photo: "Photo", "3d": "3D model" };
   // a drop can be more than one type: e.g. a blurred song for $1.29 is both "For sale" and "Find it in person"
   const typesOf = (t) => {
     const k = [], lock = t.song_lock || "none";
@@ -275,14 +284,14 @@
     // format
     const fc = new Map();
     all.forEach((t) => { if (passes(t, "format", q, fol)) fmts(t).forEach((f) => fc.set(f, (fc.get(f) || 0) + 1)); });
-    h += '<div class="facet"><h4>Media type</h4>' + ["mp3", "wav", "video"].map((k) => optHTML("format", k, k === "video" ? "Video" : k.toUpperCase() + " audio", fc.get(k) || 0)).join("") + "</div>";
+    h += '<div class="facet"><h4>Media type</h4>' + ["mp3", "wav", "video", "gif", "photo", "3d"].map((k) => optHTML("format", k, FMT_NAMES[k], fc.get(k) || 0)).join("") + "</div>";
     // no genre or artist lists here: the search box finds both
     const names = {}; all.forEach((t) => (names[artistKey(t)] = artistLabel(t)));
     $("side").innerHTML = h;
     // chips for what's turned on
     const chips = [];
     if (yFrom || yTo) chips.push('<button type="button" data-clear="year">' + (yFrom || minY) + "–" + (yTo || maxY) + "</button>");
-    ["type", "format", "genre", "artist"].forEach((g) => sel[g].forEach((v) => chips.push('<button type="button" data-clear="' + g + '" data-v="' + esc(v) + '">' + esc(g === "type" ? TYPE_NAMES[v] : g === "format" ? v.toUpperCase() : g === "artist" ? names[v] || v : v) + "</button>")));
+    ["type", "format", "genre", "artist"].forEach((g) => sel[g].forEach((v) => chips.push('<button type="button" data-clear="' + g + '" data-v="' + esc(v) + '">' + esc(g === "type" ? TYPE_NAMES[v] : g === "format" ? FMT_NAMES[v] || v.toUpperCase() : g === "artist" ? names[v] || v : v) + "</button>")));
     $("on").innerHTML = chips.join("");
     $("filters-btn").textContent = "Filters" + (chips.length ? " (" + chips.length + ")" : "");
   }
