@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=99">
+<link rel="stylesheet" href="styles.css?v=100">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=99"></script>
-<script src="app.js?v=99"></script>
-<script src="depth.js?v=99"></script>
+<script src="config.js?v=100"></script>
+<script src="app.js?v=100"></script>
+<script src="depth.js?v=100"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -330,13 +330,15 @@
     const tries = (() => { try { return JSON.parse(localStorage.getItem("d3try") || "{}"); } catch (e) { return {}; } })();
     const saveTries = () => { try { localStorage.setItem("d3try", JSON.stringify(tries)); } catch (e) {} };
     const isPic = (p) => /\.(jpe?g|png|webp)$/i.test(p || ""), isGif = (p) => /\.gif$/i.test(p || "");
-    let changed = false;
+    let changed = false, didOne = false;
     try {
       for (const t of mine.slice()) {
         const needCover = !t.depth_path && t.cover_path;
         const needOv = t.video_path && !t.overlay_depth_path && (isPic(t.video_path) || isGif(t.video_path));
         if (!needCover && !needOv) continue;
         if ((tries[t.id] || 0) >= 2) continue; // tried twice already: leave it flat
+        if (didOne && matchMedia("(pointer: coarse)").matches) break; // phones: one drop per visit, to go easy on memory
+        didOne = true;
         tries[t.id] = (tries[t.id] || 0) + 1; saveTries();
         const folder = (t.cover_path || t.video_path).split("/").slice(0, -1).join("/");
         if (folder.split("/")[0] !== uid) continue;

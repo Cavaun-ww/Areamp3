@@ -6,6 +6,17 @@
   var LIB = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1";
   var MODEL = "onnx-community/depth-anything-v2-small";
   var pipe = null;
+  // if the page ever dies in the middle of making depth (phone ran out of memory), count it;
+  // after two, this device skips 3D so publishing always works
+  var LS = { get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: function (k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} } };
+  if (LS.get("d3busy")) { LS.set("d3fail", String((+LS.get("d3fail") || 0) + 1)); LS.set("d3busy", null); }
+  function guard(fn) {
+    return async function () {
+      if ((+LS.get("d3fail") || 0) >= 2) throw new Error("3D off on this device");
+      LS.set("d3busy", "1");
+      try { return await fn.apply(this, arguments); } finally { LS.set("d3busy", null); }
+    };
+  }
 
   async function getPipe(onStatus) {
     if (pipe) return pipe;
@@ -13,7 +24,8 @@
     var tf = await import(LIB);
     tf.env.allowLocalModels = false;
     var opts = { dtype: "q8" };
-    try { if (navigator.gpu && (await navigator.gpu.requestAdapter())) opts = { device: "webgpu", dtype: "fp16" }; } catch (e) {}
+    var phone = window.matchMedia && matchMedia("(pointer: coarse)").matches;
+    try { if (!phone && navigator.gpu && (await navigator.gpu.requestAdapter())) opts = { device: "webgpu", dtype: "fp16" }; } catch (e) {}
     try { pipe = await tf.pipeline("depth-estimation", MODEL, opts); }
     catch (e) { pipe = await tf.pipeline("depth-estimation", MODEL, { dtype: "q8" }); } // no WebGPU: fall back
     return pipe;
@@ -40,12 +52,13 @@
   async function depthMap(blob, onStatus) {
     var p = await getPipe(onStatus);
     onStatus && onStatus("Adding 3D depth to your photo…");
-    var small = await shrink(blob, 640);
+    var small = await shrink(blob, window.matchMedia && matchMedia("(pointer: coarse)").matches ? 448 : 640);
     var url = URL.createObjectURL(small);
     try {
       var out = await p(url);
       var r = Array.isArray(out) ? out[0] : out;
       var canvas = r.depth.toCanvas();
+      try { r.predicted_depth && r.predicted_depth.dispose && r.predicted_depth.dispose(); } catch (e) {}
       // soften hard edges a little so tilting doesn't tear around hair and fingers
       var c2 = document.createElement("canvas"); c2.width = canvas.width; c2.height = canvas.height;
       var g = c2.getContext("2d"); g.filter = "blur(2px)"; g.drawImage(canvas, 0, 0);
@@ -97,31 +110,30 @@
     } finally { URL.revokeObjectURL(url); }
   }
 
-  // GIFs: every frame (or 60 evenly spaced ones for long GIFs), in step with the animation
+  // GIFs: one depth shape from the middle frame (frame-by-frame used too much memory on phones)
   async function gifDepth(file, onPct) {
-    await getPipe();
     var lib = await import("https://cdn.jsdelivr.net/npm/gifuct-js@2.1.2/+esm"); if (!lib.parseGIF && lib.default) lib = lib.default;
     var gif = lib.parseGIF(await file.arrayBuffer()), frames = lib.decompressFrames(gif, false), total = frames.length;
     if (!total) throw new Error("gif");
-    var W = gif.lsd.width || 1, H = gif.lsd.height || 1, n = Math.min(60, total);
-    var want = {}; for (var k = 0; k < n; k++) want[Math.round(k * (total - 1) / Math.max(1, n - 1))] = k;
+    var W = gif.lsd.width || 1, H = gif.lsd.height || 1, mid = Math.floor(total / 2);
     var full = document.createElement("canvas"); full.width = W; full.height = H; var fg = full.getContext("2d");
     var tmp = document.createElement("canvas"), tg = tmp.getContext("2d"), prev = null;
-    var fc = frameCanvas(W, H), cg = fc.getContext("2d"), sh = sheet(n), made = 0;
-    for (var i = 0; i < total; i++) {
+    for (var i = 0; i <= mid; i++) {
       var f = frames[i];
       if (prev && prev.disposalType === 2) fg.clearRect(prev.dims.left, prev.dims.top, prev.dims.width, prev.dims.height);
       var d = f.dims; tmp.width = d.width; tmp.height = d.height;
       var im = tg.createImageData(d.width, d.height), a = im.data, px = f.pixels, ct = f.colorTable, ti = f.transparentIndex;
       for (var p = 0; p < px.length; p++) { var c = px[p]; if (c === ti) continue; var col = ct[c], o = p * 4; if (!col) continue; a[o] = col[0]; a[o + 1] = col[1]; a[o + 2] = col[2]; a[o + 3] = 255; }
       tg.putImageData(im, 0, 0); fg.drawImage(tmp, d.left, d.top); prev = f;
-      if (want[i] != null) {
-        cg.fillStyle = "#000"; cg.fillRect(0, 0, fc.width, fc.height); cg.drawImage(full, 0, 0, fc.width, fc.height);
-        sh.put(want[i], await depthCell(fc)); made++; onPct && onPct(made / n);
-      }
     }
-    return { blob: await toPng(sh.c), meta: { kind: "gif", n: n, cols: sh.cols, cell: CELL, total: total } };
+    frames = null; gif = null;
+    var still = await new Promise(function (ok, no) { full.toBlob(function (b) { b ? ok(b) : no(new Error("gif")); }, "image/png"); });
+    full.width = full.height = tmp.width = tmp.height = 1;
+    onPct && onPct(0.5);
+    var blob = await depthMap(still);
+    onPct && onPct(1);
+    return { blob: blob, meta: null };
   }
 
-  window.AreaDepth = { depthMap: depthMap, videoDepth: videoDepth, gifDepth: gifDepth };
+  window.AreaDepth = { depthMap: guard(depthMap), videoDepth: guard(videoDepth), gifDepth: guard(gifDepth) };
 })();
