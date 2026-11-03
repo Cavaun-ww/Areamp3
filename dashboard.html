@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=105">
+<link rel="stylesheet" href="styles.css?v=106">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=105"></script>
-<script src="app.js?v=105"></script>
-<script src="depth.js?v=105"></script>
+<script src="config.js?v=106"></script>
+<script src="app.js?v=106"></script>
+<script src="depth.js?v=106"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -355,7 +355,7 @@
     if (!data.length) { $("tracks").innerHTML = '<p class="muted mono small" style="padding:20px 0">No drops match “' + esc(q) + '”.</p>'; return; }
     $("tracks").innerHTML = '<div class="grid">' + data.map((t) => App.trackCard(t, {
       hideArtist: true, mine: true,
-      actions: '<div class="small muted mono">' + [t.is_published ? (t.is_private ? "PRIVATE" : "PUBLIC") : "HIDDEN", t.photo_hidden || App.isLocked(t) ? "BLURRED · " + (finds[t.id] || 0) + " FOUND" : "",
+      actions: '<div class="small muted mono">' + [t.is_published ? "" : "HIDDEN", t.photo_hidden || App.isLocked(t) ? (finds[t.id] || 0) + " FOUND" : "",
           t.max_copies != null ? (+t.copies_taken || 0) + "/" + t.max_copies + " COPIES" : "", t.is_album ? "ALBUM · " + (t.album_count || 0) + " SONGS" : ""].filter(Boolean).join(" · ") + "</div>" +
         '<div class="actions">' +
           '<button class="btn btn-sm" data-act="price" data-id="' + t.id + '">Price</button>' +
@@ -363,10 +363,36 @@
           '<button class="btn btn-sm" data-act="vis" data-id="' + t.id + '">' + (t.is_published ? "Hide" : "Publish") + "</button>" +
           '<button class="btn btn-sm btn-danger" data-act="del" data-id="' + t.id + '" aria-label="Delete">✕</button>' +
         "</div>" +
-        '<button class="btn btn-sm btn-block set-open" data-act="more" data-id="' + t.id + '">Settings <span aria-hidden="true">⋯</span></button>',
+        setChips(t) +
+        '<button class="btn btn-sm btn-block set-open" data-act="more" data-id="' + t.id + '">Settings' + (activeSettings(t).length ? ' <span class="set-n">' + activeSettings(t).length + "</span>" : ' <span aria-hidden="true">⋯</span>') + "</button>",
     })).join("") + "</div>";
   }
   $("drop-q").addEventListener("input", () => { if (mine.length) paintTracks(); });
+  // which settings are changed from normal, shown as tags on the card so you can tell without opening Settings
+  function activeSettings(t) {
+    const out = [];
+    if (t.is_private) out.push("Private");
+    if (t.photo_hidden || App.isLocked(t)) out.push("Blur");
+    if (t.max_copies != null) out.push("Limit " + t.max_copies);
+    if (App.effectsSummary(t)) out.push("Effects");
+    if (t.depth_path || t.overlay_depth_path) out.push("3D");
+    if (t.has_location) out.push("Location");
+    return out;
+  }
+  function setChips(t) {
+    const a = activeSettings(t);
+    return a.length ? '<div class="set-chips">' + a.map((x) => '<span class="set-chip">' + esc(x) + "</span>").join("") + "</div>" : "";
+  }
+  async function resetSettings(t) {
+    const row = { is_private: false, photo_hidden: false, song_lock: "none", max_copies: null, pop_scale: 1, lift: 0, key_mode: "none",
+      depth_path: null, overlay_depth_path: null, overlay_depth_meta: null, ...App.locationColumns(null) };
+    const old3D = [t.depth_path, t.overlay_depth_path].filter(Boolean);
+    const { error } = await sb.from("tracks").update(row).eq("id", t.id);
+    if (error) return App.toast(error.message, true);
+    if (t.has_location) await sb.from("track_spots").delete().eq("track_id", t.id);
+    if (old3D.length) sb.storage.from("media").remove(old3D);
+    App.toast("Settings reset"); loadTracks();
+  }
   // the settings for one drop, in a pop-up list
   function openSettings(t) {
     const blurred = t.photo_hidden || App.isLocked(t);
@@ -379,8 +405,13 @@
         row("copies", "Limit copies", t.max_copies != null ? t.max_copies + " copies" : "Off") +
         row("fx", "Pop-out effects", fxs || "Off") +
         row("loc", "Location", t.has_location ? (t.place_name || "Set") : "Off") +
-      '</div><button class="btn btn-ghost btn-block" id="set-close" style="margin-top:14px">Close</button>');
+      '</div>' +
+      '<div class="row" style="margin-top:14px"><button class="btn btn-ghost" id="set-reset"' + (activeSettings(t).length ? "" : " disabled") + '>Reset settings</button><button class="btn btn-primary" id="set-close" style="margin-left:auto">Close</button></div>');
     bg.querySelector("#set-close").onclick = () => bg.remove();
+    bg.querySelector("#set-reset").onclick = () => {
+      if (!confirm('Reset all settings for "' + t.title + '"? It becomes public, unblurred, with no copy limit, no pop-out effects or 3D, and no location. Price, title and files stay the same.')) return;
+      bg.remove(); resetSettings(t);
+    };
     bg.querySelectorAll("[data-sact]").forEach((r) => (r.onclick = () => { bg.remove(); doAct(r.dataset.sact, t, r); }));
   }
   $("tracks").addEventListener("click", (e) => {
