@@ -10,10 +10,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=109">
+<link rel="stylesheet" href="styles.css?v=110">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=109"></script>
-<script src="app.js?v=109"></script>
+<script src="config.js?v=110"></script>
+<script src="app.js?v=110"></script>
 <style>
   .hero { min-height: min(78vh, 720px); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 60px 20px 50px; border-bottom: 1px solid var(--line); }
   /* New Drops: right under the logo, sliding left on its own (pauses when you touch or hover it) */
@@ -22,6 +22,7 @@
   /* (no CSS mask here: iPhone Safari stops drawing moving cards inside a mask) */
   .marquee { overflow-x: auto; overflow-y: hidden; position: relative; margin: 0 -16px; padding: 0 16px; -webkit-overflow-scrolling: touch; scrollbar-width: none; overscroll-behavior-x: contain; }
   .marquee::-webkit-scrollbar { display: none; }
+  @media (pointer: fine) { .marquee { cursor: grab; } .marquee.dragging { cursor: grabbing; user-select: none; } .marquee.dragging a { pointer-events: none; } }
   .marquee-wrap { position: relative; }
   .marquee-wrap::before, .marquee-wrap::after { content: ""; position: absolute; top: 0; bottom: 0; width: 22px; z-index: 3; pointer-events: none; }
   .marquee-wrap::before { left: -16px; background: linear-gradient(90deg, var(--bg, #000), transparent); }
@@ -233,6 +234,28 @@
       w.addEventListener("mouseenter", () => pause(1e9));
       w.addEventListener("mouseleave", () => { hold = 0; pause(800); });
       w.addEventListener("wheel", () => pause(2500), { passive: true });
+      // computer: grab the row with the mouse and drag it left or right
+      let drag = null;
+      w.addEventListener("dragstart", (e) => e.preventDefault()); // stop the browser dragging the image or link instead
+      w.addEventListener("pointerdown", (e) => {
+        if (e.pointerType !== "mouse" || e.button !== 0) return;
+        drag = { x: e.clientX, left: w.scrollLeft, moved: false }; pause(1e9);
+      });
+      addEventListener("pointermove", (e) => {
+        if (!drag) return;
+        const dx = e.clientX - drag.x;
+        if (!drag.moved && Math.abs(dx) > 5) { drag.moved = true; w.classList.add("dragging"); }
+        if (drag.moved) { w.scrollLeft = drag.left - dx; e.preventDefault(); }
+      });
+      addEventListener("pointerup", () => {
+        if (!drag) return;
+        const moved = drag.moved; drag = null; w.classList.remove("dragging");
+        if (moved) { // a drag isn't a tap: don't open the card it ended on
+          const eat = (e) => { e.preventDefault(); e.stopPropagation(); };
+          w.addEventListener("click", eat, { capture: true, once: true });
+          setTimeout(() => w.removeEventListener("click", eat, { capture: true }), 80);
+        }
+      });
       const step = (now) => {
         requestAnimationFrame(step);
         const dt = Math.min(64, now - (last || now)); last = now;
