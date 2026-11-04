@@ -793,12 +793,24 @@
       }
       $("loc-go").onclick = search;
       $("loc-q").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); search(); } });
-      $("loc-here").onclick = async () => {
+      let finding = false;
+      async function useHere(fillBox) {
+        if (finding) return; finding = true;
         $("loc-here").disabled = true; $("loc-here").textContent = "Finding you…";
-        try { const p = await hereNow(true); await setPoint(p.lat, p.lng, null, true); }
-        catch (e) { toast(e.message, true); }
+        if (fillBox) $("loc-q").placeholder = "Finding your location…";
+        try {
+          const p = await hereNow(true); await setPoint(p.lat, p.lng, null, true);
+          // put your address in the box too (only if you haven't started typing)
+          const addr = await geoName(p.lat, p.lng);
+          if (addr && !$("loc-q").value.trim()) { $("loc-q").value = addr; if (document.activeElement === $("loc-q")) $("loc-q").select(); }
+        } catch (e) { if (!fillBox) toast(e.message, true); }
+        $("loc-q").placeholder = "Search a place or address";
         $("loc-here").disabled = false; $("loc-here").textContent = "Use my current location";
-      };
+        finding = false;
+      }
+      $("loc-here").onclick = () => useHere(false);
+      // tapping the address box the first time fills in where you are now (type over it to search somewhere else)
+      $("loc-q").addEventListener("focus", () => { if (!point && !$("loc-q").value.trim()) useHere(true); }, { once: true });
       $("loc-save").onclick = async () => {
         if (!point) return;
         $("loc-save").disabled = true; $("loc-save").textContent = "Saving…";
