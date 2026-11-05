@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=113">
+<link rel="stylesheet" href="styles.css?v=114">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=113"></script>
-<script src="app.js?v=113"></script>
-<script src="depth.js?v=113"></script>
+<script src="config.js?v=114"></script>
+<script src="app.js?v=114"></script>
+<script src="depth.js?v=114"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -622,12 +622,14 @@
       bg.remove(); App.toast(price ? "Price set to " + App.money(price) : "Now a free download"); loadTracks();
     };
   }
+  const GENRES = ["Hip-Hop", "R&B", "Pop", "Rock", "Electronic", "House", "Afrobeats", "Latin", "Reggae", "Jazz", "Soul", "Gospel", "Country", "Indie", "Lo-fi", "Instrumental", "Spoken Word", "Other"];
   function openEdit(t) {
     const bg = modal(
       '<div class="label">Edit track</div>' +
       '<div class="stack" style="margin-top:12px">' +
         '<label class="field"><span>Title</span><input class="input" id="e-title" maxlength="100"></label>' +
-        '<label class="field"><span>Genre</span><input class="input" id="e-genre" maxlength="40"></label>' +
+        '<label class="field"><span>Genre</span><select class="input" id="e-genre"><option value="">Choose…</option>' +
+          [...new Set([...GENRES, ...(t.genre && !GENRES.includes(t.genre) ? [t.genre] : [])])].map((g) => '<option>' + esc(g) + "</option>").join("") + "</select></label>" +
         '<label class="field"><span>Description</span><textarea class="input" id="e-desc" maxlength="1000"></textarea></label>' +
         '<div class="row"><button class="btn btn-primary" id="e-save">Save</button><button class="btn btn-ghost" id="e-cancel">Cancel</button><span class="spacer"></span>' +
         '<button class="btn btn-sm" id="e-dl">↓ My ' + (App.hasSong(t) ? App.songType(t) : "video") + "</button>" +

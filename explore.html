@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=113">
+<link rel="stylesheet" href="styles.css?v=114">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=113"></script>
-<script src="app.js?v=113"></script>
+<script src="config.js?v=114"></script>
+<script src="app.js?v=114"></script>
 <style>
   .head-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
   .head-row .vf { display: inline-block; width: 13px; height: 13px; margin-right: 10px; vertical-align: -1px; border: 2px solid currentColor; border-radius: 2px; box-shadow: inset 0 0 0 2px var(--text), inset 0 0 0 5px currentColor; }
@@ -289,7 +289,11 @@
     const fc = new Map();
     all.forEach((t) => { if (passes(t, "format", q, fol)) fmts(t).forEach((f) => fc.set(f, (fc.get(f) || 0) + 1)); });
     h += '<div class="facet"><h4>Media type</h4>' + ["mp3", "wav", "video", "gif", "photo", "3d"].map((k) => optHTML("format", k, FMT_NAMES[k], fc.get(k) || 0)).join("") + "</div>";
-    // no genre or artist lists here: the search box finds both
+    // genre: only the ones that have drops, most first
+    const gc = counts("genre", (t) => t.genre || "Other", q, fol);
+    const gl = [...new Set([...gc.keys(), ...sel.genre])].sort((a, b) => (gc.get(b) || 0) - (gc.get(a) || 0) || a.localeCompare(b));
+    if (gl.length) h += '<div class="facet"><h4>Genre</h4>' + gl.map((g) => optHTML("genre", g, g, gc.get(g) || 0)).join("") + "</div>";
+    // no artist list here: the search box finds artists
     const names = {}; all.forEach((t) => (names[artistKey(t)] = artistLabel(t)));
     $("side").innerHTML = h;
     // chips for what's turned on
