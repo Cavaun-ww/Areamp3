@@ -28,7 +28,7 @@ window.APP_CONFIG = {
 
   // Song prices artists can choose (0 = free download)
   MIN_PRICE: 0.01,       // no real limit: any price above free
-  MAX_PRICE: 999999.99,  // the most the database can hold
+  MAX_PRICE: 999999999999.99,  // no real limit (the most the database can hold)
 
   // Upload limits (also enforced by the storage buckets in supabase/schema.sql)
   MAX_MP3_MB: 40,

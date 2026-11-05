@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=118">
+<link rel="stylesheet" href="styles.css?v=120">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=118"></script>
-<script src="app.js?v=118"></script>
-<script src="depth.js?v=118"></script>
+<script src="config.js?v=120"></script>
+<script src="app.js?v=120"></script>
+<script src="depth.js?v=120"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -614,11 +614,16 @@
       bg.querySelector("#m-sell").hidden = m !== "sell";
     };
     bg.querySelector("#m-cancel").onclick = () => bg.remove();
-    bg.querySelector("#m-save").onclick = async () => {
-      const price = m === "free" ? 0 : +(+bg.querySelector("#m-price").value).toFixed(2);
+    bg.querySelector("#m-save").onclick = async (e) => {
+      const btn = e.currentTarget;
+      bg.querySelector("#m-price").blur();
+      const price = m === "free" ? 0 : +(+String(bg.querySelector("#m-price").value).replace(/[^0-9.]/g, "")).toFixed(2);
       if (m === "sell" && !(price >= C.MIN_PRICE && price <= C.MAX_PRICE)) return App.toast("Enter a price above " + App.money(0) + ".", true);
-      const { error } = await sb.from("tracks").update({ price }).eq("id", t.id);
+      btn.disabled = true; btn.textContent = "Saving…";
+      const { data: saved, error } = await sb.from("tracks").update({ price }).eq("id", t.id).select("price");
+      btn.disabled = false; btn.textContent = "Save";
       if (error) return App.toast(error.message, true);
+      if (!saved || !saved.length) return App.toast("Couldn't save the price. Sign out and back in, then try again.", true);
       bg.remove(); App.toast(price ? "Price set to " + App.money(price) : "Now a free download"); loadTracks();
     };
   }

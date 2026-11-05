@@ -73,6 +73,9 @@
     if (!el) { el = document.createElement("div"); el.id = "toast"; el.setAttribute("role", "status"); document.body.appendChild(el); }
     el.textContent = msg;
     el.className = "show" + (isErr ? " err" : "");
+    // phones: close the keyboard so the message isn't hidden behind it
+    const ae = document.activeElement;
+    if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) && matchMedia("(pointer: coarse)").matches) ae.blur();
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => (el.className = el.className.replace("show", "")), isErr ? 5000 : 2600);
   }
