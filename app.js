@@ -1,5 +1,20 @@
 // Area MP3 — shared helpers used by every page.
 (function () {
+  // phones sometimes keep an old copy of a page after an update: if the site has a newer version, reload once to get it
+  (function freshness() {
+    try {
+      const me = document.currentScript && document.currentScript.src.match(/[?&]v=(\d+)/);
+      if (!me || location.protocol === "file:") return;
+      fetch("version.txt?t=" + Date.now(), { cache: "no-store" }).then((r) => (r.ok ? r.text() : "")).then((v) => {
+        v = (v || "").trim();
+        if (!/^\d+$/.test(v) || +v <= +me[1]) return;
+        const k = "reloaded-for-" + v;
+        if (sessionStorage.getItem(k)) return; // only once, never a loop
+        sessionStorage.setItem(k, "1");
+        location.reload();
+      }).catch(() => {});
+    } catch (e) {}
+  })();
   const C = window.APP_CONFIG;
   const configured = !/YOUR-/.test(C.SUPABASE_URL + C.SUPABASE_ANON_KEY);
 
