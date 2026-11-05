@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=121"></script>
+<script src="config.js?v=123"></script>
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; font-family: "Chakra Petch", ui-monospace, monospace; color: #f4f4f4; }
@@ -87,7 +87,15 @@ body.desktop .steps, body.desktop #start { display: none; }
 #buyend { left: 50%; bottom: 84px; transform: translateX(-50%); display: none; flex-direction: column; align-items: center; gap: 4px; padding: 14px 20px; background: #000; border: 1px solid #f4f4f4; color: #f4f4f4; text-decoration: none; text-align: center; font-family: "JetBrains Mono", ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; min-width: 230px; }
 #buyend.show { display: flex; }
 #buyend span { font-size: 11px; color: #9a9a9a; }
-#buyend b { background: #f4f4f4; color: #000; padding: 8px 16px; font-size: 14px; letter-spacing: .1em; }
+#buyend .be-buy { background: #f4f4f4; color: #000; padding: 8px 16px; font-size: 14px; font-weight: 700; letter-spacing: .1em; text-decoration: none; }
+#buyend .be-x { position: absolute; top: 4px; right: 4px; width: 32px; height: 32px; background: transparent; border: 0; color: #9a9a9a; font-size: 16px; cursor: pointer; }
+#buyend { position: fixed; padding-top: 18px; max-width: calc(100% - 32px); }
+#buyend .be-row { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; width: 100%; }
+#buyend .be-like, #buyend .be-cmt { flex: 1; padding: 9px 10px; background: transparent; border: 1px solid #555; color: #f4f4f4; font: inherit; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; text-decoration: none; cursor: pointer; text-align: center; }
+#buyend .be-like.on { background: #f4f4f4; color: #000; border-color: #f4f4f4; }
+#buyend .be-count { color: #f4f4f4; font-size: 11px; }
+#buyend .be-count:empty { display: none; }
+#buyend .be-why { font-size: 10px; color: #777; text-transform: none; letter-spacing: .02em; }
 #buyend small { font-size: 10px; color: #9a9a9a; text-transform: none; letter-spacing: .04em; }
 #unmute { left: 50%; bottom: 84px; transform: translateX(-50%); padding: 10px 16px; background: #f4f4f4; color: #000; border: 0; font: inherit; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
 #np { left: 12px; right: 72px; top: 16px; align-items: center; gap: 10px; padding: 6px 10px 6px 6px; background: rgba(0,0,0,.8); border: 1px solid #363636; text-decoration: none; color: #fff; }
@@ -150,7 +158,14 @@ body.desktop .steps, body.desktop #start { display: none; }
 <div class="hud" id="hint">POINT AT THE IMAGE</div>
 <div class="hud" id="wm" aria-hidden="true"></div>
 <button class="hud" id="unmute">Tap for sound</button>
-<a class="hud" id="buyend" href="#"><span>Preview over</span><b>Buy</b><small>to hear the full song and download it</small></a>
+<div class="hud" id="buyend" role="dialog" aria-label="Song ended"><button type="button" class="be-x" aria-label="Close">✕</button>
+  <span class="be-head">Preview over</span>
+  <a class="be-buy" href="#">Buy</a>
+  <small class="be-sub">to hear the full song and download it</small>
+  <div class="be-row"><button type="button" class="be-like">♥ Like</button><a class="be-cmt" href="#">Comment</a></div>
+  <small class="be-count"></small>
+  <small class="be-why">Likes and comments help this drop reach the Top 3</small>
+</div>
 <div class="hud" id="albar" aria-label="Album songs"><button type="button" id="al-prev" aria-label="Previous song">◀</button><span id="al-now"></span><button type="button" id="al-next" aria-label="Next song">▶</button></div>
 <a class="hud" id="np" href="#"><img alt=""><div><b></b><span></span></div><em></em></a>
 <div class="hud" id="unlock-pill"></div>
@@ -517,15 +532,42 @@ body.desktop .steps, body.desktop #start { display: none; }
   // ── the song: preview, or the full song once you have it ──
   // paid songs: you hear a 1-minute preview in the AR camera, then it asks you to buy the full song
   function isPaidPreview() { return t && !fullUrl && !locked() && +t.price > 0 && t.has_song !== false; }
-  function showBuyEnd() {
-    var b = $("buyend"); if (!b) return;
-    b.querySelector("b").textContent = "Buy " + money(t.price);
-    b.href = trackUrl("&buy=1"); b.classList.add("show");
+  // the card when a song ends: paid → Buy (preview over); free → "Enjoying it?". Both ask for a like and a comment.
+  var endShown = {};
+  function showBuyEnd(kind) {
+    var b = $("buyend"); if (!b || !t) return;
+    var paid = kind !== "free", tr = t;
+    b.querySelector(".be-head").textContent = paid ? "Preview over" : "Enjoying it?";
+    var a = b.querySelector(".be-buy"); a.hidden = !paid; a.textContent = "Buy " + money(t.price); a.href = trackUrl("&buy=1");
+    b.querySelector(".be-sub").hidden = !paid;
+    var p = t.profiles || {};
+    var cm = b.querySelector(".be-cmt");
+    cm.textContent = p.handle ? "Tell @" + p.handle + " what you think" : "Comment";
+    cm.href = "t.html?s=" + encodeURIComponent(t.slug) + "#comment";
+    var lk = b.querySelector(".be-like"), cnt = b.querySelector(".be-count");
+    lk.classList.remove("on"); lk.textContent = "♥ Like"; cnt.textContent = "";
+    b.classList.add("show");
+    // how many like it, and whether you already do
+    sb.from("likes").select("user_id", { count: "exact", head: true }).eq("track_id", tr.id).then(function (r) {
+      if (t !== tr) return; var n = r.count || 0; lk.dataset.n = n;
+      cnt.textContent = n ? "♥ " + n + (n === 1 ? " person likes this" : " people like this") : "Be the first to like it";
+    });
+    if (me) sb.from("likes").select("user_id").eq("user_id", me).eq("track_id", tr.id).maybeSingle().then(function (r) {
+      if (t === tr && r.data) { lk.classList.add("on"); lk.textContent = "♥ Liked"; }
+    });
+    lk.onclick = function () {
+      if (!me) { location.href = "auth.html?next=" + encodeURIComponent(location.pathname.split("/").pop() + location.search); return; }
+      var on = !lk.classList.contains("on"), n = +(lk.dataset.n || 0) + (on ? 1 : -1);
+      lk.classList.toggle("on", on); lk.textContent = on ? "♥ Liked" : "♥ Like"; lk.dataset.n = n;
+      cnt.textContent = n > 0 ? "♥ " + n + (n === 1 ? " person likes this" : " people like this") : "Be the first to like it";
+      (on ? sb.from("likes").insert({ user_id: me, track_id: tr.id }) : sb.from("likes").delete().eq("user_id", me).eq("track_id", tr.id))
+        .then(function (r) { if (r.error && !/duplicate/i.test(r.error.message)) { lk.classList.toggle("on", !on); lk.textContent = !on ? "♥ Liked" : "♥ Like"; } });
+    };
   }
   function hideBuyEnd() { var b = $("buyend"); if (b) b.classList.remove("show"); }
   function playSong() {
     if (!song || !song.getAttribute("src")) return;
-    if (isPaidPreview() && song.ended) return showBuyEnd(); // don't restart a finished preview
+    if (isPaidPreview() && song.ended) return showBuyEnd("paid"); // don't restart a finished preview
     song.play().catch(function () { $("unmute").classList.add("show"); });
   }
   function nowPlaying() {
@@ -886,7 +928,9 @@ body.desktop .steps, body.desktop #start { display: none; }
     // set up sound inside the tap (phones block it otherwise)
     song = new Audio(); song.loop = false; song.playsInline = true;
     song.addEventListener("ended", function () {
-      if (isPaidPreview()) return showBuyEnd(); // paid song: the preview is over, offer to buy
+      if (isPaidPreview()) return showBuyEnd("paid"); // paid song: the preview is over, offer to buy
+      // free songs: after the first full play, ask for a like or a comment (once per song; not on your own drop)
+      if (t && t.owner !== me && !locked() && !endShown[t.id]) { endShown[t.id] = 1; showBuyEnd("free"); }
       var a = albumOf(t); if (a) return albumPlay(a.n + 1); // albums play through in order
       song.currentTime = 0; playSong(); // free and owned songs keep playing
     });
@@ -954,7 +998,9 @@ body.desktop .steps, body.desktop #start { display: none; }
     clearInterval(wmTimer); wmTimer = setInterval(move, 3000);
   }
 
+  $("buyend").querySelector(".be-x").onclick = hideBuyEnd;
   function closeAR() {
+    hideBuyEnd();
     var s = document.querySelector("a-scene");
     if (s) { try { var sys = s.systems["mindar-image-system"]; if (sys) sys.stop(); } catch (e) {} s.remove(); }
     document.querySelectorAll("video").forEach(function (v) { if (v.srcObject) { v.srcObject.getTracks().forEach(function (tr) { tr.stop(); }); v.remove(); } });

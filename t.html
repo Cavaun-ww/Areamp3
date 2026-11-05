@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=121">
+<link rel="stylesheet" href="styles.css?v=123">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=121"></script>
-<script src="app.js?v=121"></script>
+<script src="config.js?v=123"></script>
+<script src="app.js?v=123"></script>
 <style>
   .rel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
   @media (max-width: 760px) { .rel { grid-template-columns: minmax(0, 1fr); gap: 20px; } }
@@ -354,6 +354,7 @@
   };
   loadComments();
   if (location.hash === "#comments") setTimeout(() => $("comments").scrollIntoView(), 300);
+  if (location.hash === "#comment") setTimeout(() => { $("comments").scrollIntoView({ block: "center" }); if (session) $("c-input").focus(); }, 400); // from the AR camera: ready to type
 
   if (qs.get("buy") && session && !mine) { history.replaceState(null, "", "t.html?s=" + encodeURIComponent(slug)); buyBtn.click(); }
 
