@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=110">
+<link rel="stylesheet" href="styles.css?v=111">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=110"></script>
-<script src="app.js?v=110"></script>
-<script src="depth.js?v=110"></script>
+<script src="config.js?v=111"></script>
+<script src="app.js?v=111"></script>
+<script src="depth.js?v=111"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -316,6 +316,17 @@
     $("drop-search-wrap").hidden = data.length < 2;
     if (!data.length) { $("tracks").innerHTML = '<div class="empty"><p style="margin-bottom:16px">Nothing here yet.</p><a class="btn btn-primary" href="upload.html">Create your first experience</a></div>'; return; }
     paintTracks();
+    // just published with 3D on: make it now, while the drop is already safely live
+    const m3 = new URLSearchParams(location.search).get("make3d");
+    if (m3) {
+      history.replaceState(null, "", "dashboard.html"); // a reload won't start it again
+      const t = mine.find((x) => x.id === m3);
+      if (t && !(t.depth_path || t.overlay_depth_path)) {
+        App.toast("Your drop is live. Adding 3D… keep this page open");
+        make3D(t).then(() => { App.toast("3D added"); paintTracks(); })
+          .catch((e) => { console.warn(e); App.toast("Your drop is live, but 3D didn't work on this phone. Try turning it on from a computer.", true); });
+      }
+    }
   }
   // 3D effect, only when the artist turns it on for a drop (made in this browser)
   async function make3D(t) {

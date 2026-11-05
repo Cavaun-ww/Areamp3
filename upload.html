@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=110">
+<link rel="stylesheet" href="styles.css?v=111">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=110"></script>
-<script src="app.js?v=110"></script>
-<script src="depth.js?v=110"></script>
+<script src="config.js?v=111"></script>
+<script src="app.js?v=111"></script>
+<script src="depth.js?v=111"></script>
 <style>
   .wave { width: 100%; height: 64px; display: block; background: #050505; border: 1px solid var(--line); margin-top: 12px; }
   .rng { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: .82rem; color: var(--text-2); }
@@ -201,7 +201,7 @@
   const C = App.C, sb = App.sb, $ = (id) => document.getElementById(id);
   document.querySelectorAll(".js-mp3mb").forEach((e) => (e.textContent = C.MAX_MP3_MB));
   $("d3-on").addEventListener("change", () => {
-    if ($("d3-on").checked) makeOverlayDepth();
+    if ($("d3-on").checked && !phone3D()) makeOverlayDepth(); // phones: 3D is made after publishing, not here
     else { ovDepth = null; depthRun++; const c = $("drop-vid").querySelector("canvas.d3"); if (c) c.remove(); const pi = $("drop-vid").querySelector(".d3-wrap img"); if (pi) { delete pi.dataset.depth; pi._d3 = false; } }
   });
   $("limit-on").addEventListener("change", () => { $("limit-field").hidden = !$("limit-on").checked; if ($("limit-on").checked) $("limit-n").focus(); });
@@ -504,7 +504,7 @@
         showPreview("drop-vid", w, isGif ? "GIF" : "Photo");
         overlayDone();
         ovDepth = null; depthRun++;
-        if (!isGif && $("d3-on").checked) makeOverlayDepth();
+        if (!isGif && $("d3-on").checked && !phone3D()) makeOverlayDepth();
       };
       im.onerror = () => App.toast(isGif ? "That GIF couldn't be read." : "That photo couldn't be read.", true);
       im.src = URL.createObjectURL(file);
@@ -532,6 +532,7 @@
   }
   // ── 3D depth for the photo in step 2: made as soon as you pick it, so you can see it before publishing ──
   let ovDepth = null, depthRun = 0;
+  const phone3D = () => matchMedia("(pointer: coarse)").matches;
   async function makeOverlayDepth() {
     if (!window.AreaDepth || !vid || vid.kind !== "image" || vid.gif) return;
     const run = ++depthRun;
@@ -845,24 +846,9 @@
         try { previewBlob = await makePreview((p) => progress(41 + p * 5, null)); } catch (e) { console.warn(e); }
       }
 
-      // 2b. 3D depth for the photo in step 2 (and the cover, so cards tilt too). Never stops the upload if it fails.
+      // 2b. 3D is made AFTER the drop is live (on your page), so a phone running low on memory can never lose your upload
       let depthBlob = null, ovDepthBlob = null, ovDepthMeta = null;
       const want3D = $("d3-on").checked;
-      if (!want3D) { /* 3D is off: publish flat */ }
-      else if (window.AreaDepth && vid && vid.kind === "image" && !vid.gif) {
-        try {
-          ovDepthBlob = ovDepth || await AreaDepth.depthMap(vid.file, () => progress(46, "Getting your photo ready…"));
-          depthBlob = await AreaDepth.depthMap(img.blob, () => progress(46, "Getting your photo ready…"));
-        } catch (e) { console.warn("depth", e); } // no 3D on this device: publish as normal
-      } else if (window.AreaDepth && vid && vid.gif) {
-        progress(46, "Getting your GIF ready…");
-        try {
-          const r = await AreaDepth.gifDepth(vid.file);
-          ovDepthBlob = r.blob; ovDepthMeta = r.meta;
-        } catch (e) { console.warn("depth", e); ovDepthBlob = null; ovDepthMeta = null; }
-      }
-      // the cover always gets depth, so its card tilts on the site
-      if (want3D && window.AreaDepth && !depthBlob) { try { depthBlob = await AreaDepth.depthMap(img.blob); } catch (e) { console.warn("depth", e); } }
 
       // 3. upload everything
       const folder = uid + "/" + crypto.randomUUID();
@@ -953,7 +939,8 @@
       progress(100, "Live");
       App.toast("It's live");
       btn.textContent = "Opening your camera…";
-      setTimeout(() => location.replace("ar.html?s=" + encodeURIComponent(data.slug) + "&new=1"), 900);
+      if (want3D) { btn.textContent = "Adding 3D…"; setTimeout(() => location.replace("dashboard.html?make3d=" + encodeURIComponent(data.id)), 900); }
+      else setTimeout(() => location.replace("ar.html?s=" + encodeURIComponent(data.slug) + "&new=1"), 900);
     } catch (e) {
       console.error(e);
       if (newTrackId) await sb.from("tracks").delete().eq("id", newTrackId);
