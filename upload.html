@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=111">
+<link rel="stylesheet" href="styles.css?v=113">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=111"></script>
-<script src="app.js?v=111"></script>
-<script src="depth.js?v=111"></script>
+<script src="config.js?v=113"></script>
+<script src="app.js?v=113"></script>
+<script src="depth.js?v=113"></script>
 <style>
   .wave { width: 100%; height: 64px; display: block; background: #050505; border: 1px solid var(--line); margin-top: 12px; }
   .rng { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: .82rem; color: var(--text-2); }
@@ -54,7 +54,7 @@
       <div class="part-label">Video, GIF, photo or 3D model <span>appears on top of the image. Listeners can download videos too.</span></div>
       <div class="drop" id="drop-vid">
         <input type="file" id="file-vid" accept="video/mp4,video/webm,video/quicktime,image/gif,image/jpeg,image/png,image/webp,.glb,model/gltf-binary">
-        <div class="empty-state"><div class="icon">[ MP4 / GIF / 3D ]</div><div>Drop a video, GIF, photo or 3D model here or <span class="browse">browse</span></div><div class="hint">Videos up to 4 minutes. Too big? We'll get it ready for you.<br>3D models: .GLB up to <span class="js-glbmb"></span> MB (under 10 MB loads fastest)</div></div>
+        <div class="empty-state"><div class="icon">[ MP4 / GIF / PNG / 3D ]</div><div>Drop a video, GIF, photo or 3D model here or <span class="browse">browse</span></div><div class="hint">PNGs with a clear background stay clear in AR.<br>Videos up to 4 minutes. Too big? We'll get it ready for you.<br>3D models: .GLB up to <span class="js-glbmb"></span> MB (under 10 MB loads fastest)</div></div>
       </div>
       <div class="trim" id="trim" hidden>
         <h3>Let's get your video ready</h3>
@@ -939,7 +939,10 @@
       progress(100, "Live");
       App.toast("It's live");
       btn.textContent = "Opening your camera…";
-      if (want3D) { btn.textContent = "Adding 3D…"; setTimeout(() => location.replace("dashboard.html?make3d=" + encodeURIComponent(data.id)), 900); }
+      if (want3D) {
+        btn.textContent = "Adding 3D…";
+        try { const p = JSON.parse(localStorage.getItem("pending3d") || "{}"); p[data.id] = 0; localStorage.setItem("pending3d", JSON.stringify(p)); } catch (e) {} setTimeout(() => location.replace("dashboard.html?make3d=" + encodeURIComponent(data.id)), 900);
+      }
       else setTimeout(() => location.replace("ar.html?s=" + encodeURIComponent(data.slug) + "&new=1"), 900);
     } catch (e) {
       console.error(e);

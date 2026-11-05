@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=111">
+<link rel="stylesheet" href="styles.css?v=113">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=111"></script>
-<script src="app.js?v=111"></script>
-<script src="depth.js?v=111"></script>
+<script src="config.js?v=113"></script>
+<script src="app.js?v=113"></script>
+<script src="depth.js?v=113"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -316,16 +316,24 @@
     $("drop-search-wrap").hidden = data.length < 2;
     if (!data.length) { $("tracks").innerHTML = '<div class="empty"><p style="margin-bottom:16px">Nothing here yet.</p><a class="btn btn-primary" href="upload.html">Create your first experience</a></div>'; return; }
     paintTracks();
-    // just published with 3D on: make it now, while the drop is already safely live
-    const m3 = new URLSearchParams(location.search).get("make3d");
-    if (m3) {
-      history.replaceState(null, "", "dashboard.html"); // a reload won't start it again
-      const t = mine.find((x) => x.id === m3);
-      if (t && !(t.depth_path || t.overlay_depth_path)) {
-        App.toast("Your drop is live. Adding 3D… keep this page open");
-        make3D(t).then(() => { App.toast("3D added"); paintTracks(); })
-          .catch((e) => { console.warn(e); App.toast("Your drop is live, but 3D didn't work on this phone. Try turning it on from a computer.", true); });
-      }
+    if (new URLSearchParams(location.search).get("make3d")) history.replaceState(null, "", "dashboard.html" + location.hash);
+    runPending3D();
+  }
+  // drops published with 3D on get their 3D here, after they're safely live.
+  // If you leave the page before it finishes, it picks up again the next time you open My page.
+  const making3D = new Set();
+  async function runPending3D() {
+    let p; try { p = JSON.parse(localStorage.getItem("pending3d") || "{}"); } catch (e) { p = {}; }
+    const save = () => { try { localStorage.setItem("pending3d", JSON.stringify(p)); } catch (e) {} };
+    for (const id of Object.keys(p)) {
+      const t = mine.find((x) => x.id === id);
+      if (!t || t.depth_path || t.overlay_depth_path || p[id] >= 3) { delete p[id]; save(); continue; }
+      if (making3D.has(id)) continue;
+      p[id]++; save(); making3D.add(id); paintTracks();
+      App.toast("Adding 3D to “" + t.title + "”… keep this page open");
+      try { await make3D(t); delete p[id]; save(); App.toast("3D added to “" + t.title + "”"); }
+      catch (e) { console.warn(e); delete p[id]; save(); App.toast("“" + t.title + "” is live, but 3D didn't work on this phone. Try it from a computer: Settings › Pop-out effects.", true); }
+      making3D.delete(id); paintTracks();
     }
   }
   // 3D effect, only when the artist turns it on for a drop (made in this browser)
@@ -392,6 +400,7 @@
   }
   function setChips(t) {
     const a = activeSettings(t);
+    if (making3D.has(t.id)) a.push("Adding 3D…");
     return a.length ? '<div class="set-chips">' + a.map((x) => '<span class="set-chip">' + esc(x) + "</span>").join("") + "</div>" : "";
   }
   async function resetSettings(t) {
