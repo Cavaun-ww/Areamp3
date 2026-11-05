@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=123"></script>
+<script src="config.js?v=124"></script>
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; font-family: "Chakra Petch", ui-monospace, monospace; color: #f4f4f4; }
@@ -537,7 +537,9 @@ body.desktop .steps, body.desktop #start { display: none; }
   function showBuyEnd(kind) {
     var b = $("buyend"); if (!b || !t) return;
     var paid = kind !== "free", tr = t;
-    b.querySelector(".be-head").textContent = paid ? "Preview over" : "Enjoying it?";
+    var left = t.max_copies != null ? Math.max(0, t.max_copies - (+t.copies_taken || 0)) : null;
+    var scarce = left == null ? "" : left === 1 ? " · Last one" : left <= 10 ? " · Only " + left + " left" : "";
+    b.querySelector(".be-head").textContent = (paid ? "Preview over" : "Enjoying it?") + (paid ? scarce : "");
     var a = b.querySelector(".be-buy"); a.hidden = !paid; a.textContent = "Buy " + money(t.price); a.href = trackUrl("&buy=1");
     b.querySelector(".be-sub").hidden = !paid;
     var p = t.profiles || {};
@@ -651,6 +653,7 @@ body.desktop .steps, body.desktop #start { display: none; }
         if (t !== tr) return;
         if (soldOut) { pill("<b>Heard ✓</b><span>All " + tr.max_copies + " copies are taken, so this one is sold out. You can still listen here any time.</span><button class=\"alt\" data-close>Keep listening</button>"); return; }
         var cleft = tr.max_copies != null ? Math.max(0, tr.max_copies - (+tr.copies_taken || 0)) : null;
+        if (paid) return; // paid songs: no pop-up here; the card at the end of the preview offers Buy
         pill("<b>Heard ✓" + (cleft != null ? (cleft === 1 ? " · LAST ONE" : cleft <= 10 ? " · ONLY " + cleft + " LEFT" : " · LIMITED") : "") + "</b><span>" + (paid ? "You can now buy it for " + money(tr.price) + "." : "You can now download it to your phone.") + "</span>" +
           (paid ? "<a href=\"" + trackUrl("&buy=1") + "\">Buy it</a>"
                 : (hasSong ? "<button data-dl=\"\">Download the song</button>" : "<button data-dl=\"\">Download the video</button>")) +
