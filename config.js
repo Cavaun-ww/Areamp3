@@ -38,5 +38,5 @@ window.APP_CONFIG = {
   MAX_MODEL_MB: 25,   // 3D models (.glb). Under 10 MB loads fastest on phones.
 
   // Length of the free preview everyone can hear before buying (seconds)
-  PREVIEW_SECONDS: 30,
+  PREVIEW_SECONDS: 60,
 };

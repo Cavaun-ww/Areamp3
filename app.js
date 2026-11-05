@@ -259,7 +259,7 @@
       audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
     };
   }
-  // everyone hears the whole song, unless it's blurred until found (then the preview plays)
+  // free songs: everyone hears the whole song. Paid songs: a 1-minute preview until you buy. Blurred: silent until found.
   const fullCache = {};
   const canHearFull = (t) => hasSong(t) && !isLocked(t);
   function play(t, fullUrl) {
@@ -283,7 +283,8 @@
     current = t;
     // start right away inside the tap (phones need that), then switch to the whole song when its link arrives
     if (fullUrl || t.preview_path) {
-      audio.muted = wantFull; // quiet until the whole song is ready, so it doesn't jump
+      const paid = +t.price > 0; // paid songs: the preview plays for everyone except buyers and the artist
+      audio.muted = wantFull && !paid; // free songs: quiet until the whole song is ready, so it doesn't jump
       audio.src = fullUrl || publicUrl(t.preview_path);
       audio.play().catch(() => toast("Tap play again to start it."));
     }
@@ -292,7 +293,7 @@
     bar.querySelector("img").src = publicUrl(t.cover_path);
     bar.querySelector(".pi b").textContent = t.title;
     const label = (full) => (artistName(p) ? artistName(p) + " · " : "") + (full ? "FULL SONG" : "PREVIEW · " + (isLocked(t) ? lockTag(t) : priceLabel(t)));
-    bar.querySelector(".pi span").textContent = label(!!fullUrl || wantFull);
+    bar.querySelector(".pi span").textContent = label(!!fullUrl || (wantFull && !(+t.price > 0)));
     const buy = bar.querySelector("[data-buy]");
     buy.textContent = isLocked(t) ? "Details" : +t.price > 0 ? "Buy " + money(t.price, t.currency) : "Download";
     buy.href = trackLink(t.slug);
@@ -302,6 +303,7 @@
         fullCache[t.id] = { url: o.url, exp: Date.now() + 50 * 1000 };
         if (!current || current.id !== t.id) return;
         audio.src = o.url; audio.currentTime = 0; audio.muted = false;
+        if (bar) bar.querySelector(".pi span").textContent = label(true);
         audio.play().catch(() => toast("Tap play again to start it."));
       }).catch(() => {
         audio.muted = false;
