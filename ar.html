@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=127"></script>
+<script src="config.js?v=128"></script>
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; font-family: "Chakra Petch", ui-monospace, monospace; color: #f4f4f4; }
@@ -531,7 +531,7 @@ body.desktop .steps, body.desktop #start { display: none; }
   }
 
   // ── the song: preview, or the full song once you have it ──
-  // paid songs: you hear a 45-second preview in the AR camera, then it asks you to buy the full song
+  // paid songs: you hear a 1-minute preview in the AR camera, then it asks you to buy the full song
   function isPaidPreview() { return t && !fullUrl && !locked() && +t.price > 0 && t.has_song !== false; }
   // the card when a song ends: paid → Buy (preview over); free → "Enjoying it?". Both ask for a like and a comment.
   var endShown = {};
@@ -577,7 +577,7 @@ body.desktop .steps, body.desktop #start { display: none; }
     var p = t.profiles || {}, name = p.display_name || (p.handle ? "@" + p.handle : "");
     $("np").querySelector("img").src = pub(t.cover_path);
     $("np").querySelector("b").textContent = t.title;
-    $("np").querySelector("span").textContent = (name ? name + " · " : "") + (t.has_song === false ? "VIDEO" : locked() && !unlocked ? "SILENT UNTIL FOUND" : isPaidPreview() ? "45-SEC PREVIEW" : t.is_album ? "ALBUM · " + (t.album_count || "") + " SONGS" : "FULL SONG");
+    $("np").querySelector("span").textContent = (name ? name + " · " : "") + (t.has_song === false ? "VIDEO" : locked() && !unlocked ? "SILENT UNTIL FOUND" : isPaidPreview() ? "1-MIN PREVIEW" : t.is_album ? "ALBUM · " + (t.album_count || "") + " SONGS" : "FULL SONG");
     $("np").querySelector("em").textContent = locked() ? (unlocked ? "UNLOCKED" : "LOCKED") : +t.price > 0 ? "BUY " + money(t.price) : "FREE";
     $("np").href = trackUrl(locked() ? "" : "&buy=1");
     $("np").classList.add("show");
