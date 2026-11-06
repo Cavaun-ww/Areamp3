@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=130">
+<link rel="stylesheet" href="styles.css?v=131">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=130"></script>
-<script src="app.js?v=130"></script>
+<script src="config.js?v=131"></script>
+<script src="app.js?v=131"></script>
 <style>
   .prof { display: flex; gap: 24px; align-items: center; padding: 18px 0 30px; border-bottom: 1px solid var(--line); margin-bottom: 26px; flex-wrap: wrap; }
   .prof .avatar { width: 120px; height: 120px; font-size: 3rem; }
@@ -67,7 +67,7 @@
         "<h1>" + esc(name) + App.vBadge(p) + (App.isPro(p) ? " " + App.proBadge(p) : "") + "</h1>" +
         '<div class="muted mono small">@' + esc(p.handle) + "</div>" +
         (p.bio ? '<p class="bio">' + esc(p.bio) + "</p>" : "") +
-        '<div class="counts"><span><b id="fc">' + fc + "</b>" + (fc === 1 ? "follower" : "followers") + '</span><span><b>' + following + "</b>following</span><span><b>" + list.length + "</b>" + (list.length === 1 ? "track" : "tracks") + "</span></div>" +
+        '<div class="counts"><span><b>' + list.length + "</b>" + (list.length === 1 ? "track" : "tracks") + "</span></div>" + // follower counts are private (on My page)
         '<div class="acts"><button class="btn" id="follow" hidden></button><a class="btn" id="msg" hidden>Message</a><button class="btn" id="share">Share</button><button class="btn btn-ghost" id="block" hidden>Block</button><a class="btn" id="edit" href="dashboard.html#profile" hidden>Edit my page</a></div>' +
       "</div>" +
     "</div>" +
@@ -98,8 +98,6 @@
   }
   App.mountFollow($("follow"), p.id, (d) => {
     fc = Math.max(0, fc + d);
-    $("fc").textContent = fc;
-    $("fc").nextSibling.textContent = fc === 1 ? "follower" : "followers";
   });
 })();
 </script>

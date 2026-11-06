@@ -553,3 +553,14 @@ canvas.d3 { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1;
 .set-chip { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text); border: 1px solid var(--line-2); background: var(--card-2); padding: 4px 7px; border-radius: 2px; line-height: 1.2; }
 .set-chip::before { content: "■ "; font-size: 8px; vertical-align: 1px; color: var(--text-2); }
 .set-n { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; background: var(--text); color: var(--bg); font-family: var(--mono); font-size: 12px; border-radius: 2px; letter-spacing: 0; }
+/* My page: follower counts (only you see them) */
+.fl-counts { display: flex; gap: 22px; margin: 4px 0 18px; }
+.fl-counts button { background: none; border: 0; padding: 4px 0; color: var(--text-2); font-family: var(--mono); font-size: 13px; letter-spacing: .06em; cursor: pointer; }
+.fl-counts button b { color: var(--text); font-size: 15px; margin-right: 4px; }
+.fl-counts button:hover, .fl-counts button:focus-visible { color: var(--text); outline: none; text-decoration: underline; text-underline-offset: 4px; }
+.fl-list { margin-top: 12px; max-height: 60vh; overflow-y: auto; border-top: 1px solid var(--line-2); }
+.fl-row { display: flex; align-items: center; gap: 12px; padding: 10px 2px; border-bottom: 1px solid var(--line-2); color: inherit; text-decoration: none; }
+.fl-row:hover { background: rgba(255,255,255,.04); }
+.fl-row span { display: flex; flex-direction: column; min-width: 0; }
+.fl-row b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-row small { font-size: 11px; }

@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=130">
+<link rel="stylesheet" href="styles.css?v=131">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=130"></script>
-<script src="app.js?v=130"></script>
-<script src="depth.js?v=130"></script>
+<script src="config.js?v=131"></script>
+<script src="app.js?v=131"></script>
+<script src="depth.js?v=131"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -39,6 +39,8 @@
     <a class="btn btn-sm" id="view-public" hidden>View public page →</a>
     <a class="btn btn-sm btn-primary" href="upload.html">+ Create</a>
   </div>
+  <!-- only you see these: tap a number to see who -->
+  <div class="fl-counts"><button type="button" data-fl="followers"><b id="fl-followers">0</b> followers</button><button type="button" data-fl="following"><b id="fl-following">0</b> following</button></div>
 
   <div class="tabs" id="tabs">
     <button type="button" data-p="tracks">My drops<span class="n" id="n-tracks"></span></button>
@@ -498,6 +500,34 @@
       bg.remove(); App.toast("No limit: anyone can get it"); loadTracks();
     };
   }
+
+  // followers / following: counts only you see, and the lists behind them
+  async function loadFollowCounts() {
+    const [a, b] = await Promise.all([
+      sb.from("follows").select("follower", { count: "exact", head: true }).eq("following", uid),
+      sb.from("follows").select("following", { count: "exact", head: true }).eq("follower", uid),
+    ]);
+    const n1 = a.count || 0, n2 = b.count || 0;
+    $("fl-followers").textContent = n1; $("fl-followers").nextSibling.textContent = n1 === 1 ? " follower" : " followers";
+    $("fl-following").textContent = n2;
+  }
+  async function openFollowList(which) {
+    const bg = modal('<div class="label">' + (which === "followers" ? "Your followers" : "You follow") + '</div><div id="fl-list" class="fl-list"><p class="muted small">Loading…</p></div><button class="btn btn-ghost btn-block" id="fl-close" style="margin-top:14px">Close</button>');
+    bg.querySelector("#fl-close").onclick = () => bg.remove();
+    const side = which === "followers" ? "follower" : "following";
+    const { data, error } = await sb.from("follows")
+      .select("created_at, p:profiles!follows_" + side + "_fkey(handle, display_name, avatar_path, verified)")
+      .eq(which === "followers" ? "following" : "follower", uid).order("created_at", { ascending: false }).limit(500);
+    const box = bg.querySelector("#fl-list");
+    if (error) { box.innerHTML = '<p class="muted small">Couldn\'t load this. Try again.</p>'; return; }
+    const rows = (data || []).filter((r) => r.p && r.p.handle);
+    box.innerHTML = rows.length ? rows.map((r) =>
+      '<a class="fl-row" href="' + esc(App.profileLink(r.p.handle)) + '">' + App.avatarHTML(r.p, 40) +
+      '<span><b>' + esc(App.artistName(r.p)) + App.vBadge(r.p) + '</b><small class="muted mono">@' + esc(r.p.handle) + " · " + esc(App.timeAgo(r.created_at)) + "</small></span></a>").join("")
+      : '<p class="muted small">' + (which === "followers" ? "Nobody follows you yet. Share your page to get followers." : "You're not following anyone yet.") + "</p>";
+  }
+  document.querySelectorAll("[data-fl]").forEach((b) => (b.onclick = () => openFollowList(b.dataset.fl)));
+  loadFollowCounts();
 
   function modal(html) {
     const bg = document.createElement("div");
