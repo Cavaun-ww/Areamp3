@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=125">
+<link rel="stylesheet" href="styles.css?v=126">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=125"></script>
-<script src="app.js?v=125"></script>
-<script src="depth.js?v=125"></script>
+<script src="config.js?v=126"></script>
+<script src="app.js?v=126"></script>
+<script src="depth.js?v=126"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -524,7 +524,7 @@
         try { if (want) await make3D(t); else await clear3D(t); }
         catch (err) { console.warn(err); btn.disabled = false; btn.textContent = "Save"; return App.toast(want ? "3D didn't work on this device. Try on a computer." : "Couldn't turn off 3D. Try again.", true); }
       }
-      bg.remove(); App.toast("Effects saved. Scan it to see"); loadTracks();
+      bg.remove(); App.toast("Effects saved. Point your camera at it to see"); loadTracks();
     };
   }
   async function changeLocation(t) {
@@ -546,14 +546,14 @@
     if (r === null) await sb.from("track_spots").delete().eq("track_id", t.id);
     App.toast(r ? "Location saved" : "Location removed"); loadTracks();
   }
-  // blur = the image is blurred on the site AND the song unlocks only when a listener scans the real image at the spot
+  // blur = the image is blurred on the site AND the song unlocks only when a listener points their camera at the real image at the spot
   function openLock(t) {
     const on = t.photo_hidden || App.isLocked(t);
     // a song that's already for sale starts on "Right to buy", so blurring it keeps its price
     const cur = App.isLocked(t) ? t.song_lock : (+t.price > 0 ? "buy" : "free");
     const bg = modal(
       '<div class="label">Blur · find it in person</div><h3 style="margin:4px 0 6px;text-transform:none;letter-spacing:.02em">' + esc(t.title) + "</h3>" +
-      '<p class="small muted" style="margin-bottom:10px">Blurred on the site. Listeners find the real one' + (t.has_location ? ' at your spot' : '') + ' and scan it. What do they get?</p>' +
+      '<p class="small muted" style="margin-bottom:10px">Blurred on the site. Listeners find the real one' + (t.has_location ? ' at your spot' : '') + ' and point their camera at it. What do they get?</p>' +
       '<div class="radio-list" id="l-mode">' +
         [["free", "Free download when found", "Listeners who find it keep the full " + App.secretWord(t) + " for free."],
          ["listen", (App.secretWord(t) === "video" ? "Watch" : "Listen") + " only when found", "Listeners who find it can " + (App.secretWord(t) === "video" ? "watch the video" : "play the full song") + " in the AR camera any time, not download it."],
@@ -590,7 +590,7 @@
       bg.remove(); App.toast(on ? "Blur settings saved" : "Blurred. Listeners have to find the real one"); loadTracks();
     };
     if (q("#l-off")) q("#l-off").onclick = async () => {
-      if (!confirm("Turn off the blur? The image shows clearly and anyone who scans it gets the whole " + App.secretWord(t) + " (free or for sale, as you set it).")) return;
+      if (!confirm("Turn off the blur? The image shows clearly and anyone who points their camera at it gets the whole " + App.secretWord(t) + " (free or for sale, as you set it).")) return;
       const { error } = await sb.from("tracks").update({ photo_hidden: false, song_lock: "none" }).eq("id", t.id);
       if (error) return App.toast(error.message, true);
       bg.remove(); App.toast("Image shows clearly again"); loadTracks();

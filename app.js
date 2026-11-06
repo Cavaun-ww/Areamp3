@@ -619,7 +619,7 @@
     if (await owns(t)) return download(t);
     if (isLocked(t)) {
       const found = await hasUnlocked(t);
-      if (!found) return toast("Find this song's secret spot and scan it to unlock it.", true);
+      if (!found) return toast("Find this song's secret spot and point your camera at it to unlock it.", true);
       if (t.song_lock === "listen") { location.href = arLink(t.slug, true); return; } // listen in the AR camera
       if (t.song_lock === "free") return download(t);
     } else if (!(+t.price > 0)) return download(t);
@@ -762,7 +762,7 @@
       bg.innerHTML =
         '<div class="modal">' +
           '<div class="label">Location</div><h3 style="margin:4px 0 6px">Where is the real image?</h3>' +
-          '<p class="muted small" style="margin-bottom:12px">Pin the spot where your image lives (a mural, poster, sticker, shop window, show) so listeners can go find it and scan it.</p>' +
+          '<p class="muted small" style="margin-bottom:12px">Pin the spot where your image lives (a mural, poster, sticker, shop window, show) so listeners can go find it and point their camera at it.</p>' +
           '<div class="loc-search"><input class="input" id="loc-q" placeholder="Search a place or address" enterkeyhint="search"><button class="btn btn-sm" id="loc-go" type="button">Search</button></div>' +
           '<div id="loc-results" class="loc-results"></div>' +
           '<button class="btn btn-sm btn-ghost btn-block" id="loc-here" type="button" style="margin:8px 0">Use my current location</button>' +

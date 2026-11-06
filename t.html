@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=125">
+<link rel="stylesheet" href="styles.css?v=126">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=125"></script>
-<script src="app.js?v=125"></script>
+<script src="config.js?v=126"></script>
+<script src="app.js?v=126"></script>
 <style>
   .rel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
   @media (max-width: 760px) { .rel { grid-template-columns: minmax(0, 1fr); gap: 20px; } }
@@ -142,13 +142,13 @@
           : paid ? App.fileType(t) + " download · pay with PayPal or card · straight to your phone" : "Free " + App.fileType(t) + " download · sign in to save it") + "</div>" +
         '<div id="copies"></div>' +
         (t.is_album ? '<div class="album-tl" id="album-tl"><div class="label">Album · ' + (t.album_count || "") + ' songs</div><ol id="album-ol"><li class="muted small">Loading…</li></ol></div>' : "") +
-        (!heard && !locked ? '<div class="note small" style="margin-top:12px">Hear it first: scan the art with the AR camera and listen. After that you can ' + (paid ? "buy and download" : "download") + " it here." + (me ? "" : ' <a href="' + esc(App.signInUrl("t.html?s=" + t.slug)) + '">Sign in</a> first so your scan counts.') + "</div>" : "") +
+        (!heard && !locked ? '<div class="note small" style="margin-top:12px">Hear it first: open the AR camera, point it at the art and listen. After that you can ' + (paid ? "buy and download" : "download") + " it here." + (me ? "" : ' <a href="' + esc(App.signInUrl("t.html?s=" + t.slug)) + '">Sign in</a> first so it counts.') + "</div>" : "") +
         (locked ? '<div class="secret"><div class="label">Secret ' + App.secretWord(t) + '</div>' +
           '<p>' + (t.has_location ? "Go to the spot, open the AR camera and point it at the real image. When you're there, the " + App.secretWord(t) + " unlocks: " : "Find the real image out in the world, open the AR camera and point at it. The " + App.secretWord(t) + " unlocks: ") + esc(App.lockReward(t)) + ".</p>" +
           (t.hint ? '<div class="hint">HINT: ' + esc(t.hint) + "</div>" : "") +
           '<div class="state">' + (mine ? "YOUR " + App.secretWord(t).toUpperCase() + " · " : found ? "YOU FOUND IT ✓ · " : "") + finds + (finds === 1 ? " LISTENER HAS" : " LISTENERS HAVE") + " FOUND IT</div></div>" : "") +
         (t.has_location && t.area_lat != null ? '<div class="where"><div class="where-map" id="where-map"></div><div class="where-row"><div><b>' + esc(t.place_name || "On the map") + '</b><span class="small muted">' +
-          (t.loc_approx ? "Approximate area. Look around for the real image." : "Go here to scan the real image.") + '</span></div><a class="btn btn-sm" target="_blank" rel="noopener" href="' + esc(App.directionsUrl(t.area_lat, t.area_lng)) + '">Directions</a></div></div>' : "") +
+          (t.loc_approx ? "Approximate area. Look around for the real image." : "Go here and point your camera at the real image.") + '</span></div><a class="btn btn-sm" target="_blank" rel="noopener" href="' + esc(App.directionsUrl(t.area_lat, t.area_lng)) + '">Directions</a></div></div>' : "") +
         '<div class="stack" style="margin-top:20px">' +
           '<button class="btn btn-primary btn-lg btn-block" id="buy"></button>' +
           '<button class="btn btn-block" id="buy-vid" hidden>↓ Download the video</button>' +

@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=125">
+<link rel="stylesheet" href="styles.css?v=126">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=125"></script>
-<script src="app.js?v=125"></script>
-<script src="depth.js?v=125"></script>
+<script src="config.js?v=126"></script>
+<script src="app.js?v=126"></script>
+<script src="depth.js?v=126"></script>
 <style>
   .wave { width: 100%; height: 64px; display: block; background: #050505; border: 1px solid var(--line); margin-top: 12px; }
   .rng { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: .82rem; color: var(--text-2); }
@@ -76,7 +76,7 @@
       <div class="part-label" style="margin-top:22px">Song <span id="song-sub">MP3 or WAV. Plays in the AR camera when people see your art.</span></div>
       <div class="seg kind-seg" id="kind-seg"><button type="button" data-k="single" class="on">Single</button><button type="button" data-k="album">Album <span class="pro-tag">PRO</span></button></div>
       <div id="album-box" hidden>
-        <div class="note small" id="album-pro" hidden>Albums are part of <b>Pro</b>: one scan of your cover plays your whole album in the AR camera, up to 20 songs. <a href="dashboard.html?pro=1#selling">Go Pro</a> to post albums.</div>
+        <div class="note small" id="album-pro" hidden>Albums are part of <b>Pro</b>: pointing at your cover plays your whole album in the AR camera, up to 20 songs. <a href="dashboard.html?pro=1#selling">Go Pro</a> to post albums.</div>
         <div id="album-area">
           <div class="drop" id="drop-album">
             <input type="file" id="file-album" multiple accept="audio/mpeg,.mp3,audio/wav,audio/x-wav,audio/wave,.wav">
@@ -115,10 +115,10 @@
               <span><b>Private</b><br><span class="small muted">Hidden from Explore and your public page. Your link, QR code and the AR camera still work.</span></span></label>
             <div>
               <button type="button" class="loc-chip" id="loc-btn">[+] <span id="loc-label">Add a location (optional)</span></button>
-              <div class="small muted" style="margin-top:6px">Let people find the real image and scan it in person.</div>
+              <div class="small muted" style="margin-top:6px">Let people find the real image and point their camera at it in person.</div>
             </div>
             <label class="toggle"><input type="checkbox" id="photo-hidden"><span class="switch" aria-hidden="true"></span>
-              <span><b>Blur the image</b><br><span class="small muted">Your image shows blurred on the site, so nobody can scan it off a screen to hear the song or see the video. Listeners have to find the real one and scan it. Add a location too and they have to be right there.</span></span></label>
+              <span><b>Blur the image</b><br><span class="small muted">Your image shows blurred on the site, so nobody can point a camera at it on a screen to hear the song or see the video. Listeners have to find the real one and point their camera at it. Add a location too and they have to be right there.</span></span></label>
             <div class="lock-box" id="lock-box" hidden>
               <div class="field"><span>What listeners unlock when they find it</span>
                 <div class="radio-list" id="reward">
