@@ -259,7 +259,7 @@
       audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
     };
   }
-  // free songs: everyone hears the whole song. Paid songs: a 1-minute preview until you buy. Blurred: silent until found.
+  // free songs: everyone hears the whole song. Paid songs: a 45-second preview until you buy. Blurred: silent until found.
   const fullCache = {};
   const canHearFull = (t) => hasSong(t) && !isLocked(t);
   function play(t, fullUrl) {
