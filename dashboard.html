@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=131">
+<link rel="stylesheet" href="styles.css?v=132">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=131"></script>
-<script src="app.js?v=131"></script>
-<script src="depth.js?v=131"></script>
+<script src="config.js?v=132"></script>
+<script src="app.js?v=132"></script>
+<script src="depth.js?v=132"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -128,6 +128,8 @@
           </div>
         </div>
       </details>
+      <label class="toggle" style="margin:4px 0 14px"><input type="checkbox" id="hide_follows"><span class="switch" aria-hidden="true"></span>
+        <span><b>Hide my followers</b><br><span class="small muted">Your follower and following numbers won't show on your public page. You still see them on My page.</span></span></label>
       <div class="row"><button class="btn btn-primary" type="submit" id="save">Save profile</button><button class="btn btn-ghost" type="button" id="share-page">Share my page</button></div>
       <hr class="rule">
       <div class="row small"><span class="muted mono" id="email"></span><span class="spacer"></span><a href="#" id="signout">Sign out</a></div>
@@ -172,7 +174,7 @@
   let profile = {};
   async function loadProfile() {
     try { await App.ensureHandle(session); } catch (e) {}
-    const { data } = await sb.from("profiles").select("handle, display_name, bio, avatar_path, pro_until, verified, theme, bg_color, bg_image_path").eq("id", uid).maybeSingle();
+    const { data } = await sb.from("profiles").select("handle, display_name, bio, avatar_path, pro_until, verified, theme, bg_color, bg_image_path, hide_follows").eq("id", uid).maybeSingle();
     profile = data || {};
     $("head-av").innerHTML = App.avatarHTML(profile);
     pickedTheme = profile.theme || "mono"; paintSwatches(); App.applyTheme(pickedTheme);
@@ -189,6 +191,7 @@
     linkPreview();
     $("display_name").value = profile.display_name || "";
     $("bio").value = profile.bio || "";
+    $("hide_follows").checked = !!profile.hide_follows;
     if (profile.handle) { $("view-public").hidden = false; $("view-public").href = App.profileLink(profile.handle); }
   }
   const linkPreview = () => ($("handle-preview").textContent = App.siteRoot.replace(/^https?:\/\//, "") + "u.html?h=" + ($("handle").value || "…"));
@@ -296,6 +299,7 @@
     $("save").disabled = true;
     const { error } = await sb.from("profiles").update({
       handle: $("handle").value, display_name: $("display_name").value.trim() || null, bio: $("bio").value.trim() || null, theme: pickedTheme, bg_color: bgImage ? null : bgColor, bg_image_path: bgImage,
+      hide_follows: $("hide_follows").checked,
     }).eq("id", uid);
     $("save").disabled = false;
     if (error) return App.toast(error.code === "23505" ? "That page name was just taken, try another" : error.message, true);
