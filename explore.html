@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=132">
+<link rel="stylesheet" href="styles.css?v=133">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=132"></script>
-<script src="app.js?v=132"></script>
+<script src="config.js?v=133"></script>
+<script src="app.js?v=133"></script>
 <style>
   .head-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
   .head-row .vf { display: inline-block; width: 13px; height: 13px; margin-right: 10px; vertical-align: -1px; border: 2px solid currentColor; border-radius: 2px; box-shadow: inset 0 0 0 2px var(--text), inset 0 0 0 5px currentColor; }
@@ -321,8 +321,8 @@
         (t.has_location ? '<div class="loc">' + ICON.pin + "<span>" + esc([t.place_name || t.place_area, here && t.area_lat != null ? App.distLabel(App.milesBetween(here, { lat: t.area_lat, lng: t.area_lng })) : ""].filter(Boolean).join(" · ").toUpperCase() || "ON THE MAP") + "</span></div>" : "") +
         '<div class="extra">' + esc([t.genre, t.duration ? App.fmtTime(t.duration) : "", new Date(t.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })].filter(Boolean).join(" · ")) + "</div></div>" +
       '<a class="stats" href="' + link + '" aria-label="Open ' + esc(t.title) + '"><span class="ty">' + esc(t.is_album ? "ALBUM" : !App.hasSong(t) ? "VIDEO" : App.hasVid(t) ? App.songType(t) + "+VID" : App.songType(t)) + "</span>" +
-        '<span class="n" title="Likes">' + ICON.heart + "<b>" + App.nLikes(t) + "</b></span>" +
-        '<span class="n c" title="Comments">' + ICON.chat + "<b>" + App.nComments(t) + "</b></span>" +
+        '<span class="n" title="Likes">' + ICON.heart + "<b>" + (App.likesHidden(t) ? "" : App.nLikes(t)) + "</b></span>" +
+        '<span class="n c" title="Comments">' + ICON.chat + "<b>" + (App.commentsHidden(t) ? "" : App.nComments(t)) + "</b></span>" +
         '<span class="n p" title="Price">' + ICON.tag + "<b>" + esc(priceTxt) + "</b></span></a>" +
     "</div>";
   }

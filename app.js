@@ -501,12 +501,17 @@
         (t.has_location ? '<div class="meta loc">' + PIN_SVG + "<span>" + esc(t.place_name || "SECRET LOCATION") + (t.loc_approx ? " · AREA" : "") + "</span></div>" : "") +
         '<div class="meta">' + esc([t.genre, t.duration ? fmtTime(t.duration) : ""].filter(Boolean).join(" · ") || " ") +
 "</div>" +
-        (t.likes ? '<div class="meta">' + nLikes(t) + (nLikes(t) === 1 ? " LIKE" : " LIKES") + " · " + nComments(t) + (nComments(t) === 1 ? " COMMENT" : " COMMENTS") + "</div>" : "") +
+        (t.likes ? ((m) => m ? '<div class="meta">' + m + "</div>" : "")([
+          likesHidden(t, opts.mine) ? "" : nLikes(t) + (nLikes(t) === 1 ? " LIKE" : " LIKES"),
+          commentsHidden(t, opts.mine) ? "" : nComments(t) + (nComments(t) === 1 ? " COMMENT" : " COMMENTS")].filter(Boolean).join(" · ")) : "") +
         (opts.actions || "") +
       "</div></div>";
   }
-  const TRACK_COLS = "id, slug, owner, title, genre, description, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, duration, price, currency, created_at, audio_format, has_song, has_video, pop_scale, lift, key_mode, is_private, photo_hidden, has_location, place_name, place_area, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, depth_path, profiles!owner(handle, display_name, avatar_path, verified, theme, bg_color, bg_image_path), likes(count), comments(count)";
+  const TRACK_COLS = "id, slug, owner, title, genre, description, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, duration, price, currency, created_at, audio_format, has_song, has_video, pop_scale, lift, key_mode, is_private, photo_hidden, has_location, place_name, place_area, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, depth_path, profiles!owner(handle, display_name, avatar_path, verified, theme, bg_color, bg_image_path, hide_likes, hide_comments), likes(count), comments(count)";
   const nLikes = (t) => (t.likes && t.likes[0] && t.likes[0].count) || 0;
+  // artists can hide their like numbers and turn off comments (Profile). They still see everything themselves.
+  const likesHidden = (t, mine) => !mine && !!(t && t.profiles && t.profiles.hide_likes);
+  const commentsHidden = (t, mine) => !mine && !!(t && t.profiles && t.profiles.hide_comments);
   const nComments = (t) => (t.comments && t.comments[0] && t.comments[0].count) || 0;
   // artist's share of each sale, as shown on the site (the real split is set on the server)
   // plans: what the artist keeps of each sale after PayPal's fee (Free or Pro)
@@ -950,7 +955,7 @@
   window.App = {
     nearReveal,
     C, sb, configured, BUCKET, SONGS, siteRoot, esc, publicUrl, trackLink, arLink, profileLink, money, priceLabel, artistName, fmtTime, fileType, songType, hasSong, hasVid,
-    toast, timeAgo, getSession, signInUrl, requireAuth, callFunction, mountHeader, ensureHandle, avatarHTML, squareJpeg,
+    toast, timeAgo, likesHidden, commentsHidden, getSession, signInUrl, requireAuth, callFunction, mountHeader, ensureHandle, avatarHTML, squareJpeg,
     play, playButton, registerTracks, trackCard, TRACK_COLS, nLikes, nComments, artistCut, isPro, proBadge, vBadge, THEMES, applyTheme, BG_COLORS, applyBackground, loadPayPal, followerCount, mountFollow, buy, download, owns, startDownload,
     renderQR, copy, share,
     isLocked, lockTag, lockReward, secretWord, copiesInfo, copiesBadge, refreshInbox, stepsSlider, Depth3D, depthAttr, hasUnlocked, playFull,

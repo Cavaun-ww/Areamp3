@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=132"></script>
+<script src="config.js?v=133"></script>
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; font-family: "Chakra Petch", ui-monospace, monospace; color: #f4f4f4; }
@@ -225,7 +225,7 @@ body.desktop .steps, body.desktop #start { display: none; }
   (async function load() {
     if (typeof AFRAME === "undefined") { status("AR library failed to load. Refresh to try again."); return; }
     if (isExplore) return loadExplore();
-    var cols = "id, slug, owner, title, price, currency, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, pop_scale, lift, key_mode, photo_hidden, has_location, place_name, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, overlay_depth_path, overlay_depth_meta, video_preview, has_song, has_video, profiles!owner(handle, display_name, avatar_path, verified)";
+    var cols = "id, slug, owner, title, price, currency, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, pop_scale, lift, key_mode, photo_hidden, has_location, place_name, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, overlay_depth_path, overlay_depth_meta, video_preview, has_song, has_video, profiles!owner(handle, display_name, avatar_path, verified, hide_likes, hide_comments)";
     var r = await sb.from("tracks").select(cols).eq("slug", slug).maybeSingle();
     if (r.error || !r.data) { $("title").textContent = "Not found"; $("by").textContent = "This link may have been removed."; $("start").textContent = "Unavailable"; $("song-btn").hidden = true; return; }
     t = r.data;
@@ -300,7 +300,7 @@ body.desktop .steps, body.desktop #start { display: none; }
     $("by").innerHTML = "Loading songs…";
     $("step2").innerHTML = "Point your phone at <b>any " + esc(C.SITE_NAME) + " image</b>: a poster, sticker, mural or cover";
     $("song-btn").textContent = "Explore music"; $("song-btn").href = "explore.html";
-    var cols = "id, slug, owner, title, price, currency, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, pop_scale, lift, key_mode, photo_hidden, has_location, place_name, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, overlay_depth_path, overlay_depth_meta, video_preview, has_song, has_video, created_at, profiles!owner(handle, display_name, avatar_path, verified), likes(count), comments(count)";
+    var cols = "id, slug, owner, title, price, currency, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, pop_scale, lift, key_mode, photo_hidden, has_location, place_name, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, overlay_depth_path, overlay_depth_meta, video_preview, has_song, has_video, created_at, profiles!owner(handle, display_name, avatar_path, verified, hide_likes, hide_comments), likes(count), comments(count)";
     var base = function () { return sb.from("tracks").select(cols).eq("is_published", true).eq("is_private", false).not("mind_path", "is", null); };
     session = (await sb.auth.getSession()).data.session;
     me = session ? session.user.id : null;
@@ -546,6 +546,9 @@ body.desktop .steps, body.desktop #start { display: none; }
     b.querySelector(".be-sub").textContent = t.has_song === false ? "to watch the full video and download it" : "to hear the full song and download it";
     var p = t.profiles || {};
     var cm = b.querySelector(".be-cmt");
+    var noLikes = !!(p.hide_likes), noCmts = !!(p.hide_comments);
+    cm.hidden = noCmts; // the artist turned off comments
+    b.querySelector(".be-why").textContent = noCmts ? "Likes help this drop reach the Top 3" : "Likes and comments help this drop reach the Top 3";
     cm.textContent = p.handle ? "Tell @" + p.handle + " what you think" : "Comment";
     cm.href = "t.html?s=" + encodeURIComponent(t.slug) + "#comment";
     var lk = b.querySelector(".be-like"), cnt = b.querySelector(".be-count");
@@ -554,6 +557,7 @@ body.desktop .steps, body.desktop #start { display: none; }
     // how many like it, and whether you already do
     sb.from("likes").select("user_id", { count: "exact", head: true }).eq("track_id", tr.id).then(function (r) {
       if (t !== tr) return; var n = r.count || 0; lk.dataset.n = n;
+      if (noLikes) return; // the artist hid their like numbers
       cnt.textContent = n ? "♥ " + n + (n === 1 ? " person likes this" : " people like this") : "Be the first to like it";
     });
     if (me) sb.from("likes").select("user_id").eq("user_id", me).eq("track_id", tr.id).maybeSingle().then(function (r) {
@@ -563,7 +567,7 @@ body.desktop .steps, body.desktop #start { display: none; }
       if (!me) { location.href = "auth.html?next=" + encodeURIComponent(location.pathname.split("/").pop() + location.search); return; }
       var on = !lk.classList.contains("on"), n = +(lk.dataset.n || 0) + (on ? 1 : -1);
       lk.classList.toggle("on", on); lk.textContent = on ? "♥ Liked" : "♥ Like"; lk.dataset.n = n;
-      cnt.textContent = n > 0 ? "♥ " + n + (n === 1 ? " person likes this" : " people like this") : "Be the first to like it";
+      if (!noLikes) cnt.textContent = n > 0 ? "♥ " + n + (n === 1 ? " person likes this" : " people like this") : "Be the first to like it";
       (on ? sb.from("likes").insert({ user_id: me, track_id: tr.id }) : sb.from("likes").delete().eq("user_id", me).eq("track_id", tr.id))
         .then(function (r) { if (r.error && !/duplicate/i.test(r.error.message)) { lk.classList.toggle("on", !on); lk.textContent = !on ? "♥ Liked" : "♥ Like"; } });
     };

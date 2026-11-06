@@ -9,10 +9,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=132">
+<link rel="stylesheet" href="styles.css?v=133">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=132"></script>
-<script src="app.js?v=132"></script>
+<script src="config.js?v=133"></script>
+<script src="app.js?v=133"></script>
 <style>
   .rel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
   @media (max-width: 760px) { .rel { grid-template-columns: minmax(0, 1fr); gap: 20px; } }
@@ -158,7 +158,7 @@
             '<button class="btn" style="flex:1" id="qr">QR code</button>' +
           "</div>" +
           '<div class="row">' +
-            '<button class="btn" style="flex:1" id="like" aria-pressed="false">+ Like · <span id="like-n">' + App.nLikes(t) + "</span></button>" +
+            '<button class="btn" style="flex:1" id="like" aria-pressed="false">+ Like<span id="like-sep"> · </span><span id="like-n">' + App.nLikes(t) + "</span></button>" +
             (mine || !p.handle ? "" : '<a class="btn" style="flex:1" id="msg" href="messages.html?to=' + encodeURIComponent(p.handle) + '">Message ' + esc(name) + "</a>") +
           "</div>" +
           '<div class="need" id="soc-need"></div>' +
@@ -264,8 +264,11 @@
   if ($("msg")) $("msg").onclick = (e) => { if (!me) { e.preventDefault(); signIn("soc-need"); } };
   const setLiked = (on) => {
     $("like").classList.toggle("on", on); $("like").setAttribute("aria-pressed", on);
-    $("like").firstChild.textContent = (on ? "Liked ✓ · " : "+ Like · ");
+    $("like").firstChild.textContent = (on ? "Liked ✓" : "+ Like");
   };
+  if (App.likesHidden(t, mine)) { $("like-sep").hidden = true; $("like-n").hidden = true; } // the artist hid their like numbers
+  if (App.commentsHidden(t, mine) && $("comments")) $("comments").hidden = true; // the artist turned off comments
+  if (mine && t.profiles && t.profiles.hide_comments && $("c-need")) $("c-need").innerHTML = "Comments are off on your songs, so only you see this. Turn them back on in My page › Profile.";
   if (me) {
     const { data: l } = await sb.from("likes").select("user_id").eq("user_id", me).eq("track_id", t.id).maybeSingle();
     setLiked(!!l);
