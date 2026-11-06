@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=133">
+<link rel="stylesheet" href="styles.css?v=134">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=133"></script>
-<script src="app.js?v=133"></script>
-<script src="depth.js?v=133"></script>
+<script src="config.js?v=134"></script>
+<script src="app.js?v=134"></script>
+<script src="depth.js?v=134"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -205,7 +205,7 @@
   async function checkHandle() {
     const v = $("handle").value, msg = $("handle-msg");
     if (v === (profile.handle || "")) { handleOk = true; msg.textContent = ""; return; }
-    if (!/^[a-z0-9_]{3,30}$/.test(v)) { handleOk = false; msg.textContent = "3–30 lowercase letters, numbers or _"; msg.style.color = "var(--muted)"; return; }
+    if (!/^[a-z0-9_]{3,30}$/.test(v)) { handleOk = false; msg.textContent = "Page name needs 3–30 letters, numbers or _ (no spaces)"; msg.style.color = "var(--muted)"; return; }
     const { data } = await sb.from("profiles").select("id").eq("handle", v).maybeSingle();
     if ($("handle").value !== v) return;
     handleOk = !data || data.id === uid;
@@ -301,7 +301,11 @@
   $("profile-form").onsubmit = async (e) => {
     e.preventDefault();
     clearTimeout(ht); await checkHandle();
-    if (!handleOk) return App.toast($("handle-msg").textContent || "Pick a different page name", true);
+    if (!handleOk) { // show the page name box so it's clear what to fix
+      $("handle").scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(() => $("handle").focus({ preventScroll: true }), 350);
+      return App.toast("Fix your page name first: " + ($("handle-msg").textContent || "pick a different one"), true);
+    }
     $("save").disabled = true;
     const { error } = await sb.from("profiles").update({
       handle: $("handle").value, display_name: $("display_name").value.trim() || null, bio: $("bio").value.trim() || null, theme: pickedTheme, bg_color: bgImage ? null : bgColor, bg_image_path: bgImage,
