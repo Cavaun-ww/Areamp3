@@ -9,12 +9,12 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=138">
+<link rel="stylesheet" href="styles.css?v=139">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=138"></script>
-<script src="app.js?v=138"></script>
-<script src="depth.js?v=138"></script>
-<script src="vclip.js?v=138"></script>
+<script src="config.js?v=139"></script>
+<script src="app.js?v=139"></script>
+<script src="depth.js?v=139"></script>
+<script src="vclip.js?v=139"></script>
 <style>
   .wave { width: 100%; height: 64px; display: block; background: #050505; border: 1px solid var(--line); margin-top: 12px; }
   .rng { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: .82rem; color: var(--text-2); }
@@ -146,7 +146,8 @@
           <div style="margin-top:12px">
             <div class="note small" id="price-locked-note" hidden></div>
             <div id="price-area">
-              <div class="seg" id="mode-seg"><button type="button" data-m="free" class="on">Free</button><button type="button" data-m="sell">Sell</button></div>
+              <div class="seg" id="mode-seg"><button type="button" data-m="free" class="on">Free</button><button type="button" data-m="sell">Sell</button><button type="button" data-m="listen">Listen only</button></div>
+              <p class="small muted" id="listen-note" hidden style="margin-top:8px">Anyone can play it, but nobody can download it.</p>
               <div class="sell-box" id="sell-box" hidden>
                 <label class="field"><span>Price per download</span>
                   <div class="input-prefix" style="max-width:220px"><span class="pre js-cur">USD</span><input class="input mono" id="price" type="number" inputmode="decimal" step="0.01"></div>
@@ -234,6 +235,7 @@
     mode = b.dataset.m;
     $("mode-seg").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
     $("sell-box").hidden = mode !== "sell";
+    $("listen-note").hidden = mode !== "listen";
     summaries();
   };
 
@@ -860,7 +862,7 @@
     if (lock !== "none") bits.push("blurred until found");
     $("priv-sum").textContent = bits.join(" · ");
     const sell = lock === "buy" || (lock === "none" && mode === "sell");
-    $("price-sum").textContent = lock === "free" ? "Free when found" : lock === "listen" ? "Not for sale" : sell ? App.money(+$("price").value || 0) : "Free";
+    $("price-sum").textContent = lock === "free" ? "Free when found" : lock === "listen" ? "Not for sale" : sell ? App.money(+$("price").value || 0) : mode === "listen" && lock === "none" ? "Listen only" : "Free";
   }
   $("is-private").addEventListener("change", summaries);
   $("photo-hidden").addEventListener("change", lockState);
@@ -1057,6 +1059,7 @@
         duration: Math.round((mp3 ? mp3.duration : vid.duration) || 0) || null,
         file_size: mp3 ? mp3.file.size : vid.file.size,
         price,
+        no_download: lock === "none" && mode === "listen", // play only, no downloads
         currency: C.CURRENCY || "USD",
         is_private: $("is-private").checked,
         photo_hidden: $("photo-hidden").checked,

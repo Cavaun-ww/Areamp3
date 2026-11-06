@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=138">
+<link rel="stylesheet" href="styles.css?v=139">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=138"></script>
-<script src="app.js?v=138"></script>
-<script src="depth.js?v=138"></script>
+<script src="config.js?v=139"></script>
+<script src="app.js?v=139"></script>
+<script src="depth.js?v=139"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -643,32 +643,34 @@
   function openPrice(t) {
     if (App.isLocked(t)) { App.toast("This song is blurred until found. Change what listeners get in Settings › Blur settings.", true); return openLock(t); }
     if (!seller) { App.toast("Fill out the seller form first.", true); show("selling"); return; }
-    const free = !(+t.price > 0);
+    const free = !(+t.price > 0) && !t.no_download, listen = !(+t.price > 0) && !!t.no_download;
     const bg = modal(
       '<div class="label">Price</div><h3 style="margin:6px 0 16px;text-transform:none;letter-spacing:.02em">' + esc(t.title) + "</h3>" +
-      '<div class="seg" id="m-seg"><button type="button" data-m="sell"' + (free ? "" : ' class="on"') + '>Sell</button><button type="button" data-m="free"' + (free ? ' class="on"' : "") + ">Free</button></div>" +
+      '<div class="seg" id="m-seg"><button type="button" data-m="sell"' + (free ? "" : ' class="on"') + '>Sell</button><button type="button" data-m="free"' + (free ? ' class="on"' : "") + ">Free</button>" + '<button type="button" data-m="listen"' + (listen ? ' class="on"' : "") + ">Listen only</button></div>" +
+      '<p class="small muted" id="m-listen" style="margin-top:10px"' + (listen ? "" : " hidden") + ">Anyone can play it, but nobody can download it.</p>" +
       '<div id="m-sell" style="margin-top:14px"' + (free ? " hidden" : "") + '><div class="input-prefix" style="max-width:220px"><span class="pre">' + esc(C.CURRENCY) + '</span><input class="input mono" id="m-price" type="number" step="0.01" inputmode="decimal"></div>' +
       '<p class="small muted" style="margin-top:6px">Any price you want.</p></div>' +
       '<div class="row" style="margin-top:18px"><button class="btn btn-primary" id="m-save">Save</button><button class="btn btn-ghost" id="m-cancel">Cancel</button></div>');
-    let m = free ? "free" : "sell";
+    let m = listen ? "listen" : free ? "free" : "sell";
     bg.querySelector("#m-price").value = (+t.price > 0 ? +t.price : +seller.default_price || 1.29).toFixed(2);
     bg.querySelector("#m-seg").onclick = (e) => {
       const b = e.target.closest("button"); if (!b) return; m = b.dataset.m;
       bg.querySelectorAll("#m-seg button").forEach((x) => x.classList.toggle("on", x === b));
       bg.querySelector("#m-sell").hidden = m !== "sell";
+      bg.querySelector("#m-listen").hidden = m !== "listen";
     };
     bg.querySelector("#m-cancel").onclick = () => bg.remove();
     bg.querySelector("#m-save").onclick = async (e) => {
       const btn = e.currentTarget;
       bg.querySelector("#m-price").blur();
-      const price = m === "free" ? 0 : +(+String(bg.querySelector("#m-price").value).replace(/[^0-9.]/g, "")).toFixed(2);
+      const price = m !== "sell" ? 0 : +(+String(bg.querySelector("#m-price").value).replace(/[^0-9.]/g, "")).toFixed(2);
       if (m === "sell" && !(price >= C.MIN_PRICE && price <= C.MAX_PRICE)) return App.toast("Enter a price above " + App.money(0) + ".", true);
       btn.disabled = true; btn.textContent = "Saving…";
-      const { data: saved, error } = await sb.from("tracks").update({ price }).eq("id", t.id).select("price");
+      const { data: saved, error } = await sb.from("tracks").update({ price, no_download: m === "listen" }).eq("id", t.id).select("price");
       btn.disabled = false; btn.textContent = "Save";
       if (error) return App.toast(error.message, true);
       if (!saved || !saved.length) return App.toast("Couldn't save the price. Sign out and back in, then try again.", true);
-      bg.remove(); App.toast(price ? "Price set to " + App.money(price) : "Now a free download"); loadTracks();
+      bg.remove(); App.toast(price ? "Price set to " + App.money(price) : m === "listen" ? "Now listen only (no downloads)" : "Now a free download"); loadTracks();
     };
   }
   const GENRES = ["Hip-Hop", "Rap", "R&B", "Pop", "Rock", "Electronic", "House", "Afrobeats", "Latin", "Reggae", "Jazz", "Soul", "Gospel", "Country", "Indie", "Lo-fi", "Instrumental", "Spoken Word", "Other"];

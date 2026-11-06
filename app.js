@@ -37,7 +37,7 @@
     try { return new Intl.NumberFormat(undefined, { style: "currency", currency: cur || C.CURRENCY || "USD" }).format(+n || 0); }
     catch { return "$" + (+n || 0).toFixed(2); }
   }
-  function priceLabel(t) { return +t.price > 0 ? money(t.price, t.currency) : "FREE"; }
+  function priceLabel(t) { return +t.price > 0 ? money(t.price, t.currency) : t.no_download ? "LISTEN" : "FREE"; }
   // ── secret songs (locked until a listener finds the spot and scans it) ──
   function isLocked(t) { return !!t && !!t.song_lock && t.song_lock !== "none"; }
   function lockTag(t) {
@@ -507,7 +507,7 @@
         (opts.actions || "") +
       "</div></div>";
   }
-  const TRACK_COLS = "id, slug, owner, title, genre, description, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, duration, price, currency, created_at, audio_format, has_song, has_video, pop_scale, lift, key_mode, is_private, photo_hidden, has_location, place_name, place_area, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, depth_path, profiles!owner(handle, display_name, avatar_path, verified, theme, bg_color, bg_image_path, hide_likes, hide_comments), likes(count), comments(count)";
+  const TRACK_COLS = "id, slug, owner, title, genre, description, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, duration, price, currency, no_download, created_at, audio_format, has_song, has_video, pop_scale, lift, key_mode, is_private, photo_hidden, has_location, place_name, place_area, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, depth_path, profiles!owner(handle, display_name, avatar_path, verified, theme, bg_color, bg_image_path, hide_likes, hide_comments), likes(count), comments(count)";
   const nLikes = (t) => (t.likes && t.likes[0] && t.likes[0].count) || 0;
   // artists can hide their like numbers and turn off comments (Profile). They still see everything themselves.
   const likesHidden = (t, mine) => !mine && !!(t && t.profiles && t.profiles.hide_likes);
