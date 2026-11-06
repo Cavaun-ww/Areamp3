@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=135">
+<link rel="stylesheet" href="styles.css?v=136">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=135"></script>
-<script src="app.js?v=135"></script>
-<script src="depth.js?v=135"></script>
+<script src="config.js?v=136"></script>
+<script src="app.js?v=136"></script>
+<script src="depth.js?v=136"></script>
 <style>
   .wave { width: 100%; height: 64px; display: block; background: #050505; border: 1px solid var(--line); margin-top: 12px; }
   .rng { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: .82rem; color: var(--text-2); }
@@ -604,6 +604,10 @@
     const a = +$("trim-start").value, b = +$("trim-end").value;
     const go = $("trim-go"); go.disabled = true; $("trim-cancel").disabled = true;
     $("trim-vid").pause(); $("trim-keep").hidden = false;
+    // free the preview player while we work (two copies of a big video at once can crash a phone)
+    const tv = $("trim-vid"), tvSrc = tv.getAttribute("src"), tvTime = tv.currentTime;
+    tv.removeAttribute("src"); tv.load();
+    try { localStorage.setItem("trimbusy", "1"); } catch (_) {}
     let lock = null;
     try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then((l) => (lock = l)).catch(() => {}); } catch (_) {}
     const v = document.createElement("video");
@@ -633,6 +637,11 @@
       App.toast(e.message || "Couldn't shrink that video. Try trimming it in your Photos app.", true);
     } finally {
       go.textContent = "Get it ready"; go.disabled = false; $("trim-cancel").disabled = false; $("trim-keep").hidden = true;
+      try { localStorage.removeItem("trimbusy"); } catch (_) {}
+      if (tvSrc && !$("trim").hidden) { // put the preview back (without resetting the start/end you picked)
+        const h = tv.onloadedmetadata; tv.onloadedmetadata = null; tv.src = tvSrc;
+        tv.addEventListener("loadedmetadata", () => { try { tv.currentTime = tvTime; } catch (_) {} tv.onloadedmetadata = h; }, { once: true });
+      }
       if (lock) lock.release().catch(() => {});
       try { v.pause(); } catch (_) {}
       v.remove(); URL.revokeObjectURL(url);
@@ -643,12 +652,14 @@
     return new Promise((resolve, reject) => {
       const begin = () => {
         if (!v.videoWidth) return reject(new Error("This phone couldn't read that video."));
-        const box = bps >= 1500000 ? 1280 : bps >= 700000 ? 960 : 854;
+        // phones: smaller frames and 24 fps so big iPhone videos (4K/HDR) don't run the phone out of memory
+        const phone = matchMedia("(pointer: coarse)").matches;
+        const box = Math.min(phone ? 720 : 1280, bps >= 1500000 ? 1280 : bps >= 700000 ? 960 : 854);
         const s = Math.min(1, box / Math.max(v.videoWidth, v.videoHeight));
         const w = Math.max(2, Math.round(v.videoWidth * s / 2) * 2), h = Math.max(2, Math.round(v.videoHeight * s / 2) * 2);
         const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
         const ctx = cv.getContext("2d");
-        const stream = cv.captureStream(30);
+        const stream = cv.captureStream(phone ? 24 : 30);
         if (v._sound) stream.addTrack(v._sound.track); // preview clips of videos without a song keep their sound
         const types = (v._sound ? ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4;codecs=avc1,mp4a.40.2", "video/webm;codecs=vp8,opus"] : [])
           .concat(["video/mp4;codecs=avc1.42E01E", "video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp8", "video/webm"]);
@@ -726,6 +737,14 @@
       v.remove(); URL.revokeObjectURL(url);
     }
   }
+
+  // the page crashed last time while getting a video ready: explain what to do instead
+  try {
+    if (localStorage.getItem("trimbusy")) {
+      localStorage.removeItem("trimbusy");
+      setTimeout(() => App.toast("That video was too big for this phone to get ready here. Trim it in your Photos app first (Edit → drag the ends to under 1 minute), then pick it again.", true), 600);
+    }
+  } catch (_) {}
 
   // pop-out effects
   const fx = App.mountEffects($("fx"), {});
