@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=129">
+<link rel="stylesheet" href="styles.css?v=130">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=129"></script>
-<script src="app.js?v=129"></script>
-<script src="depth.js?v=129"></script>
+<script src="config.js?v=130"></script>
+<script src="app.js?v=130"></script>
+<script src="depth.js?v=130"></script>
 <style>
   .wave { width: 100%; height: 64px; display: block; background: #050505; border: 1px solid var(--line); margin-top: 12px; }
   .rng { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: .82rem; color: var(--text-2); }
@@ -649,7 +649,9 @@
         const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
         const ctx = cv.getContext("2d");
         const stream = cv.captureStream(30);
-        const types = ["video/mp4;codecs=avc1.42E01E", "video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp8", "video/webm"];
+        if (v._sound) stream.addTrack(v._sound.track); // preview clips of videos without a song keep their sound
+        const types = (v._sound ? ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4;codecs=avc1,mp4a.40.2", "video/webm;codecs=vp8,opus"] : [])
+          .concat(["video/mp4;codecs=avc1.42E01E", "video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp8", "video/webm"]);
         const mime = types.find((t) => MediaRecorder.isTypeSupported(t)) || "";
         let rec, stopped = false;
         try { rec = new MediaRecorder(stream, { mimeType: mime || undefined, videoBitsPerSecond: Math.max(150000, bps) }); }
@@ -677,7 +679,7 @@
           v.onseeked = null;
           ctx.drawImage(v, 0, 0, w, h);
           rec.start(1000);
-          v.play().then(draw).catch(() => finish());
+          v.play().then(() => { if (v._sound) v._sound.start(start); draw(); }).catch(() => finish());
         };
         v.currentTime = start;
       };
@@ -687,6 +689,42 @@
       }));
       Promise.resolve(v._unlock).then(ready).then(begin).catch(reject);
     });
+  }
+
+  // paid videos: a 1-minute preview clip (starting 15 seconds in) is what plays publicly in the AR camera.
+  // The full video stays private: only the artist and buyers can play it.
+  async function makeVideoPreview(file, actx, onPct) {
+    if (!canShrink()) throw new Error("can't make clips here");
+    const v = document.createElement("video");
+    v.playsInline = true; v.setAttribute("playsinline", ""); v.preload = "auto"; v.muted = true;
+    v.style.cssText = "position:fixed;left:-9999px;top:0;width:2px;height:2px;opacity:0";
+    document.body.appendChild(v);
+    const url = URL.createObjectURL(file);
+    v.src = url;
+    v._unlock = v.play().then(() => v.pause()).catch(() => {});
+    try {
+      await new Promise((ok, bad) => { if (v.readyState >= 1) return ok(); v.onloadedmetadata = ok; v.onerror = () => bad(new Error("video")); });
+      const dur = isFinite(v.duration) ? v.duration : 0;
+      if (!dur) throw new Error("video length");
+      const len = dur >= 120 ? 60 : Math.max(3, Math.min(60, dur / 2)); // short videos: half of it
+      const start = Math.min(15, Math.max(0, dur - len));
+      // no song: the clip keeps the video's own sound (decoded once, played in step with the recording)
+      if (actx) {
+        try {
+          const buf = await actx.decodeAudioData(await file.arrayBuffer());
+          const dest = actx.createMediaStreamDestination();
+          const node = actx.createBufferSource(); node.buffer = buf; node.connect(dest);
+          const track = dest.stream.getAudioTracks()[0];
+          if (track) v._sound = { track, start: (s) => { try { node.start(0, s, len + 0.5); } catch (_) {} } };
+        } catch (e) { console.warn("clip sound", e); }
+      }
+      const bps = Math.min(2500000, Math.floor((TARGET_BYTES * 8) / len));
+      const out = await shrinkVideo(v, start, start + len, bps, onPct, C.MAX_VIDEO_MB * 1048576);
+      return out;
+    } finally {
+      try { v.pause(); } catch (_) {}
+      v.remove(); URL.revokeObjectURL(url);
+    }
   }
 
   // pop-out effects
@@ -821,6 +859,11 @@
     }
     const btn = $("publish");
     btn.disabled = true; btn.textContent = "Publishing…";
+    // sound for a paid video's preview clip has to be switched on inside this tap (phones block it later)
+    let clipAudio = null;
+    if (vid && vid.kind === "video" && !mp3 && mode === "sell") {
+      try { clipAudio = new (window.AudioContext || window.webkitAudioContext)(); clipAudio.resume(); } catch (_) { clipAudio = null; }
+    }
     const uploaded = { media: [], songs: [] };
     let newTrackId = null;
     try {
@@ -846,6 +889,15 @@
         try { previewBlob = await makePreview((p) => progress(41 + p * 5, null)); } catch (e) { console.warn(e); }
       }
 
+      // 2a. paid video: make the public 1-minute preview clip (the full video is saved privately below)
+      let vidPreview = null;
+      if (selling && price > 0 && vid && vid.kind === "video") {
+        progress(46, "Making the 1-minute preview…");
+        try { vidPreview = await makeVideoPreview(vid.file, clipAudio, (p) => progress(46, "Making the 1-minute preview… " + Math.floor(p * 100) + "%")); }
+        catch (e) { console.warn("video preview", e); vidPreview = null; }
+      }
+      if (clipAudio) clipAudio.close().catch(() => {});
+
       // 2b. 3D is made AFTER the drop is live (on your page), so a phone running low on memory can never lose your upload
       let depthBlob = null, ovDepthBlob = null, ovDepthMeta = null;
       const want3D = $("d3-on").checked;
@@ -867,7 +919,10 @@
         const ext = isPic
           ? (vid.gif ? "gif" : ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" })[vid.file.type])
           : (vid.file.name.split(".").pop() || "mp4").toLowerCase().replace(/[^a-z0-9]/g, "") || "mp4";
-        files.push({ bucket: "media", path: folder + (isPic ? "/overlay." : "/video.") + ext, body: vid.file,
+        if (vidPreview) { // paid video: only the preview clip is public
+          const px = vidPreview.type === "video/mp4" ? "mp4" : "webm";
+          files.push({ bucket: "media", path: folder + "/video." + px, body: vidPreview, type: vidPreview.type, msg: "Uploading the preview…", from: 54, to: 62 });
+        } else files.push({ bucket: "media", path: folder + (isPic ? "/overlay." : "/video.") + ext, body: vid.file,
           type: vid.gif ? "image/gif" : (vid.file.type || "video/mp4"), msg: vid.gif ? "Uploading GIF…" : isPic ? "Uploading overlay photo…" : "Uploading video…", from: 54, to: 70 });
       }
       // a private copy of the video, for listeners to download (like the song)
@@ -900,6 +955,7 @@
         mind_path: pathOf(/\/target\.mind$/),
         preview_path: pathOf(/\/preview\.mp3$/),
         video_path: pathOf(/\/(video|overlay|model)\.[a-z0-9]+$/),
+        video_preview: !!vidPreview,
         audio_path: kind === "album" ? pathOf(/\/album\/01\.(mp3|wav)$/) : pathOf(/\/song\.(mp3|wav)$/),
         is_album: kind === "album",
         depth_path: pathOf(/\/depth\.png$/),

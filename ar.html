@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=129"></script>
+<script src="config.js?v=130"></script>
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; font-family: "Chakra Petch", ui-monospace, monospace; color: #f4f4f4; }
@@ -225,7 +225,7 @@ body.desktop .steps, body.desktop #start { display: none; }
   (async function load() {
     if (typeof AFRAME === "undefined") { status("AR library failed to load. Refresh to try again."); return; }
     if (isExplore) return loadExplore();
-    var cols = "id, slug, owner, title, price, currency, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, pop_scale, lift, key_mode, photo_hidden, has_location, place_name, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, overlay_depth_path, overlay_depth_meta, has_song, has_video, profiles!owner(handle, display_name, avatar_path, verified)";
+    var cols = "id, slug, owner, title, price, currency, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, pop_scale, lift, key_mode, photo_hidden, has_location, place_name, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, overlay_depth_path, overlay_depth_meta, video_preview, has_song, has_video, profiles!owner(handle, display_name, avatar_path, verified)";
     var r = await sb.from("tracks").select(cols).eq("slug", slug).maybeSingle();
     if (r.error || !r.data) { $("title").textContent = "Not found"; $("by").textContent = "This link may have been removed."; $("start").textContent = "Unavailable"; $("song-btn").hidden = true; return; }
     t = r.data;
@@ -300,7 +300,7 @@ body.desktop .steps, body.desktop #start { display: none; }
     $("by").innerHTML = "Loading songs…";
     $("step2").innerHTML = "Point your phone at <b>any " + esc(C.SITE_NAME) + " image</b>: a poster, sticker, mural or cover";
     $("song-btn").textContent = "Explore music"; $("song-btn").href = "explore.html";
-    var cols = "id, slug, owner, title, price, currency, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, pop_scale, lift, key_mode, photo_hidden, has_location, place_name, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, overlay_depth_path, overlay_depth_meta, has_song, has_video, created_at, profiles!owner(handle, display_name, avatar_path, verified), likes(count), comments(count)";
+    var cols = "id, slug, owner, title, price, currency, cover_path, preview_path, video_path, mind_path, cover_aspect, video_aspect, pop_scale, lift, key_mode, photo_hidden, has_location, place_name, loc_approx, area_lat, area_lng, hint, song_lock, unlock_radius_m, max_copies, copies_taken, is_album, album_count, overlay_depth_path, overlay_depth_meta, video_preview, has_song, has_video, created_at, profiles!owner(handle, display_name, avatar_path, verified), likes(count), comments(count)";
     var base = function () { return sb.from("tracks").select(cols).eq("is_published", true).eq("is_private", false).not("mind_path", "is", null); };
     session = (await sb.auth.getSession()).data.session;
     me = session ? session.user.id : null;
@@ -543,6 +543,7 @@ body.desktop .steps, body.desktop #start { display: none; }
     b.querySelector(".be-head").textContent = (paid ? "Preview over" : "Enjoying it?") + (paid ? scarce : "");
     var a = b.querySelector(".be-buy"); a.hidden = !paid; a.textContent = "Buy " + money(t.price); a.href = trackUrl("&buy=1");
     b.querySelector(".be-sub").hidden = !paid;
+    b.querySelector(".be-sub").textContent = t.has_song === false ? "to watch the full video and download it" : "to hear the full song and download it";
     var p = t.profiles || {};
     var cm = b.querySelector(".be-cmt");
     cm.textContent = p.handle ? "Tell @" + p.handle + " what you think" : "Comment";
@@ -577,7 +578,7 @@ body.desktop .steps, body.desktop #start { display: none; }
     var p = t.profiles || {}, name = p.display_name || (p.handle ? "@" + p.handle : "");
     $("np").querySelector("img").src = pub(t.cover_path);
     $("np").querySelector("b").textContent = t.title;
-    $("np").querySelector("span").textContent = (name ? name + " · " : "") + (t.has_song === false ? "VIDEO" : locked() && !unlocked ? "SILENT UNTIL FOUND" : isPaidPreview() ? "1-MIN PREVIEW" : t.is_album ? "ALBUM · " + (t.album_count || "") + " SONGS" : "FULL SONG");
+    $("np").querySelector("span").textContent = (name ? name + " · " : "") + (t.has_song === false ? "VIDEO" : locked() && !unlocked ? "SILENT UNTIL FOUND" : isPaidPreview() || (t.has_song === false && vids[cur] && vids[cur]._previewing && +t.price > 0) ? "1-MIN PREVIEW" : t.is_album ? "ALBUM · " + (t.album_count || "") + " SONGS" : "FULL SONG");
     $("np").querySelector("em").textContent = locked() ? (unlocked ? "UNLOCKED" : "LOCKED") : +t.price > 0 ? "BUY " + money(t.price) : "FREE";
     $("np").href = trackUrl(locked() ? "" : "&buy=1");
     $("np").classList.add("show");
@@ -924,6 +925,29 @@ body.desktop .steps, body.desktop #start { display: none; }
     v.playsInline = true; v.setAttribute("playsinline", ""); v.setAttribute("webkit-playsinline", "");
     v.style.cssText = "position:fixed;bottom:-9999px;width:1px;height:1px;opacity:0;pointer-events:none";
     document.body.appendChild(v);
+    // paid videos: everyone sees a 1-minute preview; the artist and buyers get the full video.
+    // A free drop whose public video is a preview clip (it used to be paid) gets the full video too.
+    var paid = +x.price > 0 && (x.song_lock || "none") === "none";
+    if (paid || x.video_preview) {
+      v._previewing = true;
+      if (paid && x.has_song === false) v.loop = false; // video-only: when the preview ends, offer to buy
+      // older uploads with no preview clip: stop at 1 minute here
+      v._cut = paid && !x.video_preview ? 60 : 0;
+      callFunction("stream", { track_id: x.id, kind: "video" }).then(function (o) {
+        if (!o || !o.url) return;
+        var playing = !v.paused;
+        v._previewing = false; v._cut = 0; v.loop = true;
+        v.src = o.url; v.load();
+        if (playing) v.play().catch(function () {});
+        if (xps[cur] === x) { hideBuyEnd(); nowPlaying(); }
+      }).catch(function () {});
+      var over = function () {
+        if (!v._previewing || x.has_song !== false || !paid) return;
+        if (xps[cur] === x) { showBuyEnd("paid"); nowPlaying(); }
+      };
+      v.addEventListener("ended", over);
+      v.addEventListener("timeupdate", function () { if (v._cut && v._previewing && v.currentTime >= v._cut) { v.pause(); if (x.has_song === false) over(); else v.currentTime = 0; } });
+    }
     return v;
   }
 
