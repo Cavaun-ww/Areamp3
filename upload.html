@@ -9,11 +9,12 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=137">
+<link rel="stylesheet" href="styles.css?v=138">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=137"></script>
-<script src="app.js?v=137"></script>
-<script src="depth.js?v=137"></script>
+<script src="config.js?v=138"></script>
+<script src="app.js?v=138"></script>
+<script src="depth.js?v=138"></script>
+<script src="vclip.js?v=138"></script>
 <style>
   .wave { width: 100%; height: 64px; display: block; background: #050505; border: 1px solid var(--line); margin-top: 12px; }
   .rng { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-family: var(--mono); font-size: .82rem; color: var(--text-2); }
@@ -564,7 +565,7 @@
   let trimFile = null, trimDur = 0;
   const canShrink = () => !!(window.MediaRecorder && HTMLCanvasElement.prototype.captureStream);
   function openTrimmer(file) {
-    if (!canShrink()) return App.toast("This video is too big. Trim it shorter in your Photos app, then try again.", true);
+    if (!canShrink() && !(window.AreaClip && AreaClip.supported())) return App.toast("This video is too big. Trim it shorter in your Photos app, then try again.", true);
     trimFile = file;
     const tv = $("trim-vid");
     tv.src = URL.createObjectURL(file);
@@ -603,7 +604,7 @@
     if (!trimFile) return;
     const a = +$("trim-start").value, b = +$("trim-end").value;
     const go = $("trim-go"); go.disabled = true; $("trim-cancel").disabled = true;
-    // keep the video's own sound (it plays when the drop has no song); has to be switched on inside this tap
+    // (older method only) the video's own sound has to be switched on inside this tap
     let trimAudio = null;
     try { trimAudio = new (window.AudioContext || window.webkitAudioContext)(); trimAudio.resume(); } catch (_) { trimAudio = null; }
     $("trim-vid").pause(); $("trim-keep").hidden = false;
@@ -613,38 +614,16 @@
     try { localStorage.setItem("trimbusy", "1"); } catch (_) {}
     let lock = null;
     try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then((l) => (lock = l)).catch(() => {}); } catch (_) {}
-    const v = document.createElement("video");
-    v.playsInline = true; v.setAttribute("playsinline", ""); v.preload = "auto";
-    v.style.cssText = "position:fixed;left:-9999px;top:0;width:2px;height:2px;opacity:0";
-    document.body.appendChild(v);
-    const url = URL.createObjectURL(trimFile);
-    v.src = url;
-    // keep the video's own sound in the clip (it plays when the drop has no song). The sound is routed into the
-    // recording only, so nothing plays out loud. This has to be set up inside the tap, or phones block it.
-    let actx = null;
+    const len = b - a, LIMIT = C.MAX_VIDEO_MB * 1048576;
+    const pct = (label) => (p) => {
+      const left = Math.max(0, Math.round(len * (1 - p)));
+      go.textContent = label + " " + Math.floor(p * 100) + "%" + (left > 5 ? " · about " + fmt(left) + " left" : "");
+    };
     try {
-      actx = new (window.AudioContext || window.webkitAudioContext)(); actx.resume();
-      const src = actx.createMediaElementSource(v), dest = actx.createMediaStreamDestination();
-      src.connect(dest);
-      const track = dest.stream.getAudioTracks()[0];
-      if (track) v._sound = { track, start: () => {} };
-      v.muted = false;
-    } catch (e) { console.warn("clip sound", e); v.muted = true; v._sound = null; }
-    v._unlock = v.play().then(() => v.pause()).catch(() => { v.muted = true; v._sound = null; return v.play().then(() => v.pause()).catch(() => {}); });
-    try {
-      const len = b - a, LIMIT = C.MAX_VIDEO_MB * 1048576;
-      const pct = (label) => (p) => {
-        const left = Math.max(0, Math.round(len * (1 - p)));
-        go.textContent = label + " " + Math.floor(p * 100) + "%" + (left > 5 ? " · about " + fmt(left) + " left" : "");
-      };
-      go.textContent = "Getting the sound…";
-      await attachSound(v, trimFile, trimAudio, len);
-      let bps = Math.min(4000000, Math.floor((TARGET_BYTES * 8) / len));
-      let out = null;
-      for (let tries = 0; tries < 3 && !out; tries++) {
-        try { out = await shrinkVideo(v, a, b, bps, pct(tries ? "Almost ready…" : "Getting it ready…"), LIMIT); }
-        catch (e) { if (!e.projected) throw e; bps = Math.max(150000, Math.floor(bps * 0.85 * LIMIT / e.projected)); }
-      }
+      // 1. the light way: the phone's own video encoder, a piece of the file at a time (keeps the sound)
+      let out = await clipLight(trimFile, a, b, pct, LIMIT);
+      // 2. older way (re-records the video as it plays), for browsers or files the light way can't handle
+      if (!out) out = await clipByRecording(trimFile, a, b, pct, LIMIT, trimAudio);
       if (!out || out.size > LIMIT) throw new Error("Still a little too big. Pick a shorter part and try again.");
       $("trim").hidden = true; trimFile = null;
       useVideo(out);
@@ -660,11 +639,53 @@
         tv.addEventListener("loadedmetadata", () => { try { tv.currentTime = tvTime; } catch (_) {} tv.onloadedmetadata = h; }, { once: true });
       }
       if (lock) lock.release().catch(() => {});
-      try { v.pause(); } catch (_) {}
-      if (actx) actx.close().catch(() => {});
-      v.remove(); URL.revokeObjectURL(url);
     }
   };
+
+  // the light way (vclip.js). Returns null when this browser or file can't use it.
+  async function clipLight(file, start, end, pct, LIMIT) {
+    if (!window.AreaClip || !AreaClip.supported()) return null;
+    const len = end - start, phone = matchMedia("(pointer: coarse)").matches;
+    let bps = Math.min(4000000, Math.floor((TARGET_BYTES * 8) / len));
+    try {
+      for (let tries = 0; tries < 3; tries++) {
+        const out = await AreaClip.clip(file, { start, end, bps, maxSide: phone ? 960 : 1280, onPct: pct(tries ? "Almost ready…" : "Getting it ready…") });
+        if (out.size <= LIMIT) return out;
+        bps = Math.max(150000, Math.floor(bps * 0.85 * LIMIT / out.size));
+      }
+      throw new Error("Still a little too big. Pick a shorter part and try again.");
+    } catch (e) {
+      if (e && e.unsupported) { console.warn("light clip:", e.message); return null; }
+      if (e && /too big/.test(e.message)) throw e;
+      console.warn("light clip failed", e); return null; // try the older way
+    }
+  }
+
+  // the older way: plays the part once and re-records it smaller
+  async function clipByRecording(file, a, b, pct, LIMIT, trimAudio) {
+    const len = b - a;
+    const v = document.createElement("video");
+    v.playsInline = true; v.setAttribute("playsinline", ""); v.preload = "auto"; v.muted = true;
+    v.style.cssText = "position:fixed;left:-9999px;top:0;width:2px;height:2px;opacity:0";
+    document.body.appendChild(v);
+    const url = URL.createObjectURL(file);
+    v.src = url;
+    v._unlock = v.play().then(() => v.pause()).catch(() => {});
+    try {
+      $("trim-go").textContent = "Getting the sound…";
+      await attachSound(v, file, trimAudio, len);
+      let bps = Math.min(4000000, Math.floor((TARGET_BYTES * 8) / len));
+      let out = null;
+      for (let tries = 0; tries < 3 && !out; tries++) {
+        try { out = await shrinkVideo(v, a, b, bps, pct(tries ? "Almost ready…" : "Getting it ready…"), LIMIT); }
+        catch (e) { if (!e.projected) throw e; bps = Math.max(150000, Math.floor(bps * 0.85 * LIMIT / e.projected)); }
+      }
+      return out;
+    } finally {
+      try { v.pause(); } catch (_) {}
+      v.remove(); URL.revokeObjectURL(url);
+    }
+  }
   // plays the chosen part once, redrawing it smaller onto a canvas and recording it (with the video's own sound when we have it)
   function shrinkVideo(v, start, end, bps, onPct, limit) {
     return new Promise((resolve, reject) => {
@@ -736,9 +757,32 @@
       } };
     } catch (e) { console.warn("video sound", e); } // video has no sound, or this browser can't read it
   }
+  // a video's length without playing it
+  function videoLength(file) {
+    return new Promise((ok) => {
+      const v = document.createElement("video"); v.preload = "metadata"; v.muted = true;
+      const url = URL.createObjectURL(file); let done = false;
+      const fin = (d) => { if (done) return; done = true; URL.revokeObjectURL(url); v.removeAttribute("src"); v.load(); ok(d); };
+      v.onloadedmetadata = () => fin(isFinite(v.duration) ? v.duration : 0);
+      v.onerror = () => fin(0); setTimeout(() => fin(0), 8000);
+      v.src = url;
+    });
+  }
   // paid videos: a 1-minute preview clip (starting 15 seconds in) is what plays publicly in the AR camera.
   // The full video stays private: only the artist and buyers can play it.
   async function makeVideoPreview(file, actx, onPct) {
+    // the light way first (keeps the sound, easy on phones)
+    if (window.AreaClip && AreaClip.supported()) {
+      try {
+        const dur = await videoLength(file);
+        if (dur) {
+          const len = dur >= 120 ? 60 : Math.max(3, Math.min(60, dur / 2));
+          const start = Math.min(15, Math.max(0, dur - len));
+          const phone = matchMedia("(pointer: coarse)").matches;
+          return await AreaClip.clip(file, { start, end: start + len, bps: Math.min(2500000, Math.floor((TARGET_BYTES * 8) / len)), maxSide: phone ? 960 : 1280, onPct });
+        }
+      } catch (e) { console.warn("light preview", e); }
+    }
     if (!canShrink()) throw new Error("can't make clips here");
     const v = document.createElement("video");
     v.playsInline = true; v.setAttribute("playsinline", ""); v.preload = "auto"; v.muted = true;
