@@ -502,8 +502,8 @@
         '<div class="meta">' + esc([t.genre, t.duration ? fmtTime(t.duration) : ""].filter(Boolean).join(" · ") || " ") +
 "</div>" +
         (t.likes ? ((m) => m ? '<div class="meta">' + m + "</div>" : "")([
-          likesHidden(t, opts.mine) ? "" : nLikes(t) + (nLikes(t) === 1 ? " LIKE" : " LIKES"),
-          commentsHidden(t, opts.mine) ? "" : nComments(t) + (nComments(t) === 1 ? " COMMENT" : " COMMENTS")].filter(Boolean).join(" · ")) : "") +
+          likesHidden(t, opts.mine) ? "" : nLikes(t) + (nLikes(t) === 1 ? " LIKE" : " LIKES") + (likesHidden(t) ? " (HIDDEN)" : ""),
+          commentsHidden(t, opts.mine) ? "" : commentsHidden(t) ? "COMMENTS OFF" : nComments(t) + (nComments(t) === 1 ? " COMMENT" : " COMMENTS")].filter(Boolean).join(" · ")) : "") +
         (opts.actions || "") +
       "</div></div>";
   }
