@@ -572,3 +572,13 @@ html { color-scheme: dark; }
 *::-webkit-scrollbar-thumb { background: #333; border-radius: 0; border: 2px solid transparent; background-clip: padding-box; }
 *::-webkit-scrollbar-thumb:hover { background: #555; background-clip: padding-box; }
 *::-webkit-scrollbar-corner { background: transparent; }
+/* PayPal checkout: dark panel so PayPal's buttons sit in the site's look */
+.pp-panel { margin-top: 16px; padding: 16px; border: 1px solid var(--line-2); background: #050505; max-width: 460px; }
+.pp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.pp-x { background: none; border: 0; color: var(--text-2); font-size: 16px; width: 32px; height: 32px; cursor: pointer; }
+.pp-x:hover { color: var(--text); }
+.pp-line { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line-2); border-bottom: 1px dashed var(--line-2); }
+.pp-line .mono { font-size: 1.15rem; }
+.pp-box { color-scheme: normal; background: transparent; }
+.pp-box iframe { border-radius: 0 !important; }
+.pp-secure { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; color: var(--text-2); margin-top: 10px; text-align: center; }

@@ -640,7 +640,7 @@
           '<span class="muted small">' + esc(artistName(t.profiles)) + " · " + fileType(t) + " download</span></div>" +
           '<span class="spacer"></span><b class="mono" style="font-size:1.3rem">' + esc(money(t.price, t.currency)) + "</b>" +
         "</div>" +
-        '<div id="pp-box" style="min-height:120px"><p class="small muted mono" style="padding:30px 0;text-align:center">Loading PayPal<span class="cursor"></span></p></div>' +
+        '<div id="pp-box" class="pp-box" style="min-height:120px"><p class="small muted mono" style="padding:30px 0;text-align:center">Loading PayPal<span class="cursor"></span></p></div>' +
         '<p class="small muted" style="margin-top:6px">Secure checkout with PayPal or any card. Most of what you pay goes to the artist. The ' + fileType(t) + ' file downloads to this device right after, and stays in My page › Purchases.</p>' +
         '<p class="small" id="pp-msg" style="margin-top:10px"></p>' +
         '<button class="btn btn-ghost btn-block" id="pp-close" style="margin-top:8px">Cancel</button>' +
@@ -657,7 +657,7 @@
       const pp = await loadPayPal();
       box.innerHTML = "";
       await pp.Buttons({
-        style: { shape: "rect", color: "white", layout: "vertical", label: "pay", height: 48 },
+        style: { shape: "rect", color: "black", layout: "vertical", label: "pay", height: 48, disableMaxWidth: true },
         createOrder: async () => (await callFunction("create", { track_id: t.id })).id,
         onApprove: async (data) => {
           msg.textContent = "Confirming payment…";

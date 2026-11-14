@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=142">
+<link rel="stylesheet" href="styles.css?v=143">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=142"></script>
-<script src="app.js?v=142"></script>
-<script src="depth.js?v=142"></script>
+<script src="config.js?v=143"></script>
+<script src="app.js?v=143"></script>
+<script src="depth.js?v=143"></script>
 <style>
   .head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .head .avatar { width: 64px; height: 64px; font-size: 1.6rem; }
@@ -716,17 +716,25 @@
         "</div>" +
         '<button class="btn ' + (pro ? "" : "btn-primary") + '" id="go-pro" type="button">' + (pro ? "Renew · adds a year" : "Go Pro · " + App.money(C.PRO_PRICE) + "/year") + "</button>" +
       "</div>" +
-      '<div id="pro-pay" hidden style="margin-top:14px"><div id="pro-pp"></div><p class="small muted" id="pro-msg" style="margin-top:8px"></p></div>';
+      '<div id="pro-pay" class="pp-panel" hidden>' +
+        '<div class="pp-head"><span class="label">Checkout</span><button type="button" class="pp-x" id="pro-cancel" aria-label="Close">✕</button></div>' +
+        '<div class="pp-line"><b>Area MP3 Pro · 1 year</b><b class="mono">' + esc(App.money(C.PRO_PRICE)) + "</b></div>" +
+        '<p class="small muted" style="margin:2px 0 14px">Keep 100% of your sales and post albums. One payment, no auto-renew.</p>' +
+        '<div id="pro-pp" class="pp-box"></div>' +
+        '<p class="pp-secure">▣ Secure checkout · PayPal or any debit / credit card · no PayPal account needed</p>' +
+        '<p class="small muted" id="pro-msg" style="margin-top:8px"></p></div>';
     $("go-pro").onclick = openPro;
+    $("pro-cancel").onclick = () => { $("pro-pay").hidden = true; $("pro-pp").innerHTML = ""; $("go-pro").disabled = false; };
   }
   async function openPro() {
     const wrap = $("pro-pay"); wrap.hidden = false; $("go-pro").disabled = true;
+    setTimeout(() => wrap.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
     $("pro-pp").innerHTML = '<p class="muted mono small">Loading PayPal<span class="cursor"></span></p>';
     try {
       const pp = await App.loadPayPal();
       $("pro-pp").innerHTML = "";
       await pp.Buttons({
-        style: { shape: "rect", color: "white", layout: "vertical", label: "pay", height: 46 },
+        style: { shape: "rect", color: "black", layout: "vertical", label: "pay", height: 48, disableMaxWidth: true },
         createOrder: async () => (await App.callFunction("pro_create")).id,
         onApprove: async (d) => {
           $("pro-msg").textContent = "Confirming payment…";
