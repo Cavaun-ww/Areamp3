@@ -10,10 +10,10 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
-<link rel="stylesheet" href="styles.css?v=140">
+<link rel="stylesheet" href="styles.css?v=141">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=140"></script>
-<script src="app.js?v=140"></script>
+<script src="config.js?v=141"></script>
+<script src="app.js?v=141"></script>
 <style>
   .hero { min-height: min(78vh, 720px); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 60px 20px 50px; border-bottom: 1px solid var(--line); }
   /* New Drops: right under the logo, sliding left on its own (pauses when you touch or hover it) */
@@ -57,12 +57,16 @@
   @keyframes scanGlow { 0% { background-position: 0 100%; opacity: 1; } 62% { background-position: 0 0%; opacity: 1; } 70% { opacity: .0; } 100% { background-position: 0 0%; opacity: 0; } }
   @keyframes scanLock { 0% { transform: translate(var(--dx), var(--dy)); opacity: .35; } 10% { transform: translate(var(--dx), var(--dy)); opacity: .6; }
     62% { transform: none; opacity: .9; } 66% { transform: none; opacity: 1; filter: drop-shadow(0 0 6px #fff); } 72%, 92% { transform: none; opacity: 1; filter: none; } 100% { transform: translate(var(--dx), var(--dy)); opacity: .35; } }
-  /* on TARGET FOUND the "MP3" part wipes to gray with a quick glitch, holds, then resets for the next scan */
-  .scan-mp3 { position: absolute; inset: 22px 26px; pointer-events: none; background: #8c8c8c;
+  /* on TARGET FOUND the "MP3" part wipes to old-TV color bars with a quick glitch, holds, then resets for the next scan */
+  .scan-mp3 { position: absolute; inset: 22px 26px; pointer-events: none;
+    /* the 7 classic test-pattern bars across M-P-3, and the thin reversed strip along the bottom */
+    background:
+      linear-gradient(90deg, transparent 56%, #c8c8c8 56% 62.29%, #d4d400 62.29% 68.57%, #00cccc 68.57% 74.86%, #00c800 74.86% 81.14%, #cc00cc 81.14% 87.43%, #d00000 87.43% 93.71%, #0010d0 93.71%) 0 0 / 100% 82% no-repeat,
+      linear-gradient(90deg, transparent 56%, #0010d0 56% 62.29%, #2a2a2a 62.29% 68.57%, #cc00cc 68.57% 74.86%, #2a2a2a 74.86% 81.14%, #00cccc 81.14% 87.43%, #2a2a2a 87.43% 93.71%, #c8c8c8 93.71%) 0 100% / 100% 18% no-repeat;
     -webkit-mask: url(logo-mask.png) center / 100% 100% no-repeat; mask: url(logo-mask.png) center / 100% 100% no-repeat;
     clip-path: inset(0 44% 0 56%); opacity: 0; animation: mp3Gray var(--dur) steps(60, end) infinite; }
-  .scan-mp3::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0,0,0,.28) 0 2px, transparent 2px 5px); }
-  .scan-mp3.g2 { background: #d9d9d9; animation-name: mp3Glitch; }
+  .scan-mp3::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 2px, transparent 2px 5px); }
+  .scan-mp3.g2 { filter: hue-rotate(120deg) saturate(1.4); animation-name: mp3Glitch; }
   .scan-mp3.g2::after { display: none; }
   @keyframes mp3Gray {
     0%, 64% { opacity: 0; clip-path: inset(0 44% 0 56%); transform: none; }
