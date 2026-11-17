@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=145"></script>
+<script src="config.js?v=146"></script>
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; font-family: "Chakra Petch", ui-monospace, monospace; color: #f4f4f4; }
@@ -974,9 +974,20 @@ body.desktop .steps, body.desktop #start { display: none; }
     });
     var first = st[0] || {};
     var x0 = xps[0], src = first.fullUrl || (x0.song_lock && x0.song_lock !== "none" ? "" : pub(x0.preview_path));
-    if (src) { song.src = src; song.play().then(function () { song.pause(); song.currentTime = 0; }).catch(function () {}); }
+    // unlock sound for later, silently (phones only allow sound that starts from a tap)
+    if (src) { song.src = src; song.muted = true; song.play().then(function () { song.pause(); song.currentTime = 0; song.muted = false; }).catch(function () { song.muted = false; }); }
     vids = xps.map(function (x, i) { return makeVideo(i); });
-    if (vids[0] && xps.length === 1) vids[0].play().then(function () { vids[0].pause(); }).catch(function () {});
+    if (vids[0] && xps.length === 1) { var v0 = vids[0], wasMuted = v0.muted; v0.muted = true; v0.play().then(function () { v0.pause(); v0.muted = wasMuted; }).catch(function () { v0.muted = wasMuted; }); }
+    // safety net: if sound is playing but no image is in front of the camera for over a second, stop it
+    var quiet = 0;
+    clearInterval(window._arQuiet);
+    window._arQuiet = setInterval(function () {
+      var seen = false;
+      document.querySelectorAll("[song-overlay]").forEach(function (el) { var c = el.components && el.components["song-overlay"]; if (c && c.visible) seen = true; });
+      var loud = (song && !song.paused) || vids.some(function (v) { return v && !v.paused && !v.muted; });
+      quiet = !seen && loud ? quiet + 1 : 0;
+      if (quiet >= 3) { if (song) song.pause(); vids.forEach(function (v) { if (v) v.pause(); }); quiet = 0; }
+    }, 400);
     $("splash").style.display = "none";
     $("hint").textContent = isExplore ? "POINT AT ANY IMAGE" : "POINT AT THE IMAGE";
     $("close").classList.add("show"); $("hint").classList.add("show");
@@ -1039,6 +1050,9 @@ body.desktop .steps, body.desktop #start { display: none; }
   $("buyend").querySelector(".be-x").onclick = hideBuyEnd;
   function closeAR() {
     hideBuyEnd();
+    clearInterval(window._arQuiet);
+    if (song) song.pause();
+    vids.forEach(function (v) { if (v) v.pause(); });
     var s = document.querySelector("a-scene");
     if (s) { try { var sys = s.systems["mindar-image-system"]; if (sys) sys.stop(); } catch (e) {} s.remove(); }
     document.querySelectorAll("video").forEach(function (v) { if (v.srcObject) { v.srcObject.getTracks().forEach(function (tr) { tr.stop(); }); v.remove(); } });
