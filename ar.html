@@ -14,12 +14,12 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=147"></script>
+<script src="config.js?v=148"></script>
 <script>
   // phones (and Instagram's browser) sometimes keep an old copy of this page after an update: reload once to get the new one
   (function () {
     try {
-      var mine = 147;
+      var mine = 148;
       fetch("version.txt?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (v) {
         v = +String(v).trim(); if (!v || v <= mine) return;
         var k = "reloaded-for-" + v; if (sessionStorage.getItem(k)) return;
@@ -292,9 +292,11 @@ body.desktop .steps, body.desktop #start { display: none; }
         if (!u || t !== t0) return;
         fullUrl = u; if (st[0]) st[0].fullUrl = u;
         if (song && cur === 0) {
-          var playing = !song.paused || ($("np").classList.contains("show") && !$("hint").classList.contains("show")); // the image is in view right now
+          // swap in the full song; only play it if the image is in front of the camera right now
+          // (the silent sound warm-up after tapping Start used to count as "playing" here and started the song by itself)
+          var inView = anyInView();
           song.src = u; song.currentTime = 0;
-          if (playing) playSong();
+          if (inView) { song.muted = false; playSong(); } else song.pause();
         }
       }).catch(function () {});
     }
@@ -382,7 +384,7 @@ body.desktop .steps, body.desktop #start { display: none; }
         st[i].fullUrl = u;
         if (cur !== i) return;
         // the full song finished loading: swap it in, but only start it if that image is still in front of the camera
-        var inView = !$("hint").classList.contains("show") || !song.paused;
+        var inView = anyInView();
         fullUrl = u; song.src = u; song.currentTime = 0;
         if (inView) playSong(); else song.pause();
         nowPlaying();
