@@ -14,12 +14,39 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=148"></script>
+<script src="config.js?v=149"></script>
+<script>
+  // troubleshooting: add &debug=1 (or ?debug=1) to the address to see what starts sound, on screen
+  (function () {
+    if (!/[?&]debug=1/.test(location.search)) return;
+    var lines = [], box = null, t0 = Date.now();
+    function log(s) {
+      lines.push(((Date.now() - t0) / 1000).toFixed(1) + "s " + s); if (lines.length > 14) lines.shift();
+      if (!box) { box = document.createElement("pre"); box.style.cssText = "position:fixed;left:0;right:0;top:0;z-index:2147483647;margin:0;padding:6px 8px;background:rgba(0,0,0,.82);color:#7f7;font:10px/1.35 ui-monospace,monospace;white-space:pre-wrap;pointer-events:none"; (document.body || document.documentElement).appendChild(box); }
+      box.textContent = lines.join("\n");
+    }
+    window.__dbg = log;
+    var P = HTMLMediaElement.prototype, op = P.play;
+    P.play = function () {
+      var src = (this.currentSrc || this.src || "").split("/").pop().slice(0, 24);
+      var who = (new Error().stack || "").split("\n").slice(1, 3).map(function (l) { return (l.match(/:(\d+):\d+\)?$/) || [])[1] || "?"; }).join("<");
+      log("PLAY " + this.tagName + " " + src + (this.muted ? " (muted)" : " (LOUD)") + " line " + who + (window.__inView ? " inView=" + window.__inView() : ""));
+      return op.apply(this, arguments);
+    };
+    document.addEventListener("targetFound", function (e) { log("FOUND " + ((e.target.getAttribute && e.target.getAttribute("mindar-image-target")) || "")); }, true);
+    document.addEventListener("targetLost", function () { log("lost"); }, true);
+    setInterval(function () {
+      var s = window.__song && window.__song();
+      if (s && !s.paused) log("song playing" + (s.muted ? " muted" : " LOUD") + " t=" + s.currentTime.toFixed(1) + " inView=" + (window.__inView ? window.__inView() : "?"));
+    }, 1500);
+    window.addEventListener("error", function (e) { log("ERROR " + e.message); });
+  })();
+</script>
 <script>
   // phones (and Instagram's browser) sometimes keep an old copy of this page after an update: reload once to get the new one
   (function () {
     try {
-      var mine = 148;
+      var mine = 149;
       fetch("version.txt?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (v) {
         v = +String(v).trim(); if (!v || v <= mine) return;
         var k = "reloaded-for-" + v; if (sessionStorage.getItem(k)) return;
@@ -595,10 +622,17 @@ body.desktop .steps, body.desktop #start { display: none; }
   }
   function hideBuyEnd() { var b = $("buyend"); if (b) b.classList.remove("show"); }
   // is any image in front of the camera right now?
+  window.__inView = function () { return anyInView(); };
+  window.__song = function () { return song; };
   function anyInView() {
     var seen = false;
     document.querySelectorAll("[song-overlay]").forEach(function (el) { var c = el.components && el.components["song-overlay"]; if (c && c.visible) seen = true; });
     return seen;
+  }
+  // hard stop: sound never plays unless an image is in front of the camera, whatever started it
+  function hush(el) {
+    var chk = function () { if (!el.paused && !el.muted && !anyInView()) el.pause(); };
+    ["play", "playing", "volumechange", "timeupdate"].forEach(function (e) { el.addEventListener(e, chk); });
   }
   function playSong() {
     if (!song || !song.getAttribute("src")) return;
@@ -953,7 +987,7 @@ body.desktop .steps, body.desktop #start { display: none; }
     var x = xps[i];
     if (!x || !x.video_path || isPhoto(x.video_path) || isGif(x.video_path) || isModel(x.video_path)) return null;
     var v = document.createElement("video");
-    v.src = pub(x.video_path); v.crossOrigin = "anonymous"; v.muted = x.has_song !== false; v.loop = true; // no song: the video's own sound plays
+    v.src = pub(x.video_path); v.crossOrigin = "anonymous"; v.muted = x.has_song !== false; v.loop = true; hush(v); // no song: the video's own sound plays
     v.preload = xps.length > 1 ? "none" : "auto"; // Explore: only download a video once its image is found
     v.playsInline = true; v.setAttribute("playsinline", ""); v.setAttribute("webkit-playsinline", "");
     v.style.cssText = "position:fixed;bottom:-9999px;width:1px;height:1px;opacity:0;pointer-events:none";
@@ -968,7 +1002,7 @@ body.desktop .steps, body.desktop #start { display: none; }
       v._cut = paid && !x.video_preview ? 60 : 0;
       callFunction("stream", { track_id: x.id, kind: "video" }).then(function (o) {
         if (!o || !o.url) return;
-        var playing = !v.paused;
+        var playing = !v.paused && anyInView();
         v._previewing = false; v._cut = 0; v.loop = true;
         v.src = o.url; v.load();
         if (playing) v.play().catch(function () {});
@@ -987,7 +1021,7 @@ body.desktop .steps, body.desktop #start { display: none; }
   $("start").onclick = function () {
     if (!xps.length || !mindSrc || !isMobile) return;
     // set up sound inside the tap (phones block it otherwise)
-    song = new Audio(); song.loop = false; song.playsInline = true;
+    song = new Audio(); song.loop = false; song.playsInline = true; hush(song);
     song.addEventListener("ended", function () {
       if (isPaidPreview()) return showBuyEnd("paid"); // paid song: the preview is over, offer to buy
       // free songs: after the first full play, ask for a like or a comment (once per song; not on your own drop)
