@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=149"></script>
+<script src="config.js?v=150"></script>
 <script>
   // troubleshooting: add &debug=1 (or ?debug=1) to the address to see what starts sound, on screen
   (function () {
@@ -46,7 +46,7 @@
   // phones (and Instagram's browser) sometimes keep an old copy of this page after an update: reload once to get the new one
   (function () {
     try {
-      var mine = 149;
+      var mine = 150;
       fetch("version.txt?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (v) {
         v = +String(v).trim(); if (!v || v <= mine) return;
         var k = "reloaded-for-" + v; if (sessionStorage.getItem(k)) return;
@@ -631,8 +631,16 @@ body.desktop .steps, body.desktop #start { display: none; }
   }
   // hard stop: sound never plays unless an image is in front of the camera, whatever started it
   function hush(el) {
-    var chk = function () { if (!el.paused && !el.muted && !anyInView()) el.pause(); };
+    // (iPhones can ignore "muted" on sound, so muted songs are stopped too; only the silent warm-up clip is let through)
+    var chk = function () { if (!el.paused && !el._warm && !(el.tagName === "VIDEO" && el.muted) && !anyInView()) el.pause(); };
     ["play", "playing", "volumechange", "timeupdate"].forEach(function (e) { el.addEventListener(e, chk); });
+  }
+  function silentClip() { // 0.1s of silence as a WAV
+    var n = 800, b = new DataView(new ArrayBuffer(44 + n * 2)), w = function (o, s) { for (var i = 0; i < s.length; i++) b.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, "RIFF"); b.setUint32(4, 36 + n * 2, true); w(8, "WAVEfmt "); b.setUint32(16, 16, true); b.setUint16(20, 1, true); b.setUint16(22, 1, true);
+    b.setUint32(24, 8000, true); b.setUint32(28, 16000, true); b.setUint16(32, 2, true); b.setUint16(34, 16, true); w(36, "data"); b.setUint32(40, n * 2, true);
+    var s = "", u = new Uint8Array(b.buffer); for (var i = 0; i < u.length; i++) s += String.fromCharCode(u[i]);
+    return "data:audio/wav;base64," + btoa(s);
   }
   function playSong() {
     if (!song || !song.getAttribute("src")) return;
@@ -1023,6 +1031,7 @@ body.desktop .steps, body.desktop #start { display: none; }
     // set up sound inside the tap (phones block it otherwise)
     song = new Audio(); song.loop = false; song.playsInline = true; hush(song);
     song.addEventListener("ended", function () {
+      if (song._warm || song.src.indexOf("data:") === 0) return; // the silent warm-up clip
       if (isPaidPreview()) return showBuyEnd("paid"); // paid song: the preview is over, offer to buy
       // free songs: after the first full play, ask for a like or a comment (once per song; not on your own drop)
       if (t && t.owner !== me && !locked() && !endShown[t.id]) { endShown[t.id] = 1; showBuyEnd("free"); }
@@ -1032,7 +1041,11 @@ body.desktop .steps, body.desktop #start { display: none; }
     var first = st[0] || {};
     var x0 = xps[0], src = first.fullUrl || (x0.song_lock && x0.song_lock !== "none" ? "" : pub(x0.preview_path));
     // unlock sound for later, silently (phones only allow sound that starts from a tap)
-    if (src) { song.src = src; song.muted = true; song.play().then(function () { song.pause(); song.currentTime = 0; song.muted = false; }).catch(function () { song.muted = false; }); }
+    // a tiny clip of pure silence does the unlocking; the real song is only loaded, never played here
+    // (warming up with the real song "muted" was audible on iPhones and started the music by itself)
+    song._warm = true; song.src = silentClip();
+    var real = function () { song._warm = false; if (song.paused && src && (!song.getAttribute("src") || song.src.indexOf("data:") === 0)) { song.src = src; song.load(); } };
+    song.play().then(function () { song.pause(); real(); }).catch(real);
     vids = xps.map(function (x, i) { return makeVideo(i); });
     if (vids[0] && xps.length === 1) { var v0 = vids[0], wasMuted = v0.muted; v0.muted = true; v0.play().then(function () { v0.pause(); v0.muted = wasMuted; }).catch(function () { v0.muted = wasMuted; }); }
     // safety net: if sound is playing but no image is in front of the camera for over a second, stop it
