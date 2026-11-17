@@ -11,7 +11,7 @@
         const k = "reloaded-for-" + v;
         if (sessionStorage.getItem(k)) return; // only once, never a loop
         sessionStorage.setItem(k, "1");
-        location.reload();
+        const u = new URL(location.href); u.searchParams.set("_v", v); location.replace(u.toString()); // a new address skips the old saved copy
       }).catch(() => {});
     } catch (e) {}
   })();
