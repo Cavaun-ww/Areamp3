@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=150"></script>
+<script src="config.js?v=151"></script>
 <script>
   // troubleshooting: add &debug=1 (or ?debug=1) to the address to see what starts sound, on screen
   (function () {
@@ -46,7 +46,7 @@
   // phones (and Instagram's browser) sometimes keep an old copy of this page after an update: reload once to get the new one
   (function () {
     try {
-      var mine = 150;
+      var mine = 151;
       fetch("version.txt?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (v) {
         v = +String(v).trim(); if (!v || v <= mine) return;
         var k = "reloaded-for-" + v; if (sessionStorage.getItem(k)) return;
@@ -325,7 +325,11 @@ body.desktop .steps, body.desktop #start { display: none; }
           song.src = u; song.currentTime = 0;
           if (inView) { song.muted = false; playSong(); } else song.pause();
         }
-      }).catch(function () {});
+      }).catch(function () {
+        // couldn't get the full song: the preview is all there is
+        if (st[0]) st[0].failed = true;
+        if (song && t === t0 && cur === 0 && !hasReal() && !locked()) { song.src = pub(t.preview_path); if (anyInView()) playSong(); }
+      });
     }
     if (!t.mind_path) { $("start").textContent = "AR isn't set up for this song"; return; }
     xps = [t]; st = [{ unlocked: unlocked, fullUrl: fullUrl, tried: true }]; mindSrc = pub(t.mind_path); cur = 0;
@@ -402,7 +406,7 @@ body.desktop .steps, body.desktop #start { display: none; }
     if (song) song.loop = false; // looping is handled on "ended" (previews stop and ask to buy)
     hideBuyEnd();
     var al = albumOf(t); if (al) al.n = 1; // a found album starts at song 1
-    var src = fullUrl || (locked() ? "" : pub(t.preview_path)); // blurred: silent until found
+    var src = fullUrl || (locked() || !previewOK(t, st[i]) ? "" : pub(t.preview_path)); // blurred: silent until found; free songs wait for the full song
     if (song && src && song.src !== src) { song.src = src; song.currentTime = 0; }
     if (song && !src) { song.pause(); song.removeAttribute("src"); }
     if (!st[i].tried && t.has_song !== false && ((me && unlocked) || !locked())) {
@@ -415,7 +419,10 @@ body.desktop .steps, body.desktop #start { display: none; }
         fullUrl = u; song.src = u; song.currentTime = 0;
         if (inView) playSong(); else song.pause();
         nowPlaying();
-      }).catch(function () {});
+      }).catch(function () {
+        st[i].failed = true;
+        if (cur === i && song && !hasReal() && !locked()) { song.src = pub(t.preview_path); if (anyInView()) playSong(); }
+      });
     }
   }
 
@@ -580,6 +587,9 @@ body.desktop .steps, body.desktop #start { display: none; }
 
   // ── the song: preview, or the full song once you have it ──
   // paid songs: you hear a 1-minute preview in the AR camera, then it asks you to buy the full song
+  // the short preview (it starts 15 seconds in) is only for songs for sale; free songs wait for the whole song so they start at the beginning
+  function hasReal() { return !!(song && song.getAttribute("src") && song.src.indexOf("data:") !== 0); } // a real song is loaded (not the silent warm-up clip)
+  function previewOK(x, s) { return +x.price > 0 || x.has_song === false || (s && s.failed); }
   function isPaidPreview() { return t && !fullUrl && !locked() && +t.price > 0 && t.has_song !== false; }
   // the card when a song ends: paid → Buy (preview over); free → "Enjoying it?". Both ask for a like and a comment.
   var endShown = {};
@@ -643,7 +653,7 @@ body.desktop .steps, body.desktop #start { display: none; }
     return "data:audio/wav;base64," + btoa(s);
   }
   function playSong() {
-    if (!song || !song.getAttribute("src")) return;
+    if (!hasReal()) return;
     if (!anyInView()) return; // never start sound unless an image is actually in view
     if (isPaidPreview() && song.ended) return showBuyEnd("paid"); // don't restart a finished preview
     song.play().catch(function () { $("unmute").classList.add("show"); });
@@ -1039,7 +1049,7 @@ body.desktop .steps, body.desktop #start { display: none; }
       song.currentTime = 0; playSong(); // free and owned songs keep playing
     });
     var first = st[0] || {};
-    var x0 = xps[0], src = first.fullUrl || (x0.song_lock && x0.song_lock !== "none" ? "" : pub(x0.preview_path));
+    var x0 = xps[0], src = first.fullUrl || (x0.song_lock && x0.song_lock !== "none" || !previewOK(x0, first) ? "" : pub(x0.preview_path));
     // unlock sound for later, silently (phones only allow sound that starts from a tap)
     // a tiny clip of pure silence does the unlocking; the real song is only loaded, never played here
     // (warming up with the real song "muted" was audible on iPhones and started the music by itself)
@@ -1094,7 +1104,7 @@ body.desktop .steps, body.desktop #start { display: none; }
   };
 
   $("unmute").onclick = function () {
-    if (song && song.getAttribute("src")) { song.muted = false; song.play().catch(function () {}); }
+    if (hasReal()) { song.muted = false; song.play().catch(function () {}); }
     var v = vids[cur]; if (v && t && t.has_song === false) { v.muted = false; v.play().catch(function () {}); }
     $("unmute").classList.remove("show");
   };
